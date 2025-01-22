@@ -1,0 +1,4 @@
+create user 'aelita_dev'@'%' IDENTIFIED BY 'codeaelitadev';
+GRANT ALL PRIVILEGES ON edition1.* TO 'aelita_dev'@'%';
+
+create database edition1;
