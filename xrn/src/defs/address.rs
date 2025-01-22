@@ -9,6 +9,8 @@ pub enum XrnAddrType {
     Project,
     /// A physically stored file
     A3,
-    ///
-    PlanningLabel
+    /// For displaying entities, this is a rating
+    PlanningLabel,
+    /// Syncs data from other sources to here
+    SyncJob,
 }
