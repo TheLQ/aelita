@@ -1,5 +1,5 @@
 [workspace]
-members = [ "xrn"]
+members = [ "stor_diesel", "xrn"]
 resolver = "2"
 
 default-members = ["xrn"]
