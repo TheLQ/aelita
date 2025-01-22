@@ -1,5 +1,5 @@
-mod l;
+use aelita_www::server::start_server;
 
 fn main() {
-    println!("Hello, world!");
+    start_server();
 }

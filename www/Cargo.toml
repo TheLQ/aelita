@@ -5,3 +5,5 @@ edition = "2024"
 
 [dependencies]
 axum = "0.8.2"
+aelita_commons = { path = "../commons" }
+tokio = { version = "1.43", features = ["full"] }

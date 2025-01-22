@@ -1,2 +1,2 @@
 mod pages;
-mod server;
+pub mod server;
