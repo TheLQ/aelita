@@ -1,11 +1,14 @@
 // @generated automatically by Diesel CLI.
 
+use chrono::NaiveDateTime;
+
 diesel::table! {
     aproject_names (xrn) {
         #[max_length = 100]
         xrn -> Varchar,
         #[max_length = 100]
         title -> Varchar,
+        published -> Timestamp,
     }
 }
 
@@ -13,8 +16,7 @@ diesel::table! {
     xrn_registry (xrn) {
         #[max_length = 100]
         xrn -> Varchar,
-        #[max_length = 100]
-        published -> Varchar,
+        published -> Timestamp,
     }
 }
 
