@@ -1,1 +1,1 @@
-rm migrations/202*
+rm -r migrations/202*
