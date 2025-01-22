@@ -1,0 +1,8 @@
+[workspace]
+members = [ "xrn"]
+resolver = "2"
+
+default-members = ["xrn"]
+
+[profile.release]
+lto = "fat"
