@@ -10,3 +10,6 @@ aelita_stor_diesel = { path = "../stor_diesel" }
 tokio = { version = "1.43", features = ["full"] }
 deadpool-diesel = { version = "0.6.1", features = ["mysql"] }
 itertools = "0.14.0"
+handlebars = "6.3.0"
+serde = "1.0.217"
+thiserror = "2.0.11"
