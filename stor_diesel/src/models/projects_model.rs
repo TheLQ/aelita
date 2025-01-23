@@ -1,6 +1,9 @@
 use crate::err::StorDieselError;
 use crate::models::StorDate;
+use crate::util::to_stor_date_format;
 use aelita_xrn::defs::address::XrnAddr;
+use aelita_xrn::defs::project_xrn::ProjectXrn;
+use chrono::SecondsFormat;
 use diesel::{Insertable, Queryable, Selectable};
 use serde::Deserialize;
 use std::str::FromStr;
@@ -16,7 +19,7 @@ pub struct ModelProjectSql {
 
 #[derive(Deserialize)]
 pub struct ModelProject {
-    pub xrn: XrnAddr,
+    pub xrn: ProjectXrn,
     pub title: String,
     pub published: StorDate,
 }
@@ -31,9 +34,9 @@ impl TryFrom<ModelProjectSql> for ModelProject {
         }: ModelProjectSql,
     ) -> Result<Self, Self::Error> {
         Ok(ModelProject {
-            xrn: XrnAddr::from_str(&xrn)?,
+            xrn: ProjectXrn::from_str(&xrn)?,
             title,
-            published: StorDate::parse_from_rfc2822(&published)?,
+            published: StorDate::parse_from_rfc3339(&published)?,
         })
     }
 }
@@ -46,10 +49,17 @@ impl From<ModelProject> for ModelProjectSql {
             published,
         }: ModelProject,
     ) -> Self {
+        let published = to_stor_date_format(published);
+        assert!(
+            published.len() <= 25,
+            "ModelProject_len {} for {}",
+            published.len(),
+            published
+        );
         ModelProjectSql {
             xrn: xrn.to_string(),
             title,
-            published: published.to_rfc2822(),
+            published,
         }
     }
 }

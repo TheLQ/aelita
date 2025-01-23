@@ -6,9 +6,8 @@ diesel::table! {
         xrn -> Varchar,
         #[max_length = 100]
         title -> Varchar,
-        /// rfc3339
         #[max_length = 25]
-        published -> VarChar,
+        published -> Varchar,
     }
 }
 
@@ -16,10 +15,12 @@ diesel::table! {
     xrn_registry (xrn) {
         #[max_length = 100]
         xrn -> Varchar,
-        /// rfc3339
         #[max_length = 25]
-        published -> VarChar,
+        published -> Varchar,
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(aproject_names, xrn_registry,);
+diesel::allow_tables_to_appear_in_same_query!(
+    aproject_names,
+    xrn_registry,
+);

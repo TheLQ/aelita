@@ -8,8 +8,9 @@ aelita_commons = { path = "../commons" }
 aelita_stor_diesel = { path = "../stor_diesel" }
 aelita_xrn = { path = "../xrn" }
 #
-thiserror = { workspace = true }
 serde = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
 axum = { version = "0.8.2", features = ["macros"] }
 tokio = { version = "1.43", features = ["full"] }
 deadpool-diesel = { version = "0.6.1", features = ["mysql"] }

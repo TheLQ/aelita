@@ -27,6 +27,10 @@ pub enum XrnAddrType {
 }
 
 impl XrnAddr {
+    pub fn new(atype: XrnAddrType, value: String) -> Self {
+        Self { atype, value }
+    }
+
     pub fn atype(&self) -> &XrnAddrType {
         &self.atype
     }
@@ -38,7 +42,7 @@ impl XrnAddr {
 
 impl Display for XrnAddr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "xrn:{:?}:{}", self.atype, self.value)
+        write!(f, "xrn:{}:{}", self.atype.as_ref(), self.value)
     }
 }
 
@@ -46,19 +50,19 @@ impl FromStr for XrnAddr {
     type Err = LibxrnError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.len() < 5 {
-            return Err(LibxrnError::ParseShort(s.to_string()));
+            return Err(LibxrnError::ParseShort(s.into()));
         }
         let (prefix, remain) = s.split_at(4);
         if prefix != "xrn:" {
-            return Err(LibxrnError::ParsePrefix(s.to_string()));
+            return Err(LibxrnError::ParsePrefix(s.into()));
         }
 
         let Some(next_sep) = remain.find(":") else {
-            return Err(LibxrnError::MissingSeparator(remain.to_string(), xbt()));
+            return Err(LibxrnError::MissingSeparator(remain.into(), xbt()));
         };
         let (atype_raw, remain) = remain.split_at(next_sep);
         let atype = XrnAddrType::from_str(atype_raw)
-            .map_err(|_| LibxrnError::InvalidType(atype_raw.to_string()))?;
+            .map_err(|_| LibxrnError::InvalidType(atype_raw.into(), xbt()))?;
 
         let (_ignore_comma, value) = remain.split_at(1);
 
@@ -92,5 +96,18 @@ impl<'de> Deserialize<'de> for XrnAddr {
         D: Deserializer<'de>,
     {
         deserializer.deserialize_i32(XrnAddrVisitor)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::defs::address::{XrnAddr, XrnAddrType};
+
+    #[test]
+    fn enum_test() {
+        assert_eq!(XrnAddrType::Project.as_ref(), "project");
+
+        let addr = XrnAddr::new(XrnAddrType::Project, "page/123".into());
+        assert_eq!(addr.to_string(), "xrn:project:page/123")
     }
 }

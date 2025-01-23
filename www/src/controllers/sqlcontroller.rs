@@ -1,4 +1,5 @@
 use crate::err::{WebError, WebResult};
+use aelita_commons::err_utils::xbt;
 use aelita_commons::tracing_re::info;
 use aelita_stor_diesel::connection::load_db_url_from_env;
 use aelita_stor_diesel::diesel_re::dsl::insert_into;
@@ -92,10 +93,8 @@ impl SqlController {
 
 fn check_insert_num_rows(query: QueryResult<usize>) -> WebResult<()> {
     match query {
-        Ok(affected_rows) if affected_rows == 0 => {
-            Err(WebError::XrnRegistry_IsEmpty(Backtrace::capture()))
-        }
+        Ok(affected_rows) if affected_rows == 0 => Err(WebError::XrnRegistry_IsEmpty(xbt())),
         Ok(_affected_rows) => Ok(()),
-        Err(err) => Err(WebError::Diesel(err, Backtrace::capture())),
+        Err(err) => Err(WebError::Diesel(err, xbt())),
     }
 }

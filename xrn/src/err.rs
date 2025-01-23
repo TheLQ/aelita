@@ -13,7 +13,7 @@ pub enum LibxrnError {
     #[error("libxrn_MissingSeparator {0}")]
     MissingSeparator(String, Backtrace),
     #[error("libxrn_InvalidType {0}")]
-    InvalidType(String),
+    InvalidType(String, Backtrace),
     #[error("libxrn_AddrInvalidType {0}")]
     AddrInvalidType(XrnAddr, Backtrace),
     #[error("libxrn_AddrMissingSeparator {0}")]
