@@ -22,6 +22,7 @@ pub struct ProjectXrn {
 pub enum ProjectTypeXrn {
     Paper,
     Task,
+    Dash,
 }
 
 impl ProjectXrn {
@@ -33,8 +34,8 @@ impl ProjectXrn {
         &self.ptype
     }
 
-    pub fn id(&self) -> &u64 {
-        &self.id
+    pub fn id(&self) -> u64 {
+        self.id
     }
 
     pub fn into_addr(self) -> XrnAddr {

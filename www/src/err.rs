@@ -51,8 +51,14 @@ pub enum WebError {
     #[error("WebError_ParseInt {0:?}")]
     ParseInt(#[from] ParseIntError),
 
-    #[error("XrnRegistry_IsEmpty {0:#?}")]
+    #[error("XrnRegistry_IsEmpty")]
     XrnRegistry_IsEmpty(Backtrace),
+
+    #[error("UnsupportedXrnRoute {0}")]
+    UnsupportedXrnRoute(String),
+
+    #[error("UnsupportedDashboard {0}")]
+    UnsupportedDashboard(u64),
 }
 
 impl IntoResponse for WebError {
