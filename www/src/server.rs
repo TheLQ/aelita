@@ -1,5 +1,7 @@
 use crate::controllers::sqlcontroller::SqlState;
-use crate::pages::handle_registry::{handle_xrns_html, handle_xrns_html_post, handle_xrns_root};
+use crate::pages::handle_registry::{
+    handle_registry_html_post, handle_registry_root, handle_registryt_html,
+};
 use crate::pages::handle_root::handle_root;
 use aelita_commons::logs::log_init_trace;
 use axum::Router;
@@ -14,9 +16,9 @@ pub async fn start_server() {
 
     let app = Router::new()
         .route("/", get(handle_root))
-        .route("/{xrn}", get(handle_xrns_root))
-        .route("/{xrn}/html", get(handle_xrns_html))
-        .route("/{xrn}/html", post(handle_xrns_html_post))
+        .route("/{xrn}", get(handle_registry_root))
+        .route("/{xrn}/html", get(handle_registryt_html))
+        .route("/{xrn}/html", post(handle_registry_html_post))
         .with_state(sqlstate);
 
     // run our app with hyper, listening globally on port 3000

@@ -10,7 +10,10 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::sync::LazyLock;
 
-pub async fn handle_xrns_root(State(state): State<SqlState>, Path(xrn): Path<String>) -> String {
+pub async fn handle_registry_root(
+    State(state): State<SqlState>,
+    Path(xrn): Path<String>,
+) -> String {
     let res = state.sqlfs.xrns_list().await.unwrap();
 
     let extraction = res.into_iter().map(|v| format!("{:?}", v)).join("'");
@@ -42,7 +45,7 @@ pub async fn render_html(state: SqlState, _xrn: String) -> WebResult<Body> {
     tpl.render(props)
 }
 
-pub async fn handle_xrns_html(
+pub async fn handle_registryt_html(
     State(state): State<SqlState>,
     Path(xrn): Path<String>,
 ) -> WebResult<Body> {
@@ -54,7 +57,7 @@ pub struct PagePost {
     xrn_name: String,
 }
 
-pub async fn handle_xrns_html_post(
+pub async fn handle_registry_html_post(
     State(state): State<SqlState>,
     Path(xrn): Path<String>,
     Form(form): Form<PagePost>,
