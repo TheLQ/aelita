@@ -3,7 +3,7 @@ use crate::controllers::sqlcontroller::SqlState;
 use crate::err::{WebError, WebResult};
 use crate::server::convert_xrn::XrnFromUrl;
 use aelita_stor_diesel::models::StorDate;
-use aelita_stor_diesel::models::projects_model::ModelProject;
+use aelita_stor_diesel::models::model_project::ModelProject;
 use aelita_xrn::defs::project_xrn::{ProjectTypeXrn, ProjectXrn};
 use axum::Form;
 use axum::body::Body;

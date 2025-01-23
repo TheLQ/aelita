@@ -4,7 +4,7 @@ use aelita_commons::tracing_re::info;
 use aelita_stor_diesel::connection::load_db_url_from_env;
 use aelita_stor_diesel::diesel_re::dsl::insert_into;
 use aelita_stor_diesel::diesel_re::prelude::*;
-use aelita_stor_diesel::models::projects_model::{ModelProject, ModelProjectSql};
+use aelita_stor_diesel::models::model_project::{ModelProject, ModelProjectSql};
 use aelita_stor_diesel::models::*;
 use aelita_stor_diesel::schema::{aproject_names, xrn_registry};
 use deadpool_diesel::mysql::{Manager, Pool};
