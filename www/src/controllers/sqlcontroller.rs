@@ -1,9 +1,12 @@
+use crate::err::{WebError, WebResult};
 use aelita_commons::tracing_re::info;
 use aelita_stor_diesel::connection::load_db_url_from_env;
+use aelita_stor_diesel::diesel_re::dsl::insert_into;
 use aelita_stor_diesel::diesel_re::prelude::*;
 use aelita_stor_diesel::models::*;
 use aelita_stor_diesel::schema::xrn_registry;
-use deadpool_diesel::mysql::{Manager, Object, Pool};
+use deadpool_diesel::mysql::{Manager, Pool};
+use std::backtrace::Backtrace;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -23,8 +26,6 @@ pub struct SqlController {
     pool: Pool,
 }
 
-type PResult<T> = Result<T, deadpool_diesel::PoolError>;
-
 impl SqlController {
     pub fn new() -> Self {
         info!("building sql pool");
@@ -36,7 +37,7 @@ impl SqlController {
         Self { pool }
     }
 
-    pub async fn xrns_list(&self) -> PResult<Vec<XrnExtraction>> {
+    pub async fn xrns_list(&self) -> WebResult<Vec<XrnExtraction>> {
         let conn = self.pool.get().await?;
         let res = conn
             .interact(|conn| {
@@ -47,5 +48,21 @@ impl SqlController {
             .await
             .unwrap();
         Ok(res.unwrap())
+    }
+
+    pub async fn xrns_push(&self, new: Vec<NewXrnExtraction>) -> WebResult<()> {
+        let conn = self.pool.get().await?;
+        let _res = conn
+            .interact(
+                |conn| match insert_into(xrn_registry::table).values(new).execute(conn) {
+                    Ok(affected_rows) if affected_rows == 0 => {
+                        Err(WebError::XrnRegistry_IsEmpty(Backtrace::capture()))
+                    }
+                    Ok(_affected_rows) => Ok(()),
+                    Err(err) => Err(WebError::Diesel(err, Backtrace::capture())),
+                },
+            )
+            .await?;
+        Ok(())
     }
 }

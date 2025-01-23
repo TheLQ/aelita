@@ -1,22 +1,22 @@
-use crate::controllers::sqlcontroller::{SqlController, SqlState};
+use crate::controllers::sqlcontroller::SqlState;
 use crate::pages::handle_root::handle_root;
-use crate::pages::handle_xrns::handle_xrns;
+use crate::pages::handle_xrns::{handle_xrns_html, handle_xrns_html_post, handle_xrns_root};
 use aelita_commons::logs::log_init_trace;
-use aelita_stor_diesel::schema::xrn_registry::dsl::xrn_registry;
 use axum::Router;
-use axum::routing::get;
+use axum::routing::{get, post};
 
+/// Begin magic
 #[tokio::main]
 pub async fn start_server() {
     log_init_trace();
 
     let sqlstate = SqlState::new();
 
-    // build our application with a route
     let app = Router::new()
-        // `GET /` goes to `root`
         .route("/", get(handle_root))
-        .route("/{xrn}", get(handle_xrns))
+        .route("/{xrn}", get(handle_xrns_root))
+        .route("/{xrn}/html", get(handle_xrns_html))
+        .route("/{xrn}/html", post(handle_xrns_html_post))
         .with_state(sqlstate);
 
     // run our app with hyper, listening globally on port 3000

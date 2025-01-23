@@ -12,7 +12,7 @@ pub struct XrnExtraction {
 #[derive(Insertable)]
 #[diesel(table_name = crate::schema::xrn_registry)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
-pub struct NewPost<'a> {
-    pub xrn: &'a str,
+pub struct NewXrnExtraction {
+    pub xrn: String,
     pub published: NaiveDateTime,
 }

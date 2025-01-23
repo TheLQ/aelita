@@ -1,4 +1,4 @@
-use crate::err::WResult;
+use crate::err::WebResult;
 use axum::body::Body;
 use handlebars::Handlebars;
 use serde::Serialize;
@@ -27,8 +27,8 @@ impl HandlebarsPage {
         HandlebarsPage { template: hbs }
     }
 
-    pub fn render(&self, params: impl Serialize) -> WResult<Body> {
+    pub fn render(&self, params: impl Serialize) -> WebResult<Body> {
         let html = self.template.render(VIEWER_TEMPLATE_NAME, &params)?;
-        Ok(Body::new(html))
+        Ok(Body::from(html))
     }
 }
