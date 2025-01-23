@@ -4,9 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-axum = "0.8.2"
 aelita_commons = { path = "../commons" }
 aelita_stor_diesel = { path = "../stor_diesel" }
+aelita_xrn = { path = "../xrn" }
+#
+axum = "0.8.2"
 tokio = { version = "1.43", features = ["full"] }
 deadpool-diesel = { version = "0.6.1", features = ["mysql"] }
 itertools = "0.14.0"
