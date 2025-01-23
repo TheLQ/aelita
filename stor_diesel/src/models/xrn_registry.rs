@@ -1,4 +1,3 @@
-use chrono::NaiveDateTime;
 use diesel::prelude::*;
 
 #[derive(Queryable, Selectable, Debug)]
@@ -6,7 +5,7 @@ use diesel::prelude::*;
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct XrnExtraction {
     pub xrn: String,
-    pub published: NaiveDateTime,
+    pub published: String,
 }
 
 #[derive(Insertable)]
@@ -14,5 +13,5 @@ pub struct XrnExtraction {
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct NewXrnExtraction {
     pub xrn: String,
-    pub published: NaiveDateTime,
+    pub published: String,
 }

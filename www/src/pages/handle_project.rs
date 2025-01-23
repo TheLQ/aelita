@@ -1,16 +1,13 @@
 use crate::controllers::handlebars::HandlebarsPage;
 use crate::controllers::sqlcontroller::SqlState;
 use crate::err::WebResult;
-use crate::pages::handle_registry::PagePost;
 use crate::server::convert_xrn::XrnFromUrl;
-use aelita_commons::tracing_re::{info, warn};
-use aelita_stor_diesel::diesel_re::insertable::DefaultableColumnInsertValue::Default;
-use aelita_xrn::defs::address::XrnAddr;
-use aelita_xrn::defs::project_xrn::{ProjectTypeXrn, ProjectXrn};
+use aelita_stor_diesel::models::projects_model::ModelProject;
+use aelita_xrn::defs::project_xrn::ProjectXrn;
+use axum::Form;
 use axum::body::Body;
-use axum::extract::{Path, State};
-use axum::{Form, debug_handler};
-use serde::{Deserialize, Serialize};
+use axum::extract::State;
+use serde::Serialize;
 use std::sync::LazyLock;
 
 pub async fn handle_project(
@@ -20,27 +17,25 @@ pub async fn handle_project(
     render_html(state, xrn).await
 }
 
-#[derive(Deserialize)]
-pub struct ProjectPost {
-    ptype: ProjectTypeXrn,
-    id: u64,
-}
-
+#[axum::debug_handler]
 pub async fn handle_project_post(
     State(state): State<SqlState>,
     XrnFromUrl(xrn): XrnFromUrl<ProjectXrn>,
-    Form(form): Form<ProjectPost>,
+    Form(form): Form<ModelProject>,
 ) -> WebResult<Body> {
+    state.sqlfs.project_names_push(vec![form]).await?;
+
     render_html(state, xrn).await
 }
 
 async fn render_html(state: SqlState, xrn: ProjectXrn) -> WebResult<Body> {
-    let query = state.sqlfs.projects_list().await?;
+    let query = state.sqlfs.project_names().await?;
 
     #[derive(Serialize)]
     struct ProjectEntry {
         xrn: String,
         published: String,
+        title: String,
     }
     #[derive(Serialize)]
     struct HtmlProps {
@@ -50,8 +45,9 @@ async fn render_html(state: SqlState, xrn: ProjectXrn) -> WebResult<Body> {
         projects: query
             .into_iter()
             .map(|extract| ProjectEntry {
-                xrn: extract.xrn,
+                xrn: extract.xrn.to_string(),
                 published: format!("{}", extract.published),
+                title: extract.title,
             })
             .collect(),
     };

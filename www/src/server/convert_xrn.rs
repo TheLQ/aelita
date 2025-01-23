@@ -1,14 +1,11 @@
 use aelita_commons::err_utils::pretty_error;
 use aelita_commons::tracing_re::{error, trace, warn};
 use aelita_xrn::defs::address::XrnAddr;
-use axum::RequestPartsExt;
 use axum::extract::FromRequestParts;
 use axum::http::StatusCode;
 use axum::http::request::Parts;
 use serde::de::StdError;
-use serde::{Deserialize, Deserializer};
 use std::fmt::Debug;
-use std::path::Path;
 use std::str::FromStr;
 
 /// Axum extractor to parse xrn directly from the path
@@ -34,7 +31,7 @@ where
 {
     type Rejection = (StatusCode, String);
 
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         let full_uri = parts.uri.to_string();
         // warn!("uri {:?}", parts);
         // warn!("full {}", full_uri);

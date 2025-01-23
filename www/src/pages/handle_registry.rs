@@ -1,7 +1,6 @@
 use crate::controllers::handlebars::HandlebarsPage;
 use crate::controllers::sqlcontroller::SqlState;
 use crate::err::WebResult;
-use aelita_stor_diesel::diesel_re::internal::derives::multiconnection::chrono::NaiveDateTime;
 use aelita_stor_diesel::models::NewXrnExtraction;
 use axum::Form;
 use axum::body::Body;
@@ -65,7 +64,7 @@ pub async fn handle_registry_html_post(
     let new = vec![NewXrnExtraction {
         xrn: form.xrn_name,
         // todo
-        published: NaiveDateTime::default(),
+        published: "todo".into(),
     }];
     state.sqlfs.xrns_push(new).await?;
 

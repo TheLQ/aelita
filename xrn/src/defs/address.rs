@@ -7,7 +7,9 @@ pub struct XrnAddr {
 
 use crate::err::LibxrnError;
 use aelita_commons::err_utils::xbt;
-use std::fmt::Display;
+use serde::de::{Error, Visitor};
+use serde::{Deserialize, Deserializer};
+use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use strum::{AsRefStr, EnumString};
 
@@ -64,5 +66,31 @@ impl FromStr for XrnAddr {
             atype,
             value: value.to_string(),
         })
+    }
+}
+
+struct XrnAddrVisitor;
+
+impl<'de> Visitor<'de> for XrnAddrVisitor {
+    type Value = XrnAddr;
+
+    fn expecting(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "xrn address")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        XrnAddr::from_str(v).map_err(|e| E::custom(format!("xrnaddr_serde {}", e)))
+    }
+}
+
+impl<'de> Deserialize<'de> for XrnAddr {
+    fn deserialize<D>(deserializer: D) -> Result<XrnAddr, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_i32(XrnAddrVisitor)
     }
 }

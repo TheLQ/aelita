@@ -1,4 +1,5 @@
 use crate::controllers::sqlcontroller::SqlState;
+use crate::pages::fallback::handle_fallback;
 use crate::pages::handle_project::{handle_project, handle_project_post};
 use crate::pages::handle_registry::{
     handle_registry_html_post, handle_registry_root, handle_registryt_html,
@@ -20,8 +21,12 @@ pub async fn start_server() {
         .route("/registry", get(handle_registry_root))
         .route("/registry/html", get(handle_registryt_html))
         .route("/registry/html", post(handle_registry_html_post))
+        // xrn handling
+        // route by prefix for performance
+        // XrnFromUrl extractor parses this
         .route("/xrn:project:{*xrn_value}", get(handle_project))
         .route("/xrn:project:{*xrn_value}", post(handle_project_post))
+        .fallback(handle_fallback)
         .with_state(sqlstate);
 
     // run our app with hyper, listening globally on port 3000

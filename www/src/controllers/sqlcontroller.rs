@@ -3,9 +3,9 @@ use aelita_commons::tracing_re::info;
 use aelita_stor_diesel::connection::load_db_url_from_env;
 use aelita_stor_diesel::diesel_re::dsl::insert_into;
 use aelita_stor_diesel::diesel_re::prelude::*;
-use aelita_stor_diesel::models::projects_model::ModelProject;
+use aelita_stor_diesel::models::projects_model::{ModelProject, ModelProjectSql};
 use aelita_stor_diesel::models::*;
-use aelita_stor_diesel::schema::xrn_registry;
+use aelita_stor_diesel::schema::{aproject_names, xrn_registry};
 use deadpool_diesel::mysql::{Manager, Pool};
 use std::backtrace::Backtrace;
 use std::sync::Arc;
@@ -65,15 +65,37 @@ impl SqlController {
         Ok(())
     }
 
-    pub async fn projects_list(&self) -> WebResult<Vec<ModelProject>> {
+    pub async fn project_names(&self) -> WebResult<Vec<ModelProject>> {
         let conn = self.pool.get().await?;
-        let result = conn
+        let query = conn
             .interact(|conn| {
-                xrn_registry::table
-                    .select(ModelProject::as_select())
+                aproject_names::table
+                    .select(ModelProjectSql::as_select())
                     .load(conn)
             })
             .await??;
+        let result: Vec<ModelProject> = query.into_iter().map(|e| e.try_into()).try_collect()?;
         Ok(result)
+    }
+
+    pub async fn project_names_push(&self, new: Vec<ModelProject>) -> WebResult<()> {
+        let new: Vec<ModelProjectSql> = new.into_iter().map(|v| v.into()).collect();
+
+        let conn = self.pool.get().await?;
+        conn.interact(|conn| {
+            check_insert_num_rows(insert_into(aproject_names::table).values(new).execute(conn))
+        })
+        .await??;
+        Ok(())
+    }
+}
+
+fn check_insert_num_rows(query: QueryResult<usize>) -> WebResult<()> {
+    match query {
+        Ok(affected_rows) if affected_rows == 0 => {
+            Err(WebError::XrnRegistry_IsEmpty(Backtrace::capture()))
+        }
+        Ok(_affected_rows) => Ok(()),
+        Err(err) => Err(WebError::Diesel(err, Backtrace::capture())),
     }
 }
