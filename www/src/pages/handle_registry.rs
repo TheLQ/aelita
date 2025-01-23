@@ -21,7 +21,7 @@ pub async fn handle_registry_root(
     format!("{extraction}\n{url_xrn}\n")
 }
 
-pub async fn render_html(state: SqlState, _xrn: String) -> WebResult<Body> {
+async fn render_html(state: SqlState, _xrn: String) -> WebResult<Body> {
     let query = state.sqlfs.xrns_list().await?;
     #[derive(Serialize)]
     struct XrnEntry {
