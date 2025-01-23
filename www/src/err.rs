@@ -1,4 +1,5 @@
 use aelita_commons::err_utils::pretty_error;
+use aelita_xrn::err::LibxrnError;
 use axum::body::Body;
 use axum::http::{StatusCode, header};
 use axum::response::{IntoResponse, Response};
@@ -25,6 +26,10 @@ pub enum WebError {
         #[from] aelita_stor_diesel::diesel_re::result::Error,
         Backtrace,
     ),
+
+    // #[error("Libxrn {}", pretty_error(.0))]
+    #[error("WebError_Libxrn {0:#?}")]
+    Libxrn(#[from] LibxrnError),
 
     #[error("XrnRegistry_IsEmpty {0:#?}")]
     XrnRegistry_IsEmpty(Backtrace),

@@ -10,3 +10,7 @@ pub fn pretty_error(e: impl Error) -> String {
         format!("Panic {}", e)
     }
 }
+
+pub fn xbt() -> Backtrace {
+    Backtrace::capture()
+}

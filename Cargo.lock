@@ -18,10 +18,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "512761e0bb2578dd7380c6baaa0f4ce03e84f95e960231d1dec8bf4d7d6e2627"
 
 [[package]]
-name = "aelita-xrn"
-version = "0.1.0"
-
-[[package]]
 name = "aelita_commons"
 version = "0.1.0"
 dependencies = [
@@ -37,6 +33,7 @@ dependencies = [
  "chrono",
  "diesel",
  "dotenvy",
+ "serde",
 ]
 
 [[package]]
@@ -45,13 +42,24 @@ version = "0.1.0"
 dependencies = [
  "aelita_commons",
  "aelita_stor_diesel",
+ "aelita_xrn",
  "axum",
  "deadpool-diesel",
  "handlebars",
  "itertools",
  "serde",
+ "strum",
  "thiserror",
  "tokio",
+]
+
+[[package]]
+name = "aelita_xrn"
+version = "0.1.0"
+dependencies = [
+ "aelita_commons",
+ "strum",
+ "thiserror",
 ]
 
 [[package]]
@@ -97,6 +105,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "efea76243612a2436fb4074ba0cf3ba9ea29efdeb72645d8fc63f116462be1de"
 dependencies = [
  "axum-core",
+ "axum-macros",
  "bytes",
  "form_urlencoded",
  "futures-util",
@@ -142,6 +151,17 @@ dependencies = [
  "tower-layer",
  "tower-service",
  "tracing",
+]
+
+[[package]]
+name = "axum-macros"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "604fde5e028fea851ce1d8570bbdc034bec850d157f7569d10f347d06808c05c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1271,6 +1291,28 @@ name = "strsim"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
+
+[[package]]
+name = "strum"
+version = "0.26.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
+dependencies = [
+ "strum_macros",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.26.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c6bee85a5a24955dc440386795aa378cd9cf82acd5f764469152d2270e581be"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn",
+]
 
 [[package]]
 name = "syn"

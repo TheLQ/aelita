@@ -6,10 +6,12 @@ pub struct XrnAddr {
 }
 
 use crate::err::LibxrnError;
+use aelita_commons::err_utils::xbt;
+use std::fmt::Display;
 use std::str::FromStr;
 use strum::{AsRefStr, EnumString};
 
-#[derive(Debug, AsRefStr, EnumString)]
+#[derive(Debug, AsRefStr, EnumString, PartialEq)]
 #[strum(serialize_all = "lowercase")]
 pub enum XrnAddrType {
     /// A working project
@@ -22,9 +24,19 @@ pub enum XrnAddrType {
     SyncJob,
 }
 
-impl ToString for XrnAddr {
-    fn to_string(&self) -> String {
-        format!("xrn:{:?}:{}", self.atype, self.value)
+impl XrnAddr {
+    pub fn atype(&self) -> &XrnAddrType {
+        &self.atype
+    }
+
+    pub fn value(&self) -> &str {
+        &self.value
+    }
+}
+
+impl Display for XrnAddr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "xrn:{:?}:{}", self.atype, self.value)
     }
 }
 
@@ -40,7 +52,7 @@ impl FromStr for XrnAddr {
         }
 
         let Some(next_sep) = remain.find(":") else {
-            return Err(LibxrnError::ParsePrefixAfter(s.to_string()));
+            return Err(LibxrnError::MissingSeparator(remain.to_string(), xbt()));
         };
         let (atype_raw, remain) = remain.split_at(next_sep);
         let atype = XrnAddrType::from_str(atype_raw)

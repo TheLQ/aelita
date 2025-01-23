@@ -1,5 +1,5 @@
 use crate::controllers::sqlcontroller::SqlState;
-use crate::pages::handle_project::handle_project_html;
+use crate::pages::handle_project::handle_project;
 use crate::pages::handle_registry::{
     handle_registry_html_post, handle_registry_root, handle_registryt_html,
 };
@@ -20,7 +20,7 @@ pub async fn start_server() {
         .route("/registry", get(handle_registry_root))
         .route("/registry/html", get(handle_registryt_html))
         .route("/registry/html", post(handle_registry_html_post))
-        .route("/xrn:project:{xrn_value}/html", get(handle_project_html))
+        .route("/xrn:project:{*xrn_value}", get(handle_project))
         .with_state(sqlstate);
 
     // run our app with hyper, listening globally on port 3000
