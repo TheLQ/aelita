@@ -1,6 +1,6 @@
 use crate::controllers::sqlcontroller::SqlState;
+use crate::pages::handle_registry::{handle_xrns_html, handle_xrns_html_post, handle_xrns_root};
 use crate::pages::handle_root::handle_root;
-use crate::pages::handle_xrns::{handle_xrns_html, handle_xrns_html_post, handle_xrns_root};
 use aelita_commons::logs::log_init_trace;
 use axum::Router;
 use axum::routing::{get, post};
