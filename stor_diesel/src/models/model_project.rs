@@ -1,6 +1,5 @@
+use crate::date_wrapper::StorDate;
 use crate::err::StorDieselError;
-use crate::models::StorDate;
-use crate::util::to_stor_date_format;
 use aelita_xrn::defs::project_xrn::ProjectXrn;
 use diesel::{Insertable, Queryable, Selectable};
 use serde::Deserialize;
@@ -34,7 +33,7 @@ impl TryFrom<ModelProjectSql> for ModelProject {
         Ok(ModelProject {
             xrn: ProjectXrn::from_str(&xrn)?,
             title,
-            published: StorDate::parse_from_rfc3339(&published)?,
+            published: StorDate::from_str(&published)?,
         })
     }
 }
@@ -47,7 +46,7 @@ impl From<ModelProject> for ModelProjectSql {
             published,
         }: ModelProject,
     ) -> Self {
-        let published = to_stor_date_format(published);
+        let published = published.to_stor_string();
         assert!(
             published.len() <= 25,
             "ModelProject_len {} for {}",

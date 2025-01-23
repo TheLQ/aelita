@@ -2,13 +2,12 @@ use crate::controllers::handlebars::HandlebarsPage;
 use crate::controllers::sqlcontroller::SqlState;
 use crate::err::WebResult;
 use crate::server::convert_xrn::XrnFromUrl;
-use aelita_stor_diesel::models::StorDate;
+use aelita_stor_diesel::date_wrapper::StorDate;
 use aelita_stor_diesel::models::model_project::ModelProject;
 use aelita_xrn::defs::project_xrn::{ProjectTypeXrn, ProjectXrn};
 use axum::Form;
 use axum::body::Body;
 use axum::extract::State;
-use chrono::Local;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::sync::LazyLock;
@@ -36,7 +35,7 @@ pub async fn handle_project_post(
         title,
     }): Form<PostData>,
 ) -> WebResult<Body> {
-    let published: StorDate = Local::now().into();
+    let published: StorDate = StorDate::now();
 
     let project = ModelProject {
         xrn: ProjectXrn::new(ProjectTypeXrn::from_str(&project_type)?, id.parse()?),
@@ -67,7 +66,7 @@ async fn render_html(state: SqlState, xrn: ProjectXrn) -> WebResult<Body> {
             .into_iter()
             .map(|extract| ProjectEntry {
                 xrn: extract.xrn.to_string(),
-                published: format!("{}", extract.published),
+                published: extract.published.to_stor_string(),
                 title: extract.title,
             })
             .collect(),
