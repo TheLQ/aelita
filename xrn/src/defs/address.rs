@@ -75,7 +75,7 @@ impl FromStr for XrnAddr {
 
 struct XrnAddrVisitor;
 
-impl<'de> Visitor<'de> for XrnAddrVisitor {
+impl Visitor<'_> for XrnAddrVisitor {
     type Value = XrnAddr;
 
     fn expecting(&self, f: &mut Formatter) -> std::fmt::Result {

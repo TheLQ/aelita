@@ -5,8 +5,7 @@ use std::env;
 
 pub fn load_db_url_from_env() -> String {
     dotenv().ok();
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    database_url
+    env::var("DATABASE_URL").expect("DATABASE_URL must be set")
 }
 
 pub fn establish_connection() -> MysqlConnection {

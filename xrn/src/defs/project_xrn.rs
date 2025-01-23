@@ -59,7 +59,7 @@ impl TryFrom<XrnAddr> for ProjectXrn {
             return Err(LibxrnError::AddrInvalidType(addr, xbt()));
         };
 
-        let Ok(id) = *&remain[1..].parse() else {
+        let Ok(id) = remain[1..].parse() else {
             return Err(LibxrnError::AddrNotANumber(addr));
         };
 

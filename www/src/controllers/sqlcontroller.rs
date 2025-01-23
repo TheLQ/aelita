@@ -8,7 +8,6 @@ use aelita_stor_diesel::models::model_project::{ModelProject, ModelProjectSql};
 use aelita_stor_diesel::models::*;
 use aelita_stor_diesel::schema::{aproject_names, xrn_registry};
 use deadpool_diesel::mysql::{Manager, Pool};
-use std::backtrace::Backtrace;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -53,15 +52,12 @@ impl SqlController {
 
     pub async fn xrns_push(&self, new: Vec<NewXrnExtraction>) -> WebResult<()> {
         let conn = self.pool.get().await?;
-        conn.interact(
-            |conn| match insert_into(xrn_registry::table).values(new).execute(conn) {
-                Ok(affected_rows) if affected_rows == 0 => {
-                    Err(WebError::XrnRegistry_IsEmpty(Backtrace::capture()))
-                }
-                Ok(_affected_rows) => Ok(()),
-                Err(err) => Err(WebError::Diesel(err, Backtrace::capture())),
-            },
-        )
+        conn.interact(|conn| {
+            check_insert_num_rows(
+                new.len(),
+                insert_into(xrn_registry::table).values(new).execute(conn),
+            )
+        })
         .await??;
         Ok(())
     }
@@ -84,17 +80,21 @@ impl SqlController {
 
         let conn = self.pool.get().await?;
         conn.interact(|conn| {
-            check_insert_num_rows(insert_into(aproject_names::table).values(new).execute(conn))
+            check_insert_num_rows(
+                new.len(),
+                insert_into(aproject_names::table).values(new).execute(conn),
+            )
         })
         .await??;
         Ok(())
     }
 }
 
-fn check_insert_num_rows(query: QueryResult<usize>) -> WebResult<()> {
+fn check_insert_num_rows(len: usize, query: QueryResult<usize>) -> WebResult<()> {
     match query {
-        Ok(affected_rows) if affected_rows == 0 => Err(WebError::XrnRegistry_IsEmpty(xbt())),
-        Ok(_affected_rows) => Ok(()),
+        Ok(0) => Err(WebError::XrnRegistry_IsEmpty(xbt())),
+        Ok(query_len) if len == query_len => Ok(()),
+        Ok(_query_len) => Err(WebError::XrnRegistry_IsEmpty(xbt())),
         Err(err) => Err(WebError::Diesel(err, xbt())),
     }
 }

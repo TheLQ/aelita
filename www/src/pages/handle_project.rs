@@ -39,7 +39,7 @@ pub async fn handle_project_post(
     let published: StorDate = Local::now().into();
 
     let project = ModelProject {
-        xrn: ProjectXrn::new(ProjectTypeXrn::from_str(&project_type)?, id.parse()?).into(),
+        xrn: ProjectXrn::new(ProjectTypeXrn::from_str(&project_type)?, id.parse()?),
         title,
         published,
     };

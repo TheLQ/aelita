@@ -2,7 +2,7 @@
 members = ["commons", "stor_diesel", "www", "xrn"]
 resolver = "2"
 
-default-members = ["xrn"]
+default-members = ["www"]
 
 [profile.release]
 lto = "fat"

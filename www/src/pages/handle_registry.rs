@@ -36,7 +36,7 @@ async fn render_html(state: SqlState, _xrn: String) -> WebResult<Body> {
             .into_iter()
             .map(|extract| XrnEntry {
                 xrn: extract.xrn,
-                published: format!("{}", extract.published),
+                published: extract.published.to_string(),
             })
             .collect(),
     };
