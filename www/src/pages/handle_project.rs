@@ -57,12 +57,12 @@ async fn render_html(state: SqlState, xrn: ProjectXrn) -> WebResult<Body> {
 
 async fn render_dash(state: SqlState, xrn: ProjectXrn) -> WebResult<Body> {
     match xrn.id() {
-        0 => render_dash_primary(state).await,
+        0 => render_dash_primary(state, xrn).await,
         id => Err(WebError::UnsupportedDashboard(id)),
     }
 }
 
-async fn render_dash_primary(state: SqlState) -> WebResult<Body> {
+async fn render_dash_primary(state: SqlState, xrn: ProjectXrn) -> WebResult<Body> {
     let query = state.sqlfs.project_names().await?;
     #[derive(Serialize)]
     struct ProjectEntry {
@@ -72,9 +72,11 @@ async fn render_dash_primary(state: SqlState) -> WebResult<Body> {
     }
     #[derive(Serialize)]
     struct HtmlProps {
+        dash_name: String,
         projects: Vec<ProjectEntry>,
     }
     let props = HtmlProps {
+        dash_name: xrn.to_string(),
         projects: query
             .into_iter()
             .map(|extract| ProjectEntry {
