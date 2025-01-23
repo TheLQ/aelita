@@ -91,7 +91,7 @@ async fn render_dash_primary(state: SqlState, xrn: ProjectXrn) -> WebResult<Body
 }
 
 fn get_template() -> &'static HandlebarsPage {
-    const TEMPLATE: &str = include_str!("../../html/page_projects.html");
+    const TEMPLATE: &str = include_str!("../../html/page_projects.html.hbs");
     static INSTANCE: LazyLock<HandlebarsPage> =
         LazyLock::new(|| HandlebarsPage::from_template(TEMPLATE));
     &INSTANCE

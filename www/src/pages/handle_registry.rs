@@ -73,7 +73,7 @@ pub async fn handle_registry_html_post(
 }
 
 fn get_template() -> &'static HandlebarsPage {
-    const TEMPLATE: &str = include_str!("../../html/page_xrns.html");
+    const TEMPLATE: &str = include_str!("../../html/page_xrns.html.hbs");
     static INSTANCE: LazyLock<HandlebarsPage> =
         LazyLock::new(|| HandlebarsPage::from_template(TEMPLATE));
     &INSTANCE
