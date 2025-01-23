@@ -6,7 +6,7 @@ use serde::{Deserialize, Deserializer};
 use std::cmp::PartialEq;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use strum::{AsRefStr, Display, EnumString};
+use strum::{AsRefStr, EnumString};
 
 /// xrn:project:paper/30305
 /// xrn:project:task/3045

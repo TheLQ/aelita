@@ -1,9 +1,7 @@
 use crate::err::StorDieselError;
 use crate::models::StorDate;
 use crate::util::to_stor_date_format;
-use aelita_xrn::defs::address::XrnAddr;
 use aelita_xrn::defs::project_xrn::ProjectXrn;
-use chrono::SecondsFormat;
 use diesel::{Insertable, Queryable, Selectable};
 use serde::Deserialize;
 use std::str::FromStr;

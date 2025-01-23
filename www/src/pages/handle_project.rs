@@ -1,6 +1,6 @@
 use crate::controllers::handlebars::HandlebarsPage;
 use crate::controllers::sqlcontroller::SqlState;
-use crate::err::{WebError, WebResult};
+use crate::err::WebResult;
 use crate::server::convert_xrn::XrnFromUrl;
 use aelita_stor_diesel::models::StorDate;
 use aelita_stor_diesel::models::model_project::ModelProject;
