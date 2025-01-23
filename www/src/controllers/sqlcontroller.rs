@@ -39,30 +39,28 @@ impl SqlController {
 
     pub async fn xrns_list(&self) -> WebResult<Vec<XrnExtraction>> {
         let conn = self.pool.get().await?;
-        let res = conn
+        let result = conn
             .interact(|conn| {
                 xrn_registry::table
                     .select(XrnExtraction::as_select())
                     .load(conn)
             })
-            .await
-            .unwrap();
-        Ok(res.unwrap())
+            .await??;
+        Ok(result)
     }
 
     pub async fn xrns_push(&self, new: Vec<NewXrnExtraction>) -> WebResult<()> {
         let conn = self.pool.get().await?;
-        let _res = conn
-            .interact(
-                |conn| match insert_into(xrn_registry::table).values(new).execute(conn) {
-                    Ok(affected_rows) if affected_rows == 0 => {
-                        Err(WebError::XrnRegistry_IsEmpty(Backtrace::capture()))
-                    }
-                    Ok(_affected_rows) => Ok(()),
-                    Err(err) => Err(WebError::Diesel(err, Backtrace::capture())),
-                },
-            )
-            .await?;
+        conn.interact(
+            |conn| match insert_into(xrn_registry::table).values(new).execute(conn) {
+                Ok(affected_rows) if affected_rows == 0 => {
+                    Err(WebError::XrnRegistry_IsEmpty(Backtrace::capture()))
+                }
+                Ok(_affected_rows) => Ok(()),
+                Err(err) => Err(WebError::Diesel(err, Backtrace::capture())),
+            },
+        )
+        .await??;
         Ok(())
     }
 }
