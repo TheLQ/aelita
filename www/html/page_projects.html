@@ -1,0 +1,17 @@
+{{#each projects}}
+<p>{{xrn}}</p>
+<p>{{published}}</p>
+{{/each}}
+<form method="post">
+    <div>
+        <!-- ........ todo if err print it .......... -->
+        <label>
+            Project Type
+            <input name="project_type" type="text"/>
+        </label>
+        <label>
+            id
+            <input name="id" type="number"/>
+        </label>
+    </div>
+</form>

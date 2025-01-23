@@ -33,7 +33,6 @@ dependencies = [
  "chrono",
  "diesel",
  "dotenvy",
- "serde",
 ]
 
 [[package]]
@@ -58,6 +57,7 @@ name = "aelita_xrn"
 version = "0.1.0"
 dependencies = [
  "aelita_commons",
+ "serde",
  "strum",
  "thiserror",
 ]

@@ -7,4 +7,3 @@ edition = "2024"
 chrono = "0.4.39"
 diesel = { version = "2.2.0", features = ["mysql", "chrono"] }
 dotenvy = "0.15"
-serde = { version = "1.0.217", features = ["derive"] }

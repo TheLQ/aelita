@@ -1,6 +1,5 @@
 use crate::defs::address::XrnAddr;
 use std::backtrace::Backtrace;
-use strum::AsRefStr;
 use thiserror::Error;
 
 pub type LibxrnResult<T> = Result<T, LibxrnError>;

@@ -1,8 +1,12 @@
 [workspace]
-members = [ "commons", "stor_diesel", "www", "xrn"]
+members = ["commons", "stor_diesel", "www", "xrn"]
 resolver = "2"
 
 default-members = ["xrn"]
 
 [profile.release]
 lto = "fat"
+
+[workspace.dependencies]
+serde = { version = "1.0.217", features = ["derive"] }
+thiserror = "2.0.11"

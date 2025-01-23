@@ -8,11 +8,11 @@ aelita_commons = { path = "../commons" }
 aelita_stor_diesel = { path = "../stor_diesel" }
 aelita_xrn = { path = "../xrn" }
 #
+thiserror = { workspace = true }
+serde = { workspace = true }
 axum = { version = "0.8.2", features = ["macros"] }
 tokio = { version = "1.43", features = ["full"] }
 deadpool-diesel = { version = "0.6.1", features = ["mysql"] }
 itertools = "0.14.0"
 handlebars = "6.3.0"
-serde = { version = "1.0.217", features = ["derive"] }
-thiserror = "2.0.11"
 strum = { version = "0.26.3", features = ["derive"] }
