@@ -1,5 +1,6 @@
 use crate::date_wrapper::StorDate;
 use crate::err::StorDieselError;
+use crate::gen_try_from_converter;
 use aelita_xrn::defs::project_xrn::{ProjectTypeXrn, ProjectXrn};
 use diesel::{Insertable, Queryable, Selectable};
 use serde::Deserialize;
@@ -23,6 +24,30 @@ pub struct ModelProject {
     pub description: String,
 }
 
+impl ModelProject {
+    pub fn xrn(&self) -> ProjectXrn {
+        ProjectXrn::new(ProjectTypeXrn::Paper, self.xrn_project_id)
+    }
+}
+
+gen_try_from_converter!(
+    ModelProject,
+    ModelProjectSql,
+    (title, description),
+    (published, |v: StorDate| v.to_stor_string()),
+    (xrn_project_id, |v: u32| v.try_into()),
+);
+
+gen_try_from_converter!(
+    ModelProjectSql,
+    ModelProject,
+    (title, description),
+    (published, |v: String| StorDate::from_str(&v)),
+    (xrn_project_id, |v: i32| v.try_into()),
+);
+
+//
+
 #[derive(Insertable, Debug)]
 #[diesel(table_name = crate::schema::aproject_names)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
@@ -39,45 +64,9 @@ pub struct NewModelProject {
     pub description: String,
 }
 
-impl ModelProject {
-    pub fn xrn(&self) -> ProjectXrn {
-        ProjectXrn::new(ProjectTypeXrn::Paper, self.xrn_project_id)
-    }
-}
-
-impl TryFrom<ModelProjectSql> for ModelProject {
-    type Error = StorDieselError;
-    fn try_from(
-        ModelProjectSql {
-            xrn_project_id,
-            title,
-            published,
-            description,
-        }: ModelProjectSql,
-    ) -> Result<Self, Self::Error> {
-        let xrn_project_id: u32 = xrn_project_id.try_into()?;
-        Ok(ModelProject {
-            xrn_project_id,
-            title,
-            published: StorDate::from_str(&published)?,
-            description,
-        })
-    }
-}
-
-impl TryFrom<NewModelProject> for NewModelProjectSql {
-    type Error = StorDieselError;
-    fn try_from(
-        NewModelProject {
-            title,
-            published,
-            description,
-        }: NewModelProject,
-    ) -> Result<Self, Self::Error> {
-        Ok(NewModelProjectSql {
-            title,
-            published: published.to_stor_string(),
-            description,
-        })
-    }
-}
+gen_try_from_converter!(
+    NewModelProject,
+    NewModelProjectSql,
+    (title, description),
+    (published, |v: StorDate| v.to_stor_string()),
+);
