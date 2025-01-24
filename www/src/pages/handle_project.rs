@@ -35,15 +35,19 @@ pub async fn handle_project_post(
         title,
     }): Form<PostData>,
 ) -> WebResult<Body> {
-    let published: StorDate = StorDate::now();
-    let xrn_project_id: u32 = id.parse().unwrap();
+    let project_type = ProjectTypeXrn::from_str(&project_type)?;
+    match project_type {
+        ProjectTypeXrn::Dash => {}
+        _ => return Err(WebError::UnsupportedXrnRoute(project_type.as_ref().into())),
+    }
 
+    let published: StorDate = StorDate::now();
+    let xrn_project_id: u32 = id.parse()?;
     let project = ModelProject {
         xrn_project_id,
         title,
         published,
     };
-
     state.sqlfs.project_names_push(vec![project]).await?;
 
     render_html(state, xrn).await

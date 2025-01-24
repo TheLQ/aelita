@@ -1,2 +1,2 @@
-pub mod api_model;
+pub mod api_xrn_registry;
 mod common;

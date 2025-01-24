@@ -30,6 +30,7 @@ pub struct ModelProject {
 }
 
 impl ModelProject {
+    #[allow(unused)] // todo
     fn maybe_xrn(&self) -> ProjectXrn {
         ProjectXrn::new(ProjectTypeXrn::Paper, self.xrn_project_id)
     }

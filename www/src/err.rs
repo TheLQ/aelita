@@ -50,9 +50,6 @@ pub enum WebError {
     #[error("WebError_ParseInt {0:?}")]
     ParseInt(#[from] ParseIntError),
 
-    #[error("XrnRegistry_IsEmpty")]
-    XrnRegistry_IsEmpty(Backtrace),
-
     #[error("UnsupportedXrnRoute {0}")]
     UnsupportedXrnRoute(String),
 

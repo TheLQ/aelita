@@ -1,6 +1,7 @@
 use crate::controllers::handlebars::HandlebarsPage;
 use crate::controllers::sqlcontroller::SqlState;
 use crate::err::WebResult;
+use aelita_stor_diesel::api::api_xrn_registry::storapi_xrns_list;
 use aelita_stor_diesel::models::NewXrnExtraction;
 use axum::Form;
 use axum::body::Body;
@@ -13,15 +14,16 @@ pub async fn handle_registry_root(
     State(state): State<SqlState>,
     Path(xrn): Path<String>,
 ) -> String {
-    let res = state.sqlfs.xrns_list().await.unwrap();
+    let query = state.sqlfs.query_stor(storapi_xrns_list).await.unwrap();
 
-    let extraction = res.into_iter().map(|v| format!("{:?}", v)).join("'");
+    let extraction = query.into_iter().map(|v| format!("{:?}", v)).join("'");
     let url_xrn = xrn;
     format!("{extraction}\n{url_xrn}\n")
 }
 
 async fn render_html(state: SqlState, _xrn: String) -> WebResult<Body> {
-    let query = state.sqlfs.xrns_list().await?;
+    let query = state.sqlfs.query_stor(storapi_xrns_list).await?;
+
     #[derive(Serialize)]
     struct XrnEntry {
         xrn: String,

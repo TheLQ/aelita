@@ -1,11 +1,11 @@
 use crate::err::WebResult;
 use aelita_commons::err_utils::xbt;
 use aelita_commons::tracing_re::info;
-use aelita_stor_diesel::api::api_model::{storapi_xrns_list, storapi_xrns_push};
+use aelita_stor_diesel::api::api_xrn_registry::storapi_xrns_push;
 use aelita_stor_diesel::connection::load_db_url_from_env;
 use aelita_stor_diesel::diesel_re::dsl::insert_into;
 use aelita_stor_diesel::diesel_re::prelude::*;
-use aelita_stor_diesel::err::StorDieselResult;
+use aelita_stor_diesel::err::{StorDieselError, StorDieselResult};
 use aelita_stor_diesel::models::*;
 use aelita_stor_diesel::schema::*;
 use deadpool_diesel::mysql::{Manager, Pool};
@@ -39,22 +39,22 @@ impl SqlController {
         Self { pool }
     }
 
-    /// todo
-    async fn query_stor<'a, F, R>(&self, inner: F) -> WebResult<R>
+    pub async fn query_stor<'a, F, R>(&self, inner: F) -> WebResult<R>
     where
-        F: FnOnce(&mut MysqlConnection) -> R + Send + 'static,
+        F: FnOnce(&mut MysqlConnection) -> StorDieselResult<R> + Send + 'static,
         R: Send + 'static,
     {
         let conn = self.pool.get().await?;
-        let result = conn.interact(inner).await?;
+        let result = conn.interact(inner).await??;
         Ok(result)
     }
 
-    pub async fn xrns_list(&self) -> WebResult<Vec<XrnExtraction>> {
-        let conn = self.pool.get().await?;
-        let res = conn.interact(|conn| storapi_xrns_list(conn)).await??;
-        Ok(res)
-    }
+    // pub async fn xrns_list(&self) -> WebResult<Vec<XrnExtraction>> {
+    //     // let conn = self.pool.get().await?;
+    //     // let res = conn.interact(|conn| storapi_xrns_list(conn)).await??;
+    //     // Ok(res)
+    //     self.query_stor(storapi_xrns_list).await
+    // }
 
     pub async fn xrns_push(&self, new: Vec<NewXrnExtraction>) -> WebResult<()> {
         let conn = self.pool.get().await?;
