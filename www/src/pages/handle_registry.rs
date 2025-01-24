@@ -1,7 +1,7 @@
 use crate::controllers::handlebars::HandlebarsPage;
 use crate::controllers::sqlcontroller::SqlState;
 use crate::err::WebResult;
-use aelita_stor_diesel::api::api_xrn_registry::storapi_xrns_list;
+use aelita_stor_diesel::api::api_xrn_registry::{storapi_xrns_list, storapi_xrns_push};
 use aelita_stor_diesel::models::NewXrnExtraction;
 use axum::Form;
 use axum::body::Body;
@@ -68,7 +68,10 @@ pub async fn handle_registry_html_post(
         // todo
         published: "todo".into(),
     }];
-    state.sqlfs.xrns_push(new).await?;
+    state
+        .sqlfs
+        .query_stor(|conn| storapi_xrns_push(conn, new))
+        .await?;
 
     // show same page
     render_html(state, xrn).await

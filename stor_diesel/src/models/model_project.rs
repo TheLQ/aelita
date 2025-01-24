@@ -14,6 +14,13 @@ pub struct ModelProjectSql {
     published: String,
 }
 
+#[derive(Deserialize)]
+pub struct ModelProject {
+    pub xrn_project_id: u32,
+    pub title: String,
+    pub published: StorDate,
+}
+
 #[derive(Insertable, Debug)]
 #[diesel(table_name = crate::schema::aproject_names)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
@@ -23,8 +30,7 @@ pub struct NewModelProjectSql {
 }
 
 #[derive(Deserialize)]
-pub struct ModelProject {
-    pub xrn_project_id: u32,
+pub struct NewModelProject {
     pub title: String,
     pub published: StorDate,
 }
@@ -54,27 +60,39 @@ impl TryFrom<ModelProjectSql> for ModelProject {
     }
 }
 
-impl TryFrom<ModelProject> for ModelProjectSql {
+// impl TryFrom<ModelProject> for ModelProjectSql {
+//     type Error = StorDieselError;
+//     fn try_from(
+//         ModelProject {
+//             xrn_project_id,
+//             title,
+//             published,
+//         }: ModelProject,
+//     ) -> Result<Self, Self::Error> {
+//         let published = published.to_stor_string();
+//         assert!(
+//             // todo: can we read max_len from schema?
+//             published.len() <= 25,
+//             "ModelProject_len {} for {}",
+//             published.len(),
+//             published
+//         );
+//         Ok(ModelProjectSql {
+//             xrn_project_id: xrn_project_id.try_into()?,
+//             title,
+//             published,
+//         })
+//     }
+// }
+
+impl TryFrom<NewModelProject> for NewModelProjectSql {
     type Error = StorDieselError;
     fn try_from(
-        ModelProject {
-            xrn_project_id,
-            title,
-            published,
-        }: ModelProject,
+        NewModelProject { title, published }: NewModelProject,
     ) -> Result<Self, Self::Error> {
-        let published = published.to_stor_string();
-        assert!(
-            // todo: can we read max_len from schema?
-            published.len() <= 25,
-            "ModelProject_len {} for {}",
-            published.len(),
-            published
-        );
-        Ok(ModelProjectSql {
-            xrn_project_id: xrn_project_id.try_into()?,
+        Ok(NewModelProjectSql {
             title,
-            published,
+            published: published.to_stor_string(),
         })
     }
 }

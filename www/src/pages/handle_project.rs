@@ -2,8 +2,11 @@ use crate::controllers::handlebars::HandlebarsPage;
 use crate::controllers::sqlcontroller::SqlState;
 use crate::err::{WebError, WebResult};
 use crate::server::convert_xrn::XrnFromUrl;
+use aelita_stor_diesel::api::api_project::{
+    storapi_project_names_list, storapi_project_names_push,
+};
 use aelita_stor_diesel::date_wrapper::StorDate;
-use aelita_stor_diesel::models::model_project::ModelProject;
+use aelita_stor_diesel::models::NewModelProject;
 use aelita_xrn::defs::project_xrn::{ProjectTypeXrn, ProjectXrn};
 use axum::Form;
 use axum::body::Body;
@@ -22,7 +25,6 @@ pub async fn handle_project(
 #[derive(Deserialize)]
 pub struct PostData {
     pub project_type: String,
-    pub id: String,
     pub title: String,
 }
 
@@ -31,24 +33,21 @@ pub async fn handle_project_post(
     XrnFromUrl(xrn): XrnFromUrl<ProjectXrn>,
     Form(PostData {
         project_type,
-        id,
         title,
     }): Form<PostData>,
 ) -> WebResult<Body> {
     let project_type = ProjectTypeXrn::from_str(&project_type)?;
     match project_type {
-        ProjectTypeXrn::Dash => {}
+        ProjectTypeXrn::Paper => {}
         _ => return Err(WebError::UnsupportedXrnRoute(project_type.as_ref().into())),
     }
 
     let published: StorDate = StorDate::now();
-    let xrn_project_id: u32 = id.parse()?;
-    let project = ModelProject {
-        xrn_project_id,
-        title,
-        published,
-    };
-    state.sqlfs.project_names_push(vec![project]).await?;
+    let project = NewModelProject { title, published };
+    state
+        .sqlfs
+        .query_stor(|conn| storapi_project_names_push(conn, vec![project]))
+        .await?;
 
     render_html(state, xrn).await
 }
@@ -68,7 +67,7 @@ async fn render_dash(state: SqlState, xrn: ProjectXrn) -> WebResult<Body> {
 }
 
 async fn render_dash_primary(state: SqlState, xrn: ProjectXrn) -> WebResult<Body> {
-    let query = state.sqlfs.project_names().await?;
+    let query = state.sqlfs.query_stor(storapi_project_names_list).await?;
     #[derive(Serialize)]
     struct ProjectEntry {
         xrn: String,
