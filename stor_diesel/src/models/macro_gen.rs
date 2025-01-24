@@ -1,16 +1,16 @@
 use crate::err::StorDieselError;
 
 /// Handy to convert native SQL as raw text
-/// into Enums and chrono DateTimes
+/// into user-friendly Enums and chrono DateTimes
 #[macro_export]
 macro_rules! gen_try_from_converter {
-    ($struct_raw: ident, $struct_sql: ident, ( $($field_name_only: ident),+ ), $( ($field_name: ident, $convert: expr), )+ ) => {
+    ($struct_raw: ident, $struct_sql: ident, ( $($field_name_only: ident),* ), $( ($field_name: ident, $convert: expr), )+ ) => {
         impl TryFrom<$struct_raw> for $struct_sql {
             type Error = StorDieselError;
             fn try_from(value: $struct_raw) -> Result<Self, Self::Error> {
 
                 Ok($struct_sql {
-                    $( $field_name_only: value.$field_name_only, )+
+                    $( $field_name_only: value.$field_name_only, )*
                     $( $field_name: crate::models::macro_gen::ConvertWrap($convert(value.$field_name)).aconvert()?, )+
 
                 })

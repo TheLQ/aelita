@@ -2,9 +2,10 @@ use crate::err::{StorDieselError, StorDieselResult};
 use crate::models::date::StorDateType;
 use chrono::{Local, SecondsFormat};
 use serde::{Deserialize, Deserializer};
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 
+#[derive(Clone)]
 #[repr(transparent)]
 pub struct StorDate(StorDateType);
 
@@ -32,6 +33,12 @@ impl FromStr for StorDate {
 impl Display for StorDate {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.to_stor_string())
+    }
+}
+
+impl Debug for StorDate {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(self, f)
     }
 }
 

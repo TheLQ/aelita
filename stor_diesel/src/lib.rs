@@ -9,5 +9,6 @@ pub mod date_wrapper;
 pub mod err;
 #[allow(unused_imports)]
 pub mod schema;
+pub mod tests;
 
 pub use diesel as diesel_re;

@@ -1,8 +1,18 @@
--- Xrn > Registry
+-- Registry > Total
 
-CREATE TABLE `xrn_registry`
+CREATE TABLE `registry_ids`
 (
     `xrn`           VARCHAR(100) NOT NULL PRIMARY KEY,
+    `published`     VARCHAR(25)  NOT NULL COMMENT "timestamp_rfc3339",
+    `publish_cause` TEXT         NOT NULL
+);
+
+-- Registry > Links
+
+CREATE TABLE `registry_links`
+(
+    `xrn_source`    VARCHAR(100) NOT NULL PRIMARY KEY,
+    `xrn_target`    VARCHAR(100) NOT NULL,
     `published`     VARCHAR(25)  NOT NULL COMMENT "timestamp_rfc3339",
     `publish_cause` TEXT         NOT NULL
 );
@@ -29,19 +39,7 @@ CREATE TABLE `aproject_tasks`
     `publish_cause` TEXT             NOT NULL
 );
 
-CREATE TABLE `aproject_tasks_map`
-(
-    `xrn_task_id`   INTEGER UNSIGNED NOT NULL PRIMARY KEY,
-    `xrn`           VARCHAR(100)     NOT NULL,
-    `published`     VARCHAR(25)      NOT NULL COMMENT "timestamp_rfc3339",
-    `publish_cause` TEXT             NOT NULL,
-    FOREIGN KEY (xrn_task_id)
-        REFERENCES aproject_tasks (xrn_task_id) ON DELETE RESTRICT,
-    FOREIGN KEY (xrn)
-        REFERENCES xrn_registry (xrn) ON DELETE RESTRICT
-);
-
--- Label > Names
+-- Label
 
 CREATE TABLE `alabel_names`
 (
@@ -49,17 +47,5 @@ CREATE TABLE `alabel_names`
     `description`    TEXT         NOT NULL,
     `published`      VARCHAR(25)  NOT NULL COMMENT "timestamp_rfc3339",
     `publish_cause`  TEXT         NOT NULL
-);
-
-CREATE TABLE `alabel_names_map`
-(
-    `xrn_label_name` VARCHAR(100) NOT NULL PRIMARY KEY,
-    `xrn`            VARCHAR(100) NOT NULL,
-    `published`      VARCHAR(25)  NOT NULL COMMENT "timestamp_rfc3339",
-    `publish_cause`  TEXT         NOT NULL,
-    FOREIGN KEY (xrn_label_name)
-        REFERENCES alabel_names (xrn_label_name) ON DELETE RESTRICT,
-    FOREIGN KEY (xrn)
-        REFERENCES xrn_registry (xrn) ON DELETE RESTRICT
 );
 

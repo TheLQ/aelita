@@ -12,18 +12,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    alabel_names_map (xrn_label_name) {
-        #[max_length = 100]
-        xrn_label_name -> Varchar,
-        #[max_length = 100]
-        xrn -> Varchar,
-        #[max_length = 25]
-        published -> Varchar,
-        publish_cause -> Text,
-    }
-}
-
-diesel::table! {
     aproject_names (xrn_project_id) {
         xrn_project_id -> Unsigned<Integer>,
         title -> Text,
@@ -46,8 +34,7 @@ diesel::table! {
 }
 
 diesel::table! {
-    aproject_tasks_map (xrn_task_id) {
-        xrn_task_id -> Unsigned<Integer>,
+    registry_ids (xrn) {
         #[max_length = 100]
         xrn -> Varchar,
         #[max_length = 25]
@@ -57,25 +44,21 @@ diesel::table! {
 }
 
 diesel::table! {
-    xrn_registry (xrn) {
+    registry_links (xrn_source) {
         #[max_length = 100]
-        xrn -> Varchar,
+        xrn_source -> Varchar,
+        #[max_length = 100]
+        xrn_target -> Varchar,
         #[max_length = 25]
         published -> Varchar,
         publish_cause -> Text,
     }
 }
 
-diesel::joinable!(alabel_names_map -> alabel_names (xrn_label_name));
-diesel::joinable!(alabel_names_map -> xrn_registry (xrn));
-diesel::joinable!(aproject_tasks_map -> aproject_tasks (xrn_task_id));
-diesel::joinable!(aproject_tasks_map -> xrn_registry (xrn));
-
 diesel::allow_tables_to_appear_in_same_query!(
     alabel_names,
-    alabel_names_map,
     aproject_names,
     aproject_tasks,
-    aproject_tasks_map,
-    xrn_registry,
+    registry_ids,
+    registry_links,
 );

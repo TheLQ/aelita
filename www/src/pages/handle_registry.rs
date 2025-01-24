@@ -1,20 +1,29 @@
 use crate::controllers::handlebars::HandlebarsPage;
 use crate::controllers::sqlcontroller::SqlState;
 use crate::err::WebResult;
-use aelita_stor_diesel::api::api_xrn_registry::{storapi_xrns_list, storapi_xrns_push};
-use aelita_stor_diesel::models::NewXrnExtraction;
+use aelita_stor_diesel::api::api_registry_ids::{
+    storapi_registry_ids_list, storapi_registry_ids_push,
+};
+use aelita_stor_diesel::date_wrapper::StorDate;
+use aelita_stor_diesel::models::NewModelRegistryId;
+use aelita_xrn::defs::address::XrnAddr;
 use axum::Form;
 use axum::body::Body;
 use axum::extract::{Path, State};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use std::sync::LazyLock;
 
 pub async fn handle_registry_root(
     State(state): State<SqlState>,
     Path(xrn): Path<String>,
 ) -> String {
-    let query = state.sqlfs.query_stor(storapi_xrns_list).await.unwrap();
+    let query = state
+        .sqlfs
+        .query_stor(storapi_registry_ids_list)
+        .await
+        .unwrap();
 
     let extraction = query.into_iter().map(|v| format!("{:?}", v)).join("'");
     let url_xrn = xrn;
@@ -22,7 +31,7 @@ pub async fn handle_registry_root(
 }
 
 async fn render_html(state: SqlState, _xrn: String) -> WebResult<Body> {
-    let query = state.sqlfs.query_stor(storapi_xrns_list).await?;
+    let query = state.sqlfs.query_stor(storapi_registry_ids_list).await?;
 
     #[derive(Serialize)]
     struct XrnEntry {
@@ -37,7 +46,7 @@ async fn render_html(state: SqlState, _xrn: String) -> WebResult<Body> {
         xrns: query
             .into_iter()
             .map(|extract| XrnEntry {
-                xrn: extract.xrn,
+                xrn: extract.xrn.to_string(),
                 published: extract.published.to_string(),
             })
             .collect(),
@@ -63,14 +72,13 @@ pub async fn handle_registry_html_post(
     Path(xrn): Path<String>,
     Form(form): Form<PagePost>,
 ) -> WebResult<Body> {
-    let new = vec![NewXrnExtraction {
-        xrn: form.xrn_name,
-        // todo
-        published: "todo".into(),
+    let new = vec![NewModelRegistryId {
+        xrn: XrnAddr::from_str(&form.xrn_name)?,
+        published: StorDate::now(),
     }];
     state
         .sqlfs
-        .query_stor(|conn| storapi_xrns_push(conn, new))
+        .query_stor(|conn| storapi_registry_ids_push(conn, new))
         .await?;
 
     // show same page

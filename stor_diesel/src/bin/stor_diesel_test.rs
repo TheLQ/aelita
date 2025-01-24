@@ -1,32 +1,21 @@
+use aelita_commons::err_utils::pretty_error;
+use aelita_commons::logs::log_init_trace;
 use aelita_stor_diesel::connection::establish_connection;
-use aelita_stor_diesel::models::xrn_registry::XrnExtraction;
-use aelita_stor_diesel::models::*;
-use aelita_stor_diesel::schema::xrn_registry::dsl::xrn_registry;
-use diesel::prelude::*;
+use aelita_stor_diesel::tests::todo_list::create_todo_list;
 
 fn main() {
-    let connection = &mut establish_connection();
+    log_init_trace();
 
-    let new_post = NewXrnExtraction {
-        xrn: "asdf".into(),
-        published: "asdf".into(),
+    let conn = &mut establish_connection();
+
+    let res = match 1 {
+        1 => create_todo_list(conn),
+        i => {
+            panic!("unhandled number {}", i)
+        }
     };
 
-    diesel::insert_into(xrn_registry)
-        .values(&new_post)
-        .execute(connection)
-        .expect("Error saving new post");
-    println!("inserted post");
-
-    let results = xrn_registry
-        .select(XrnExtraction::as_select())
-        .load(connection)
-        .expect("Error loading posts");
-
-    println!("Displaying {} posts", results.len());
-    for post in results {
-        println!("{}", post.xrn);
-        println!("-----------\n");
-        println!("{}", post.published);
+    if let Err(e) = res {
+        panic!("MainFail {}", pretty_error(e))
     }
 }
