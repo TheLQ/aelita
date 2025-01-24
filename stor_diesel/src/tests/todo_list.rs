@@ -1,23 +1,16 @@
-use crate::api::api_project::{
-    storapi_project_names_list, storapi_project_names_list_range, storapi_project_names_push,
-    storapi_project_names_push_and_get, storapi_project_names_reset,
-};
+use crate::api::api_project::{storapi_project_names_push_and_get, storapi_project_names_reset};
 use crate::api::api_registry_ids::{storapi_registry_ids_push, storapi_registry_ids_reset};
 use crate::date_wrapper::StorDate;
 use crate::err::StorDieselResult;
 use crate::models::{ModelProjectName, ModelRegistryId, NewModelProjectName};
-use crate::schema::registry_ids::dsl::registry_ids;
 use aelita_commons::tracing_re::info;
-use aelita_xrn::defs::address::{XrnAddr, XrnAddrType};
-use aelita_xrn::defs::project_xrn::{ProjectTypeXrn, ProjectXrn};
-use diesel::prelude::*;
-use diesel::{MysqlConnection, RunQueryDsl};
+use diesel::MysqlConnection;
 
 pub fn create_todo_list(conn: &mut MysqlConnection) -> StorDieselResult<()> {
     info!("TheWhiteBoard");
 
     let current_time = StorDate::now();
-    let model = Model::synthesize(conn, current_time.clone())?;
+    Model::synthesize(conn, current_time.clone())?;
     Ok(())
 }
 
@@ -107,6 +100,4 @@ impl Model {
 
         Ok(())
     }
-
-    fn projects_paper
 }
