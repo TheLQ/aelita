@@ -5,7 +5,7 @@ use serde::{Deserialize, Deserializer};
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 #[repr(transparent)]
 pub struct StorDate(StorDateType);
 

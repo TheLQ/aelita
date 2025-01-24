@@ -5,7 +5,7 @@ use crate::api::api_project::{
 use crate::api::api_registry_ids::{storapi_registry_ids_push, storapi_registry_ids_reset};
 use crate::date_wrapper::StorDate;
 use crate::err::StorDieselResult;
-use crate::models::{NewModelProject, NewModelRegistryId};
+use crate::models::{ModelProject, NewModelProject, NewModelRegistryId};
 use crate::schema::registry_ids::dsl::registry_ids;
 use aelita_commons::tracing_re::info;
 use aelita_xrn::defs::address::{XrnAddr, XrnAddrType};
@@ -23,74 +23,73 @@ pub fn create_todo_list(conn: &mut MysqlConnection) -> StorDieselResult<()> {
 
 #[derive(Default)]
 struct Model {
-    registry_ids: Vec<NewModelRegistryId>,
-    project_names: Vec<NewModelProject>,
+    projects: Vec<ModelProject>,
+    current_time: StorDate,
 }
 
 impl Model {
     pub fn synthesize(conn: &mut MysqlConnection, current_time: StorDate) -> StorDieselResult<()> {
         let mut model = Self::default();
+        model.current_time = current_time.clone();
 
+        model.reset(conn)?;
+
+        model.projects_initial_1(conn)?;
+        model.projects_initial_2(conn)?;
+
+        Ok(())
+    }
+
+    fn reset(&mut self, conn: &mut MysqlConnection) -> StorDieselResult<()> {
         let added_rows = storapi_registry_ids_reset(conn)?;
         info!("reset registry_ids of {} rows", added_rows);
         let added_rows = storapi_project_names_reset(conn)?;
         info!("reset project_names of {} rows", added_rows);
+        Ok(())
+    }
 
+    fn projects_initial_1(&mut self, conn: &mut MysqlConnection) -> StorDieselResult<()> {
         info!("start push1");
-        model.project_names.push(NewModelProject {
+        let mut project_names: Vec<NewModelProject> = Vec::new();
+        project_names.push(NewModelProject {
             title: "alpha".into(),
             description: "what what??".into(),
-            published: current_time.clone(),
+            published: self.current_time.clone(),
             publish_cause: "todo_list init".into(),
         });
 
-        let output_projects_ids = storapi_project_names_push(conn, model.project_names)?;
-        let output_projects = storapi_project_names_list_range(conn, output_projects_ids.clone())?;
-        info!(
-            "range {}..{} re-fetch found {}",
-            output_projects_ids.start,
-            output_projects_ids.end,
-            output_projects.len(),
-        );
-        for project in output_projects {
-            info!("project {:?}", project);
+        let output_projects_ids = storapi_project_names_push(conn, project_names)?;
+        let mut output_projects =
+            storapi_project_names_list_range(conn, output_projects_ids.clone())?;
+        for project in &output_projects {
+            info!("Inserted Project {:?}", project);
         }
+        self.projects.append(&mut output_projects);
+        Ok(())
+    }
 
+    fn projects_initial_2(&mut self, conn: &mut MysqlConnection) -> StorDieselResult<()> {
         info!("start push2");
-        model.project_names = Vec::new();
-        model.project_names.push(NewModelProject {
+        let mut project_names = Vec::new();
+        project_names.push(NewModelProject {
             title: "beta".into(),
             description: "hell yea brother??".into(),
-            published: current_time.clone(),
+            published: self.current_time.clone(),
             publish_cause: "todo_list init".into(),
         });
-        model.project_names.push(NewModelProject {
+        project_names.push(NewModelProject {
             title: "gamma".into(),
             description: "yeaoo??".into(),
-            published: current_time.clone(),
+            published: self.current_time.clone(),
             publish_cause: "todo_list init".into(),
         });
 
-        let output_projects_ids = storapi_project_names_push(conn, model.project_names)?;
-        let output_projects = storapi_project_names_list_range(conn, output_projects_ids)?;
-        for project in output_projects {
+        let output_projects_ids = storapi_project_names_push(conn, project_names)?;
+        let mut output_projects = storapi_project_names_list_range(conn, output_projects_ids)?;
+        for project in &output_projects {
             info!("project {:?}", project);
         }
-
-        // let project_alpha_xrn = ProjectTypeXrn::Paper.into_xrn(1);
-        // let project_beta_xrn = ProjectTypeXrn::Paper.into_xrn(2);
-        // let project_gamma_xrn = ProjectTypeXrn::Paper.into_xrn(3);
-        // let all_projects = [project_alpha_xrn, project_beta_xrn, project_gamma_xrn].clone();
-        //
-        // for project in all_projects {
-        //     model.registry_ids.push(NewModelRegistryId {
-        //         xrn: project.into_addr(),
-        //         published: current_time.clone(),
-        //         publish_cause: "todo_list init".into(),
-        //     });
-        // }
-        //
-
+        self.projects.append(&mut output_projects);
         Ok(())
     }
 }
