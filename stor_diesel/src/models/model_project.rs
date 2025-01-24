@@ -8,7 +8,7 @@ use serde::Deserialize;
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = crate::schema::aproject_names)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
-pub struct ModelProjectSql {
+pub struct ModelProjectNameSql {
     xrn_project_id: u32,
     title: String,
     published: String,
@@ -16,29 +16,29 @@ pub struct ModelProjectSql {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ModelProject {
+pub struct ModelProjectName {
     pub xrn_project_id: u32,
     pub title: String,
     pub published: StorDate,
     pub description: String,
 }
 
-impl ModelProject {
+impl ModelProjectName {
     pub fn xrn(&self) -> ProjectXrn {
         ProjectXrn::new(ProjectTypeXrn::Paper, self.xrn_project_id)
     }
 }
 
 gen_try_from_converter!(
-    ModelProject,
-    ModelProjectSql,
+    ModelProjectName,
+    ModelProjectNameSql,
     (title, description, xrn_project_id),
     (published, |v: StorDate| v.to_stor_string()),
 );
 
 gen_try_from_converter!(
-    ModelProjectSql,
-    ModelProject,
+    ModelProjectNameSql,
+    ModelProjectName,
     (title, description, xrn_project_id),
     (published, StorDate::from_string),
 );
@@ -48,7 +48,7 @@ gen_try_from_converter!(
 #[derive(Insertable, Debug)]
 #[diesel(table_name = crate::schema::aproject_names)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
-pub struct NewModelProjectSql {
+pub struct NewModelProjectNameSql {
     title: String,
     description: String,
     published: String,
@@ -56,7 +56,7 @@ pub struct NewModelProjectSql {
 }
 
 #[derive(Deserialize)]
-pub struct NewModelProject {
+pub struct NewModelProjectName {
     pub title: String,
     pub description: String,
     pub published: StorDate,
@@ -64,8 +64,8 @@ pub struct NewModelProject {
 }
 
 gen_try_from_converter!(
-    NewModelProject,
-    NewModelProjectSql,
+    NewModelProjectName,
+    NewModelProjectNameSql,
     (title, description, publish_cause),
     (published, |v: StorDate| v.to_stor_string()),
 );

@@ -6,7 +6,7 @@ use aelita_stor_diesel::api::api_project::{
     storapi_project_names_list, storapi_project_names_push,
 };
 use aelita_stor_diesel::date_wrapper::StorDate;
-use aelita_stor_diesel::models::NewModelProject;
+use aelita_stor_diesel::models::NewModelProjectName;
 use aelita_xrn::defs::project_xrn::{ProjectTypeXrn, ProjectXrn};
 use axum::Form;
 use axum::body::Body;
@@ -45,7 +45,7 @@ pub async fn handle_project_post(
     }
 
     let published: StorDate = StorDate::now();
-    let project = NewModelProject {
+    let project = NewModelProjectName {
         title,
         published,
         description,

@@ -1,6 +1,8 @@
 use crate::api::common::{StorConnection, check_insert_num_rows};
 use crate::err::StorDieselResult;
-use crate::models::{ModelProject, ModelProjectSql, NewModelProject, NewModelProjectSql};
+use crate::models::{
+    ModelProjectName, ModelProjectNameSql, NewModelProjectName, NewModelProjectNameSql,
+};
 use crate::schema::aproject_names;
 use aelita_commons::tracing_re::debug;
 use diesel::dsl::*;
@@ -10,9 +12,9 @@ use std::ops::Range;
 
 pub fn storapi_project_names_list(
     conn: &mut StorConnection,
-) -> StorDieselResult<Vec<ModelProject>> {
+) -> StorDieselResult<Vec<ModelProjectName>> {
     let projects_sql = aproject_names::table
-        .select(ModelProjectSql::as_select())
+        .select(ModelProjectNameSql::as_select())
         .load(conn)?;
     projects_sql
         .into_iter()
@@ -23,10 +25,10 @@ pub fn storapi_project_names_list(
 pub fn storapi_project_names_list_range(
     conn: &mut StorConnection,
     id_range: Range<u32>,
-) -> StorDieselResult<Vec<ModelProject>> {
+) -> StorDieselResult<Vec<ModelProjectName>> {
     debug!("range {}..{}", id_range.start, id_range.end);
     let projects_sql = aproject_names::table
-        .select(ModelProjectSql::as_select())
+        .select(ModelProjectNameSql::as_select())
         .filter(aproject_names::xrn_project_id.gt(id_range.start))
         .limit((id_range.end - id_range.start).into())
         .load(conn)?;
@@ -38,9 +40,9 @@ pub fn storapi_project_names_list_range(
 
 pub fn storapi_project_names_push(
     conn: &mut StorConnection,
-    new: Vec<NewModelProject>,
+    new: Vec<NewModelProjectName>,
 ) -> StorDieselResult<Range<u32>> {
-    let new: Vec<NewModelProjectSql> = new.into_iter().map(TryInto::try_into).try_collect()?;
+    let new: Vec<NewModelProjectNameSql> = new.into_iter().map(TryInto::try_into).try_collect()?;
     let new_len = new.len();
 
     let tx_res: StorDieselResult<Range<u32>> = conn.transaction(|conn| {
@@ -64,8 +66,8 @@ pub fn storapi_project_names_push(
 
 pub fn storapi_project_names_push_and_get(
     conn: &mut StorConnection,
-    new: Vec<NewModelProject>,
-) -> StorDieselResult<Vec<ModelProject>> {
+    new: Vec<NewModelProjectName>,
+) -> StorDieselResult<Vec<ModelProjectName>> {
     let range = storapi_project_names_push(conn, new)?;
     storapi_project_names_list_range(conn, range)
 }

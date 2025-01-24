@@ -5,7 +5,7 @@ use crate::api::api_project::{
 use crate::api::api_registry_ids::{storapi_registry_ids_push, storapi_registry_ids_reset};
 use crate::date_wrapper::StorDate;
 use crate::err::StorDieselResult;
-use crate::models::{ModelProject, ModelRegistryId, NewModelProject};
+use crate::models::{ModelProjectName, ModelRegistryId, NewModelProjectName};
 use crate::schema::registry_ids::dsl::registry_ids;
 use aelita_commons::tracing_re::info;
 use aelita_xrn::defs::address::{XrnAddr, XrnAddrType};
@@ -23,7 +23,7 @@ pub fn create_todo_list(conn: &mut MysqlConnection) -> StorDieselResult<()> {
 
 #[derive(Default)]
 struct Model {
-    projects: Vec<ModelProject>,
+    projects: Vec<ModelProjectName>,
     current_time: StorDate,
 }
 
@@ -51,8 +51,8 @@ impl Model {
 
     fn projects_initial_1(&mut self, conn: &mut MysqlConnection) -> StorDieselResult<()> {
         info!("start push1");
-        let mut project_names: Vec<NewModelProject> = Vec::new();
-        project_names.push(NewModelProject {
+        let mut project_names: Vec<NewModelProjectName> = Vec::new();
+        project_names.push(NewModelProjectName {
             title: "alpha".into(),
             description: "what what??".into(),
             published: self.current_time.clone(),
@@ -70,13 +70,13 @@ impl Model {
     fn projects_initial_2(&mut self, conn: &mut MysqlConnection) -> StorDieselResult<()> {
         info!("start push2");
         let mut project_names = Vec::new();
-        project_names.push(NewModelProject {
+        project_names.push(NewModelProjectName {
             title: "beta".into(),
             description: "hell yea brother??".into(),
             published: self.current_time.clone(),
             publish_cause: "todo_list init".into(),
         });
-        project_names.push(NewModelProject {
+        project_names.push(NewModelProjectName {
             title: "gamma".into(),
             description: "yeaoo??".into(),
             published: self.current_time.clone(),
@@ -107,4 +107,6 @@ impl Model {
 
         Ok(())
     }
+
+    fn projects_paper
 }
