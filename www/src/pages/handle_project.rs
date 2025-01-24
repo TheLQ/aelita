@@ -36,9 +36,10 @@ pub async fn handle_project_post(
     }): Form<PostData>,
 ) -> WebResult<Body> {
     let published: StorDate = StorDate::now();
+    let xrn_project_id: u32 = id.parse().unwrap();
 
     let project = ModelProject {
-        xrn: ProjectXrn::new(ProjectTypeXrn::from_str(&project_type)?, id.parse()?),
+        xrn_project_id,
         title,
         published,
     };
@@ -80,7 +81,7 @@ async fn render_dash_primary(state: SqlState, xrn: ProjectXrn) -> WebResult<Body
         projects: query
             .into_iter()
             .map(|extract| ProjectEntry {
-                xrn: extract.xrn.to_string(),
+                xrn: extract.xrn_project_id.to_string(),
                 published: extract.published.to_stor_string(),
                 title: extract.title,
             })

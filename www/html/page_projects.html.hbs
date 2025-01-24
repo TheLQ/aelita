@@ -1,9 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- fix xrn with path seps -->
-    <base href="/">
-
     <title>Aelita Projects</title>
 </head>
 <body>
@@ -11,7 +8,7 @@
 <h1>Dashboard {{dash_name}}</h1>
 <div>
     {{#each projects}}
-        <p><a href="./{{xrn}}">{{xrn}}</a></p>
+        <p><a href="/{{xrn}}">{{xrn}}</a></p>
         <p>{{published}}</p>
         <p>title {{title}}</p>
     {{/each}}

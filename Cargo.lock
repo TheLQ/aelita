@@ -30,6 +30,7 @@ dependencies = [
 name = "aelita_stor_diesel"
 version = "0.1.0"
 dependencies = [
+ "aelita_commons",
  "aelita_xrn",
  "chrono",
  "diesel",

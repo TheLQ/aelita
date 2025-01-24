@@ -24,7 +24,7 @@ pub struct NewModelProjectSql {
 
 #[derive(Deserialize)]
 pub struct ModelProject {
-    xrn_project_id: u32,
+    pub xrn_project_id: u32,
     pub title: String,
     pub published: StorDate,
 }
@@ -53,25 +53,27 @@ impl TryFrom<ModelProjectSql> for ModelProject {
     }
 }
 
-impl From<ModelProject> for ModelProjectSql {
-    fn from(
+impl TryFrom<ModelProject> for ModelProjectSql {
+    type Error = StorDieselError;
+    fn try_from(
         ModelProject {
             xrn_project_id,
             title,
             published,
         }: ModelProject,
-    ) -> Self {
+    ) -> Result<Self, Self::Error> {
         let published = published.to_stor_string();
         assert!(
+            // todo: can we read max_len from schema?
             published.len() <= 25,
             "ModelProject_len {} for {}",
             published.len(),
             published
         );
-        ModelProjectSql {
-            xrn_project_id: xrn.id(),
+        Ok(ModelProjectSql {
+            xrn_project_id: xrn_project_id.try_into()?,
             title,
             published,
-        }
+        })
     }
 }

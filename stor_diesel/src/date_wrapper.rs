@@ -1,5 +1,5 @@
 use crate::err::StorDieselError;
-use crate::models::StorDateType;
+use crate::models::date::StorDateType;
 use chrono::{Local, SecondsFormat};
 use serde::{Deserialize, Deserializer};
 use std::fmt::{Display, Formatter};

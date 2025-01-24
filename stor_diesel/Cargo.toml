@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+aelita_commons = { path = "../commons" }
 aelita_xrn = { path = "../xrn" }
 #
 serde = { workspace = true }
