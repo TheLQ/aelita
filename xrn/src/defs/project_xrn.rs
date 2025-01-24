@@ -98,6 +98,12 @@ impl Display for ProjectXrn {
     }
 }
 
+impl ProjectTypeXrn {
+    pub fn into_xrn(self, id: u32) -> ProjectXrn {
+        ProjectXrn::new(self, id)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::defs::project_xrn::{ProjectTypeXrn, ProjectXrn};

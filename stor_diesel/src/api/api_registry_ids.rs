@@ -4,7 +4,7 @@ use crate::models::{
     ModelRegistryId, ModelRegistryIdSql, NewModelRegistryId, NewModelRegistryIdSql,
 };
 use crate::schema::registry_ids;
-use diesel::dsl::{count, delete, insert_into};
+use diesel::dsl::{delete, insert_into};
 use diesel::prelude::*;
 
 pub fn storapi_registry_ids_list(

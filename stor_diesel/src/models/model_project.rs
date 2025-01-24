@@ -1,6 +1,7 @@
 use crate::date_wrapper::StorDate;
 use crate::err::StorDieselError;
 use crate::gen_try_from_converter;
+use crate::schema::alabel_names::publish_cause;
 use aelita_xrn::defs::project_xrn::{ProjectTypeXrn, ProjectXrn};
 use diesel::{Insertable, Queryable, Selectable};
 use serde::Deserialize;
@@ -15,7 +16,7 @@ pub struct ModelProjectSql {
     description: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct ModelProject {
     pub xrn_project_id: u32,
     pub title: String,
@@ -50,20 +51,22 @@ gen_try_from_converter!(
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct NewModelProjectSql {
     title: String,
-    published: String,
     description: String,
+    published: String,
+    publish_cause: String,
 }
 
 #[derive(Deserialize)]
 pub struct NewModelProject {
     pub title: String,
-    pub published: StorDate,
     pub description: String,
+    pub published: StorDate,
+    pub publish_cause: String,
 }
 
 gen_try_from_converter!(
     NewModelProject,
     NewModelProjectSql,
-    (title, description),
+    (title, description, publish_cause),
     (published, |v: StorDate| v.to_stor_string()),
 );
