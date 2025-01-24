@@ -13,7 +13,7 @@ use strum::{AsRefStr, EnumString};
 #[derive(Debug, Clone)]
 pub struct ProjectXrn {
     ptype: ProjectTypeXrn,
-    id: u64,
+    id: u32,
 }
 
 #[derive(Debug, Clone, AsRefStr, EnumString, PartialEq, Deserialize)]
@@ -26,7 +26,7 @@ pub enum ProjectTypeXrn {
 }
 
 impl ProjectXrn {
-    pub fn new(ptype: ProjectTypeXrn, id: u64) -> Self {
+    pub fn new(ptype: ProjectTypeXrn, id: u32) -> Self {
         Self { ptype, id }
     }
 
@@ -34,7 +34,7 @@ impl ProjectXrn {
         &self.ptype
     }
 
-    pub fn id(&self) -> u64 {
+    pub fn id(&self) -> u32 {
         self.id
     }
 
