@@ -1,7 +1,6 @@
 use crate::date_wrapper::StorDate;
 use crate::err::StorDieselError;
 use crate::gen_try_from_converter;
-use crate::schema::alabel_names::publish_cause;
 use aelita_xrn::defs::project_xrn::{ProjectTypeXrn, ProjectXrn};
 use diesel::{Insertable, Queryable, Selectable};
 use serde::Deserialize;

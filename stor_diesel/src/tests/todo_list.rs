@@ -1,11 +1,11 @@
 use crate::api::api_project::{
     storapi_project_names_list, storapi_project_names_list_range, storapi_project_names_push,
-    storapi_project_names_reset,
+    storapi_project_names_push_and_get, storapi_project_names_reset,
 };
 use crate::api::api_registry_ids::{storapi_registry_ids_push, storapi_registry_ids_reset};
 use crate::date_wrapper::StorDate;
 use crate::err::StorDieselResult;
-use crate::models::{ModelProject, NewModelProject, NewModelRegistryId};
+use crate::models::{ModelProject, ModelRegistryId, NewModelProject};
 use crate::schema::registry_ids::dsl::registry_ids;
 use aelita_commons::tracing_re::info;
 use aelita_xrn::defs::address::{XrnAddr, XrnAddrType};
@@ -36,6 +36,7 @@ impl Model {
 
         model.projects_initial_1(conn)?;
         model.projects_initial_2(conn)?;
+        model.register_project_xrn(conn)?;
 
         Ok(())
     }
@@ -58,9 +59,7 @@ impl Model {
             publish_cause: "todo_list init".into(),
         });
 
-        let output_projects_ids = storapi_project_names_push(conn, project_names)?;
-        let mut output_projects =
-            storapi_project_names_list_range(conn, output_projects_ids.clone())?;
+        let mut output_projects = storapi_project_names_push_and_get(conn, project_names)?;
         for project in &output_projects {
             info!("Inserted Project {:?}", project);
         }
@@ -84,12 +83,28 @@ impl Model {
             publish_cause: "todo_list init".into(),
         });
 
-        let output_projects_ids = storapi_project_names_push(conn, project_names)?;
-        let mut output_projects = storapi_project_names_list_range(conn, output_projects_ids)?;
+        let mut output_projects = storapi_project_names_push_and_get(conn, project_names)?;
         for project in &output_projects {
             info!("project {:?}", project);
         }
         self.projects.append(&mut output_projects);
+        Ok(())
+    }
+
+    fn register_project_xrn(&mut self, conn: &mut MysqlConnection) -> StorDieselResult<()> {
+        let new: Vec<ModelRegistryId> = self
+            .projects
+            .iter()
+            .map(|v| ModelRegistryId {
+                xrn: v.xrn().into_addr(),
+                published: self.current_time.clone(),
+                publish_cause: "todo_list init".into(),
+            })
+            .collect();
+        let new_len = new.len();
+        storapi_registry_ids_push(conn, new)?;
+        info!("registry new ids {}", new_len);
+
         Ok(())
     }
 }

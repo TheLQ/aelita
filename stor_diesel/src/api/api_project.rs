@@ -1,8 +1,8 @@
 use crate::api::common::{StorConnection, check_insert_num_rows};
 use crate::err::StorDieselResult;
 use crate::models::{ModelProject, ModelProjectSql, NewModelProject, NewModelProjectSql};
-use crate::schema::{aproject_names, registry_ids};
-use aelita_commons::tracing_re::{debug, trace};
+use crate::schema::aproject_names;
+use aelita_commons::tracing_re::debug;
 use diesel::dsl::*;
 use diesel::insert_into;
 use diesel::prelude::*;
@@ -60,6 +60,14 @@ pub fn storapi_project_names_push(
         Ok(id_range)
     });
     Ok(tx_res?)
+}
+
+pub fn storapi_project_names_push_and_get(
+    conn: &mut StorConnection,
+    new: Vec<NewModelProject>,
+) -> StorDieselResult<Vec<ModelProject>> {
+    let range = storapi_project_names_push(conn, new)?;
+    storapi_project_names_list_range(conn, range)
 }
 
 pub fn storapi_project_names_reset(conn: &mut StorConnection) -> StorDieselResult<usize> {

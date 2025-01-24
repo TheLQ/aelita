@@ -1,8 +1,6 @@
 use crate::api::common::{StorConnection, check_insert_num_rows};
 use crate::err::StorDieselResult;
-use crate::models::{
-    ModelRegistryId, ModelRegistryIdSql, NewModelRegistryId, NewModelRegistryIdSql,
-};
+use crate::models::{ModelRegistryId, ModelRegistryIdSql};
 use crate::schema::registry_ids;
 use diesel::dsl::{delete, insert_into};
 use diesel::prelude::*;
@@ -18,9 +16,9 @@ pub fn storapi_registry_ids_list(
 
 pub fn storapi_registry_ids_push(
     conn: &mut StorConnection,
-    new: Vec<NewModelRegistryId>,
+    new: Vec<ModelRegistryId>,
 ) -> StorDieselResult<()> {
-    let new: Vec<NewModelRegistryIdSql> = new.into_iter().map(TryFrom::try_from).try_collect()?;
+    let new: Vec<ModelRegistryIdSql> = new.into_iter().map(TryFrom::try_from).try_collect()?;
     check_insert_num_rows(
         new.len(),
         insert_into(registry_ids::table).values(&new).execute(conn),
