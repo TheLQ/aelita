@@ -24,11 +24,6 @@ pub enum WebError {
     #[error("WebError_Deadpool {0:?}")]
     Deadpool(#[from] deadpool_diesel::PoolError, Backtrace),
 
-    // #[error("WebError_Diesel {0:?}")]
-    // Diesel(
-    //     #[from] aelita_stor_diesel::diesel_re::result::Error,
-    //     Backtrace,
-    // ),
     #[error("WebError_Strum {0:?}")]
     Strum(#[from] strum::ParseError, Backtrace),
 

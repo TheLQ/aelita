@@ -26,6 +26,7 @@ pub async fn handle_project(
 pub struct PostData {
     pub project_type: String,
     pub title: String,
+    pub description: String,
 }
 
 pub async fn handle_project_post(
@@ -34,6 +35,7 @@ pub async fn handle_project_post(
     Form(PostData {
         project_type,
         title,
+        description,
     }): Form<PostData>,
 ) -> WebResult<Body> {
     let project_type = ProjectTypeXrn::from_str(&project_type)?;
@@ -43,7 +45,11 @@ pub async fn handle_project_post(
     }
 
     let published: StorDate = StorDate::now();
-    let project = NewModelProject { title, published };
+    let project = NewModelProject {
+        title,
+        published,
+        description,
+    };
     state
         .sqlfs
         .query_stor(|conn| storapi_project_names_push(conn, vec![project]))
@@ -84,7 +90,7 @@ async fn render_dash_primary(state: SqlState, xrn: ProjectXrn) -> WebResult<Body
         projects: query
             .into_iter()
             .map(|extract| ProjectEntry {
-                xrn: extract.xrn_project_id.to_string(),
+                xrn: extract.xrn().to_string(),
                 published: extract.published.to_stor_string(),
                 title: extract.title,
             })
