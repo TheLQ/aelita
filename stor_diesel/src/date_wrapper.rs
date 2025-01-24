@@ -1,4 +1,4 @@
-use crate::err::StorDieselError;
+use crate::err::{StorDieselError, StorDieselResult};
 use crate::models::date::StorDateType;
 use chrono::{Local, SecondsFormat};
 use serde::{Deserialize, Deserializer};
@@ -11,6 +11,10 @@ pub struct StorDate(StorDateType);
 impl StorDate {
     pub fn now() -> Self {
         Self(Local::now().into())
+    }
+
+    pub fn from_string(value: String) -> StorDieselResult<Self> {
+        Self::from_str(&value)
     }
 
     pub fn to_stor_string(&self) -> String {

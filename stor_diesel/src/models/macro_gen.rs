@@ -1,5 +1,7 @@
 use crate::err::StorDieselError;
 
+/// Handy to convert native SQL as raw text
+/// into Enums and chrono DateTimes
 #[macro_export]
 macro_rules! gen_try_from_converter {
     ($struct_raw: ident, $struct_sql: ident, ( $($field_name_only: ident),+ ), $( ($field_name: ident, $convert: expr), )+ ) => {
@@ -9,7 +11,7 @@ macro_rules! gen_try_from_converter {
 
                 Ok($struct_sql {
                     $( $field_name_only: value.$field_name_only, )+
-                    $( $field_name: ConvertWrap($convert(value.$field_name)).aconvert()?, )+
+                    $( $field_name: crate::models::macro_gen::ConvertWrap($convert(value.$field_name)).aconvert()?, )+
 
                 })
             }
@@ -18,19 +20,20 @@ macro_rules! gen_try_from_converter {
 }
 
 /// Conversions can return either the value or a Result with the value
-struct ConvertWrap<T>(T);
+/// so the macro can always use ?
+pub struct ConvertWrap<T>(pub T);
 
 impl<R, E> ConvertWrap<Result<R, E>>
 where
     StorDieselError: From<E>,
 {
-    fn aconvert(self) -> Result<R, StorDieselError> {
+    pub fn aconvert(self) -> Result<R, StorDieselError> {
         self.0.map_err(Into::into)
     }
 }
 
 impl ConvertWrap<String> {
-    fn aconvert(self) -> Result<String, StorDieselError> {
+    pub fn aconvert(self) -> Result<String, StorDieselError> {
         Ok(self.0)
     }
 }

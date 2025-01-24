@@ -11,30 +11,30 @@ CREATE TABLE `xrn_registry`
 
 CREATE TABLE `aproject_names`
 (
-    `xrn_project_id` INTEGER     NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `title`          TEXT        NOT NULL,
-    `description`    TEXT        NOT NULL,
-    `published`      VARCHAR(25) NOT NULL COMMENT "timestamp_rfc3339",
-    `publish_cause`  TEXT        NOT NULL
+    `xrn_project_id` INTEGER UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `title`          TEXT             NOT NULL,
+    `description`    TEXT             NOT NULL,
+    `published`      VARCHAR(25)      NOT NULL COMMENT "timestamp_rfc3339",
+    `publish_cause`  TEXT             NOT NULL
 );
 
 -- Project > Tasks
 
 CREATE TABLE `aproject_tasks`
 (
-    `xrn_task_id`   INTEGER     NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `title`         TEXT        NOT NULL,
-    `description`   TEXT        NOT NULL,
-    `published`     VARCHAR(25) NOT NULL COMMENT "timestamp_rfc3339",
-    `publish_cause` TEXT        NOT NULL
+    `xrn_task_id`   INTEGER UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `title`         TEXT             NOT NULL,
+    `description`   TEXT             NOT NULL,
+    `published`     VARCHAR(25)      NOT NULL COMMENT "timestamp_rfc3339",
+    `publish_cause` TEXT             NOT NULL
 );
 
 CREATE TABLE `aproject_tasks_map`
 (
-    `xrn_task_id`   INTEGER     NOT NULL PRIMARY KEY,
-    `xrn`           INTEGER     NOT NULL,
-    `published`     VARCHAR(25) NOT NULL COMMENT "timestamp_rfc3339",
-    `publish_cause` TEXT        NOT NULL,
+    `xrn_task_id`   INTEGER UNSIGNED NOT NULL PRIMARY KEY,
+    `xrn`           VARCHAR(100)     NOT NULL,
+    `published`     VARCHAR(25)      NOT NULL COMMENT "timestamp_rfc3339",
+    `publish_cause` TEXT             NOT NULL,
     FOREIGN KEY (xrn_task_id)
         REFERENCES aproject_tasks (xrn_task_id) ON DELETE RESTRICT,
     FOREIGN KEY (xrn)
@@ -54,7 +54,7 @@ CREATE TABLE `alabel_names`
 CREATE TABLE `alabel_names_map`
 (
     `xrn_label_name` VARCHAR(100) NOT NULL PRIMARY KEY,
-    `xrn`            INTEGER      NOT NULL,
+    `xrn`            VARCHAR(100) NOT NULL,
     `published`      VARCHAR(25)  NOT NULL COMMENT "timestamp_rfc3339",
     `publish_cause`  TEXT         NOT NULL,
     FOREIGN KEY (xrn_label_name)

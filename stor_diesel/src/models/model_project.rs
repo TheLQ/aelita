@@ -4,13 +4,12 @@ use crate::gen_try_from_converter;
 use aelita_xrn::defs::project_xrn::{ProjectTypeXrn, ProjectXrn};
 use diesel::{Insertable, Queryable, Selectable};
 use serde::Deserialize;
-use std::str::FromStr;
 
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = crate::schema::aproject_names)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct ModelProjectSql {
-    xrn_project_id: i32,
+    xrn_project_id: u32,
     title: String,
     published: String,
     description: String,
@@ -33,17 +32,15 @@ impl ModelProject {
 gen_try_from_converter!(
     ModelProject,
     ModelProjectSql,
-    (title, description),
+    (title, description, xrn_project_id),
     (published, |v: StorDate| v.to_stor_string()),
-    (xrn_project_id, |v: u32| v.try_into()),
 );
 
 gen_try_from_converter!(
     ModelProjectSql,
     ModelProject,
-    (title, description),
-    (published, |v: String| StorDate::from_str(&v)),
-    (xrn_project_id, |v: i32| v.try_into()),
+    (title, description, xrn_project_id),
+    (published, StorDate::from_string),
 );
 
 //
