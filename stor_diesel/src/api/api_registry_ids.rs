@@ -28,7 +28,5 @@ pub fn storapi_registry_ids_push(
 }
 
 pub fn storapi_registry_ids_reset(conn: &mut StorConnection) -> StorDieselResult<usize> {
-    // nope this is the actual rows
-    // check_insert_num_rows(0, delete(registry_ids::table).execute(conn))
     Ok(delete(registry_ids::table).execute(conn)?)
 }

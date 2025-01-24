@@ -1,5 +1,6 @@
 use crate::api::api_project::{
     storapi_project_names_list, storapi_project_names_list_range, storapi_project_names_push,
+    storapi_project_names_reset,
 };
 use crate::api::api_registry_ids::{storapi_registry_ids_push, storapi_registry_ids_reset};
 use crate::date_wrapper::StorDate;
@@ -20,20 +21,6 @@ pub fn create_todo_list(conn: &mut MysqlConnection) -> StorDieselResult<()> {
     Ok(())
 }
 
-pub fn synthesize(
-    conn: &mut MysqlConnection,
-    current_time: StorDate,
-    model: Model,
-) -> StorDieselResult<()> {
-    let added_rows = storapi_registry_ids_reset(conn)?;
-    info!("reset registry of {} rows", added_rows);
-
-    storapi_registry_ids_push(conn, model.registry_ids)?;
-    info!("push registry");
-
-    Ok(())
-}
-
 #[derive(Default)]
 struct Model {
     registry_ids: Vec<NewModelRegistryId>,
@@ -44,12 +31,33 @@ impl Model {
     pub fn synthesize(conn: &mut MysqlConnection, current_time: StorDate) -> StorDieselResult<()> {
         let mut model = Self::default();
 
+        let added_rows = storapi_registry_ids_reset(conn)?;
+        info!("reset registry_ids of {} rows", added_rows);
+        let added_rows = storapi_project_names_reset(conn)?;
+        info!("reset project_names of {} rows", added_rows);
+
+        info!("start push1");
         model.project_names.push(NewModelProject {
             title: "alpha".into(),
             description: "what what??".into(),
             published: current_time.clone(),
             publish_cause: "todo_list init".into(),
         });
+
+        let output_projects_ids = storapi_project_names_push(conn, model.project_names)?;
+        let output_projects = storapi_project_names_list_range(conn, output_projects_ids.clone())?;
+        info!(
+            "range {}..{} re-fetch found {}",
+            output_projects_ids.start,
+            output_projects_ids.end,
+            output_projects.len(),
+        );
+        for project in output_projects {
+            info!("project {:?}", project);
+        }
+
+        info!("start push2");
+        model.project_names = Vec::new();
         model.project_names.push(NewModelProject {
             title: "beta".into(),
             description: "hell yea brother??".into(),

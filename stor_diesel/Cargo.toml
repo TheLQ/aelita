@@ -13,4 +13,5 @@ chrono = { workspace = true }
 #
 diesel = { version = "2.2.0", features = ["mysql", "chrono"] }
 dotenvy = "0.15"
+log = "0.4.25"
 
