@@ -12,8 +12,8 @@ diesel::table! {
 }
 
 diesel::table! {
-    aproject_names (xrn_project_id) {
-        xrn_project_id -> Unsigned<Integer>,
+    aproject_lasers (xrn_laser_id) {
+        xrn_laser_id -> Unsigned<Integer>,
         title -> Text,
         description -> Text,
         #[max_length = 25]
@@ -23,8 +23,8 @@ diesel::table! {
 }
 
 diesel::table! {
-    aproject_tasks (xrn_task_id) {
-        xrn_task_id -> Unsigned<Integer>,
+    aproject_names (xrn_project_id) {
+        xrn_project_id -> Unsigned<Integer>,
         title -> Text,
         description -> Text,
         #[max_length = 25]
@@ -57,8 +57,8 @@ diesel::table! {
 
 diesel::allow_tables_to_appear_in_same_query!(
     alabel_names,
+    aproject_lasers,
     aproject_names,
-    aproject_tasks,
     registry_ids,
     registry_links,
 );

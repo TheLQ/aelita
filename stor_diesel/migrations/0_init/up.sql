@@ -30,9 +30,9 @@ CREATE TABLE `aproject_names`
 
 -- Project > Tasks
 
-CREATE TABLE `aproject_tasks`
+CREATE TABLE `aproject_lasers`
 (
-    `xrn_task_id`   INTEGER UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `xrn_laser_id`  INTEGER UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `title`         TEXT             NOT NULL,
     `description`   TEXT             NOT NULL,
     `published`     VARCHAR(25)      NOT NULL COMMENT "timestamp_rfc3339",

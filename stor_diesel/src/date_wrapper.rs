@@ -30,6 +30,19 @@ impl FromStr for StorDate {
     }
 }
 
+impl TryFrom<String> for StorDate {
+    type Error = StorDieselError;
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::from_str(&value)
+    }
+}
+
+impl Into<String> for StorDate {
+    fn into(self) -> String {
+        self.to_stor_string()
+    }
+}
+
 impl Display for StorDate {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.to_stor_string())
