@@ -8,10 +8,10 @@ aelita_commons = { path = "../commons" }
 aelita_xrn = { path = "../xrn" }
 #
 serde = { workspace = true }
+serde_json = { workspace = true }
 thiserror = { workspace = true }
 chrono = { workspace = true }
 #
 diesel = { version = "2.2.0", features = ["mysql", "chrono"] }
 dotenvy = "0.15"
-log = "0.4.25"
 
