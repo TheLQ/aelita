@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 aelita_commons = { path = "../commons" }
-strum = { version = "0.26.3", features = ["derive"] }
-thiserror = { workspace = true }
+#
 serde = { workspace = true }
+thiserror = { workspace = true }
+strum = { workspace = true }

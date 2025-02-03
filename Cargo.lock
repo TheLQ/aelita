@@ -38,6 +38,7 @@ dependencies = [
  "dotenvy",
  "serde",
  "serde_json",
+ "strum",
  "thiserror",
 ]
 
@@ -54,7 +55,6 @@ dependencies = [
  "handlebars",
  "itertools",
  "serde",
- "strum",
  "thiserror",
  "tokio",
 ]
