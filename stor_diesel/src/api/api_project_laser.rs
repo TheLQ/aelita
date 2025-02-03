@@ -1,11 +1,10 @@
-use crate::api::common::{StorConnection, check_insert_num_rows};
+use crate::api::common::StorConnection;
 use crate::err::StorDieselResult;
-use crate::models::ModelProjectName;
 use crate::models::model_project_laser::{ModelProjectLaserSql, NewModelProjectLaserSql};
 use crate::schema::*;
 use diesel::dsl::max;
 use diesel::prelude::*;
-use diesel::{Connection, QueryDsl, insert_into};
+use diesel::{Connection, QueryDsl};
 
 pub fn storapi_project_lasers_list(
     conn: &mut StorConnection,

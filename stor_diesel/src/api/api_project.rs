@@ -1,8 +1,6 @@
 use crate::api::common::{StorConnection, check_insert_num_rows};
 use crate::err::StorDieselResult;
-use crate::models::{
-    ModelProjectName, ModelProjectNameSql, NewModelProjectName, NewModelProjectNameSql,
-};
+use crate::models::{ModelProjectName, NewModelProjectName};
 use crate::schema::aproject_names;
 use aelita_commons::tracing_re::debug;
 use diesel::dsl::*;
@@ -13,13 +11,10 @@ use std::ops::Range;
 pub fn storapi_project_names_list(
     conn: &mut StorConnection,
 ) -> StorDieselResult<Vec<ModelProjectName>> {
-    let projects_sql = aproject_names::table
-        .select(ModelProjectNameSql::as_select())
-        .load(conn)?;
-    projects_sql
-        .into_iter()
-        .map(TryInto::try_into)
-        .try_collect()
+    aproject_names::table
+        .select(ModelProjectName::as_select())
+        .load(conn)
+        .map_err(Into::into)
 }
 
 pub fn storapi_project_names_list_range(
@@ -27,22 +22,18 @@ pub fn storapi_project_names_list_range(
     id_range: Range<u32>,
 ) -> StorDieselResult<Vec<ModelProjectName>> {
     debug!("range {}..{}", id_range.start, id_range.end);
-    let projects_sql = aproject_names::table
-        .select(ModelProjectNameSql::as_select())
+    aproject_names::table
+        .select(ModelProjectName::as_select())
         .filter(aproject_names::xrn_project_id.gt(id_range.start))
         .limit((id_range.end - id_range.start).into())
-        .load(conn)?;
-    projects_sql
-        .into_iter()
-        .map(TryInto::try_into)
-        .try_collect()
+        .load(conn)
+        .map_err(Into::into)
 }
 
 pub fn storapi_project_names_push(
     conn: &mut StorConnection,
     new: Vec<NewModelProjectName>,
 ) -> StorDieselResult<Range<u32>> {
-    let new: Vec<NewModelProjectNameSql> = new.into_iter().map(TryInto::try_into).try_collect()?;
     let new_len = new.len();
 
     let tx_res: StorDieselResult<Range<u32>> = conn.transaction(|conn| {

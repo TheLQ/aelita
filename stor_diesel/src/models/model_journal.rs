@@ -5,7 +5,6 @@ use diesel::serialize::{IsNull, Output, ToSql};
 use diesel::sql_types::Text;
 use diesel::{AsExpression, FromSqlRow, Insertable, Queryable, Selectable};
 use std::io::Write;
-use std::str::FromStr;
 use strum::{AsRefStr, EnumString};
 
 #[derive(Insertable, Debug)]
@@ -15,7 +14,6 @@ pub struct ModelJournalMutation {
     pub(crate) mut_id: u32,
     pub(crate) mut_type: String,
     pub(crate) data: String,
-    #[diesel(serialize_as = String)]
     pub published: StorDate,
     pub publish_cause: String,
 }
@@ -25,14 +23,11 @@ pub struct ModelJournalMutation {
 #[diesel(table_name = crate::schema::jnl_id_counters)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct ModelJournalIdCounter {
-    // #[diesel(serialize_as = String, deserialize_as = String)]
     pub key: ModelJournalIdKey,
     pub counter: u32,
-    #[diesel(serialize_as = String, deserialize_as = String)]
     pub updated: StorDate,
 }
 
-// #[derive(Debug, EnumString, AsRefStr, FromSqlRow, AsExpression)]
 #[derive(Debug, EnumString, AsRefStr, AsExpression, FromSqlRow)]
 #[diesel(sql_type = Text)]
 pub enum ModelJournalIdKey {
@@ -58,6 +53,5 @@ impl ToSql<Text, Mysql> for ModelJournalIdKey {
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct ModelJournalIdCounterUpdate {
     pub counter: u32,
-    #[diesel(serialize_as = String, deserialize_as = String)]
     pub updated: StorDate,
 }

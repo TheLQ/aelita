@@ -1,26 +1,24 @@
-use crate::err::{StorDieselError, StorDieselResult};
+use crate::err::StorDieselError;
 use chrono::{DateTime, SecondsFormat, Utc};
-use serde::{Deserialize, Deserializer};
+use diesel::deserialize::FromSql;
+use diesel::mysql::{Mysql, MysqlValue};
+use diesel::serialize::{IsNull, Output, ToSql};
+use diesel::sql_types::Text;
+use diesel::{AsExpression, FromSqlRow};
 use std::fmt::{Debug, Display, Formatter};
+use std::io::Write;
 use std::str::FromStr;
 
 pub type StorDateType = DateTime<Utc>;
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, AsExpression, FromSqlRow)]
+#[diesel(sql_type = Text)]
 #[repr(transparent)]
 pub struct StorDate(StorDateType);
 
 impl StorDate {
     pub fn now() -> Self {
         Self(Utc::now())
-    }
-
-    pub fn from_string(value: String) -> StorDieselResult<Self> {
-        Self::from_str(&value)
-    }
-
-    pub fn to_stor_string(&self) -> String {
-        self.0.to_rfc3339_opts(SecondsFormat::Secs, false)
     }
 }
 
@@ -31,22 +29,10 @@ impl FromStr for StorDate {
     }
 }
 
-impl TryFrom<String> for StorDate {
-    type Error = StorDieselError;
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        Self::from_str(&value)
-    }
-}
-
-impl Into<String> for StorDate {
-    fn into(self) -> String {
-        self.to_stor_string()
-    }
-}
-
 impl Display for StorDate {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.to_stor_string())
+        let str = self.0.to_rfc3339_opts(SecondsFormat::Secs, false);
+        f.write_str(&str)
     }
 }
 
@@ -56,11 +42,27 @@ impl Debug for StorDate {
     }
 }
 
-impl<'de> Deserialize<'de> for StorDate {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        Ok(Self(StorDateType::deserialize(deserializer)?))
+//
+
+impl FromSql<Text, Mysql> for StorDate {
+    fn from_sql(bytes: MysqlValue) -> diesel::deserialize::Result<Self> {
+        let t = <String as FromSql<Text, Mysql>>::from_sql(bytes)?;
+        Ok(Self::from_str(&t)?)
     }
 }
+
+impl ToSql<Text, Mysql> for StorDate {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Mysql>) -> diesel::serialize::Result {
+        out.write(self.to_string().as_bytes())?;
+        Ok(IsNull::No)
+    }
+}
+
+// impl<'de> Deserialize<'de> for StorDate {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: Deserializer<'de>,
+//     {
+//         Ok(Self(StorDateType::deserialize(deserializer)?))
+//     }
+// }
