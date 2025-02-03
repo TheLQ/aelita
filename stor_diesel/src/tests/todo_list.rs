@@ -1,11 +1,12 @@
 use crate::api::api_project::{storapi_project_names_push_and_get, storapi_project_names_reset};
 use crate::api::api_registry_ids::{storapi_registry_ids_push, storapi_registry_ids_reset};
+use crate::connection::StorConnection;
 use crate::err::StorDieselResult;
 use crate::models::date::StorDate;
 use crate::models::model_project_laser::{ModelProjectLaserSql, NewModelProjectLaserSql};
 use crate::models::{ModelProjectName, ModelRegistryId, NewModelProjectName};
 use aelita_commons::tracing_re::info;
-use diesel::{MysqlConnection, QueryableByName, RunQueryDsl, Selectable, sql_query};
+use diesel::{QueryableByName, RunQueryDsl, Selectable, sql_query};
 
 pub fn create_todo_list(conn: &mut MysqlConnection) -> StorDieselResult<()> {
     info!("TheWhiteBoard");
@@ -35,7 +36,7 @@ impl Model {
         Ok(())
     }
 
-    fn reset(&mut self, conn: &mut MysqlConnection) -> StorDieselResult<()> {
+    fn reset(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
         let added_rows = storapi_registry_ids_reset(conn)?;
         info!("reset registry_ids of {} rows", added_rows);
         let added_rows = storapi_project_names_reset(conn)?;
@@ -43,7 +44,7 @@ impl Model {
         Ok(())
     }
 
-    fn projects_initial_1(&mut self, conn: &mut MysqlConnection) -> StorDieselResult<()> {
+    fn projects_initial_1(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
         info!("start push1");
         let mut project_names: Vec<NewModelProjectName> = Vec::new();
         project_names.push(NewModelProjectName {
@@ -61,7 +62,7 @@ impl Model {
         Ok(())
     }
 
-    fn projects_initial_2(&mut self, conn: &mut MysqlConnection) -> StorDieselResult<()> {
+    fn projects_initial_2(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
         info!("start push2");
         let mut project_names = Vec::new();
         project_names.push(NewModelProjectName {

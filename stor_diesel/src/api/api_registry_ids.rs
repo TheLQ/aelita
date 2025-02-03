@@ -1,4 +1,5 @@
-use crate::api::common::{StorConnection, check_insert_num_rows};
+use crate::api::common::check_insert_num_rows;
+use crate::connection::StorConnection;
 use crate::err::StorDieselResult;
 use crate::models::ModelRegistryId;
 use crate::schema::registry_ids;

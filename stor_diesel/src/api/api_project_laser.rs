@@ -1,4 +1,4 @@
-use crate::api::common::StorConnection;
+use crate::connection::StorConnection;
 use crate::err::StorDieselResult;
 use crate::models::model_project_laser::{ModelProjectLaserSql, NewModelProjectLaserSql};
 use crate::schema::*;
