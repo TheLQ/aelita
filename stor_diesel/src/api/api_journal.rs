@@ -1,6 +1,6 @@
 use crate::api::common::{StorConnection, check_insert_num_rows};
-use crate::date_wrapper::StorDate;
 use crate::err::StorDieselResult;
+use crate::models::date::StorDate;
 use crate::models::model_journal::{
     ModelJournalIdCounter, ModelJournalIdCounterUpdate, ModelJournalIdKey, ModelJournalMutation,
 };

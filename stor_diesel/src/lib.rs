@@ -5,7 +5,6 @@ pub mod connection;
 pub mod models;
 
 pub mod api;
-pub mod date_wrapper;
 pub mod err;
 #[allow(unused_imports)]
 pub mod schema;

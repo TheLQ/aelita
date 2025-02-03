@@ -1,6 +1,6 @@
-use crate::date_wrapper::StorDate;
 use crate::err::StorDieselError;
 use crate::gen_try_from_converter;
+use crate::models::date::StorDate;
 use aelita_xrn::defs::address::XrnAddr;
 use diesel::prelude::*;
 use std::str::FromStr;
