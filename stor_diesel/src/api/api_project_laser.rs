@@ -29,14 +29,15 @@ pub fn storapi_project_lasers_push(
             Some(id) => id + 1,
             None => 0,
         };
+        todo!();
 
-        check_insert_num_rows(
-            new.len(),
-            insert_into(aproject_lasers::table)
-                .values(new)
-                .execute(conn),
-        )?;
-
-        Ok(Vec::new())
+        // check_insert_num_rows(
+        //     insert_into(aproject_lasers::table)
+        //         .values(new)
+        //         .execute(conn),
+        //     new.len(),
+        // )?;
+        //
+        // Ok(Vec::new())
     })
 }

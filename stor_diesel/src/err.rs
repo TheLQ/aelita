@@ -1,4 +1,4 @@
-use aelita_commons::err_utils::{IOEC, IOECSerde, IOECStd};
+use aelita_commons::err_utils::{IOEC, IOECSerde, IOECStd, xbt};
 use aelita_xrn::err::LibxrnError;
 use std::backtrace::Backtrace;
 use std::io;
@@ -26,8 +26,12 @@ pub enum StorDieselError {
     #[error("StorDieselError_ChronoParse {0}")]
     ChronoParse(#[from] chrono::ParseError, Backtrace),
 
-    #[error("StorDieselError_ResultLen expected {0} actual {1}")]
-    ResultLen(usize, usize, Backtrace),
+    #[error("StorDieselError_ResultLen actual {actual} expected {expected}")]
+    ResultLen {
+        actual: usize,
+        expected: usize,
+        backtrace: Backtrace,
+    },
 
     #[error("StorDieselError_TryFromNumber {0}")]
     TryFromNumber(#[from] TryFromIntError, Backtrace),
@@ -50,6 +54,6 @@ impl From<IOECStd> for StorDieselError {
 
 impl From<IOECSerde> for StorDieselError {
     fn from(IOECSerde { path, err }: IOECSerde) -> Self {
-        Self::Serde(path, err, Backtrace::capture())
+        Self::Serde(path, err, xbt())
     }
 }

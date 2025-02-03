@@ -20,8 +20,8 @@ pub fn storapi_registry_ids_push(
 ) -> StorDieselResult<()> {
     let new: Vec<ModelRegistryIdSql> = new.into_iter().map(TryFrom::try_from).try_collect()?;
     check_insert_num_rows(
-        new.len(),
         insert_into(registry_ids::table).values(&new).execute(conn),
+        new.len(),
     )
 }
 

@@ -1,5 +1,4 @@
 use crate::date_wrapper::StorDate;
-use crate::err::StorDieselError;
 use diesel::{Insertable, Queryable, Selectable};
 
 #[derive(Queryable, Selectable, Debug)]

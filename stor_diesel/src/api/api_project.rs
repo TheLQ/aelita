@@ -53,8 +53,8 @@ pub fn storapi_project_names_push(
         let old_total = auto_id_start.unwrap_or(0);
 
         check_insert_num_rows(
-            new_len,
             insert_into(aproject_names::table).values(new).execute(conn),
+            new_len,
         )?;
 
         let old_total = old_total as u32;
