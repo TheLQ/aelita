@@ -1,2 +1,2 @@
-use chrono::{DateTime, FixedOffset};
-pub type StorDateType = DateTime<FixedOffset>;
+use chrono::{DateTime, Utc};
+pub type StorDateType = DateTime<Utc>;

@@ -1,6 +1,6 @@
 use crate::err::{StorDieselError, StorDieselResult};
 use crate::models::date::StorDateType;
-use chrono::{Local, SecondsFormat};
+use chrono::{SecondsFormat, Utc};
 use serde::{Deserialize, Deserializer};
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
@@ -11,7 +11,7 @@ pub struct StorDate(StorDateType);
 
 impl StorDate {
     pub fn now() -> Self {
-        Self(Local::now().into())
+        Self(Utc::now())
     }
 
     pub fn from_string(value: String) -> StorDieselResult<Self> {
@@ -26,7 +26,7 @@ impl StorDate {
 impl FromStr for StorDate {
     type Err = StorDieselError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self(StorDateType::parse_from_rfc3339(s)?))
+        Ok(Self(s.parse()?))
     }
 }
 
