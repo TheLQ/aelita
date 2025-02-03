@@ -1,6 +1,8 @@
 use aelita_commons::err_utils::pretty_error;
 use aelita_commons::logs::log_init_trace;
 use aelita_commons::tracing_re::{error, info};
+use aelita_stor_diesel::api::api_journal::{NewMutation, storapi_journal_mutation_push};
+use aelita_stor_diesel::connection::establish_connection;
 use aelita_stor_diesel::err::{StorDieselError, StorDieselResult};
 use serde::Deserialize;
 use std::fs;
@@ -18,8 +20,24 @@ fn main() -> ExitCode {
     }
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct HistoryItem {
+    id: String,
+    url: String,
+    title: Option<String>,
+    last_visit_time: usize,
+    visit_count: u16,
+}
+
 fn inner_main() -> StorDieselResult<()> {
-    let contents = load_file()?;
+    // let contents = load_file()?;
+
+    let conn = &mut establish_connection();
+    storapi_journal_mutation_push(conn, [NewMutation {
+        mut_type: "Asdf".into(),
+        data: "asdf".into(),
+    }])?;
 
     Ok(())
 }
@@ -35,12 +53,4 @@ fn load_file() -> StorDieselResult<Vec<HistoryItem>> {
     Ok(json)
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct HistoryItem {
-    id: String,
-    url: String,
-    title: Option<String>,
-    last_visit_time: usize,
-    visit_count: u16,
-}
+fn insert_data(data: Vec<HistoryItem>) {}
