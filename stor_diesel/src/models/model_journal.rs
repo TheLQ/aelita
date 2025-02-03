@@ -3,7 +3,7 @@ use diesel::deserialize::FromSql;
 use diesel::mysql::{Mysql, MysqlValue};
 use diesel::serialize::{IsNull, Output, ToSql};
 use diesel::sql_types::Text;
-use diesel::{AsExpression, FromSqlRow, Insertable, Queryable, Selectable};
+use diesel::{AsChangeset, AsExpression, FromSqlRow, Insertable, Queryable, Selectable};
 use std::io::Write;
 use strum::{AsRefStr, EnumString};
 
@@ -48,7 +48,7 @@ impl ToSql<Text, Mysql> for ModelJournalIdKey {
     }
 }
 
-#[derive(Insertable, Debug)]
+#[derive(AsChangeset, Debug)]
 #[diesel(table_name = crate::schema::jnl_id_counters)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct ModelJournalIdCounterUpdate {

@@ -1,7 +1,6 @@
 use crate::models::date::StorDate;
 use aelita_xrn::defs::project_xrn::{ProjectTypeXrn, ProjectXrn};
 use diesel::{Insertable, Queryable, Selectable};
-use serde::Deserialize;
 
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = crate::schema::aproject_names)]

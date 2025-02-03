@@ -4,8 +4,7 @@ use crate::models::date::StorDate;
 use crate::models::model_journal::{
     ModelJournalIdCounter, ModelJournalIdCounterUpdate, ModelJournalIdKey, ModelJournalMutation,
 };
-use crate::schema::jnl_id_counters::dsl::jnl_id_counters;
-use crate::schema::jnl_mutation::dsl::jnl_mutation;
+use crate::schema::{jnl_id_counters, jnl_mutation};
 use diesel::Connection;
 use diesel::prelude::*;
 
@@ -36,7 +35,7 @@ pub fn storapi_journal_mutation_push(
             .map(|NewMutation { mut_type, data }| {
                 let res = ModelJournalMutation {
                     mut_id: existing_count_id,
-                    mut_type: MUT_TYPE.into(),
+                    mut_type,
                     data,
                     published: StorDate::now(),
                     publish_cause: "???".into(),
@@ -47,7 +46,9 @@ pub fn storapi_journal_mutation_push(
             .collect();
         let va_len = va.len();
 
-        let res = diesel::insert_into(jnl_mutation).values(va).execute(conn);
+        let res = diesel::insert_into(jnl_mutation::table)
+            .values(va)
+            .execute(conn);
         check_insert_num_rows(res, va_len)?;
 
         Ok(())
@@ -58,7 +59,7 @@ pub fn storapi_journal_id_counter_get_opt(
     conn: &mut StorConnection,
     key: ModelJournalIdKey,
 ) -> StorDieselResult<Option<ModelJournalIdCounter>> {
-    jnl_id_counters
+    jnl_id_counters::table
         .find(key)
         .select(ModelJournalIdCounter::as_select())
         .for_update() // row lock
@@ -71,7 +72,7 @@ pub fn storapi_journal_id_counter_init(
     conn: &mut StorConnection,
     key: ModelJournalIdKey,
 ) -> StorDieselResult<()> {
-    let res = diesel::insert_into(jnl_id_counters)
+    let res = diesel::insert_into(jnl_id_counters::table)
         .values(ModelJournalIdCounter {
             key,
             counter: 0,
@@ -85,13 +86,14 @@ pub fn storapi_journal_id_counter_init(
 pub fn storapi_journal_id_counter_update(
     conn: &mut StorConnection,
     key: String,
-    new: u32,
+    counter: u32,
 ) -> StorDieselResult<()> {
-    let res = diesel::insert_into(jnl_id_counters)
-        .values(ModelJournalIdCounterUpdate {
-            counter: 0,
+    let res = diesel::update(jnl_id_counters::table)
+        .set(ModelJournalIdCounterUpdate {
+            counter,
             updated: StorDate::now(),
         })
+        .filter(jnl_id_counters::key.eq(key))
         .execute(conn);
     check_insert_num_rows(res, 1)?;
     Ok(())
