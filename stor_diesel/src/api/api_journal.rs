@@ -59,7 +59,7 @@ pub fn storapi_journal_id_counter_get_opt(
     key: ModelJournalIdKey,
 ) -> StorDieselResult<Option<ModelJournalIdCounter>> {
     jnl_id_counters
-        .find(key.as_ref())
+        .find(key)
         .select(ModelJournalIdCounter::as_select())
         .for_update() // row lock
         .first(conn)

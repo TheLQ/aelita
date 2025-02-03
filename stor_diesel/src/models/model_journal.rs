@@ -1,10 +1,11 @@
 use crate::date_wrapper::StorDate;
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
-use diesel::mysql::Mysql;
+use diesel::mysql::{Mysql, MysqlValue};
 use diesel::serialize::{IsNull, Output, ToSql};
 use diesel::sql_types::Text;
 use diesel::{AsExpression, Associations, FromSqlRow, Insertable, Queryable, Selectable, SqlType};
+use std::io::Write;
 use std::str::FromStr;
 use strum::{AsRefStr, EnumString};
 
@@ -25,7 +26,7 @@ pub struct ModelJournalMutation {
 #[diesel(table_name = crate::schema::jnl_id_counters)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct ModelJournalIdCounter {
-    #[diesel(serialize_as = String, deserialize_as = String)]
+    // #[diesel(serialize_as = String, deserialize_as = String)]
     pub key: ModelJournalIdKey,
     pub counter: u32,
     #[diesel(serialize_as = String, deserialize_as = String)]
@@ -33,44 +34,23 @@ pub struct ModelJournalIdCounter {
 }
 
 // #[derive(Debug, EnumString, AsRefStr, FromSqlRow, AsExpression)]
-#[derive(Debug, EnumString, AsRefStr, SqlType, FromSqlRow)]
-#[diesel(sql_type = String)]
+#[derive(Debug, EnumString, AsRefStr, AsExpression, FromSqlRow)]
+#[diesel(sql_type = Text)]
 pub enum ModelJournalIdKey {
     Mutation,
 }
 
-// impl ToSql<Text, Mysql> for ModelJournalIdKey
-// // where
-// // DB: Backend,
-// // String: ToSql<Text, DB>,
-// {
-//     fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Mysql>) -> diesel::serialize::Result {
-//         out.set_value(self.as_ref().to_string());
-//         Ok(IsNull::No)
-//         // let new = self.as_ref().to_string();
-//         // new.to_sql(out)
-//     }
-// }
-// impl FromSql<Text, Mysql> for ModelJournalIdKey
-// // where
-// //     DB: Backend,
-// {
-//     fn from_sql(bytes: <Mysql as Backend>::RawValue<'_>) -> diesel::deserialize::Result<Self> {
-//         let val: String = String::from_sql(bytes)?;
-//         Self::from_str(&val).map_err(|e| format!("{}", e).into())
-//     }
-// }
-
-impl TryFrom<String> for ModelJournalIdKey {
-    type Error = strum::ParseError;
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        Self::from_str(&value)
+impl FromSql<Text, Mysql> for ModelJournalIdKey {
+    fn from_sql(bytes: MysqlValue) -> diesel::deserialize::Result<Self> {
+        let t = <String as FromSql<Text, Mysql>>::from_sql(bytes)?;
+        Ok(t.as_str().try_into()?)
     }
 }
 
-impl Into<String> for ModelJournalIdKey {
-    fn into(self) -> String {
-        self.as_ref().to_string()
+impl ToSql<Text, Mysql> for ModelJournalIdKey {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Mysql>) -> diesel::serialize::Result {
+        out.write(self.as_ref().as_bytes())?;
+        Ok(IsNull::No)
     }
 }
 
