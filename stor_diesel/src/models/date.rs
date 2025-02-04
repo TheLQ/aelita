@@ -31,7 +31,7 @@ impl FromStr for StorDate {
 
 impl Display for StorDate {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let str = self.0.to_rfc3339_opts(SecondsFormat::Secs, false);
+        let str = self.0.to_rfc3339_opts(SecondsFormat::Secs, true);
         f.write_str(&str)
     }
 }
