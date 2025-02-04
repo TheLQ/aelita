@@ -20,16 +20,34 @@ pub fn establish_connection() -> StorConnection {
     // InstrumentedMysqlConnection::establish(&database_url)
     let mut conn = MysqlConnection::establish(&database_url)
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));
-    conn.set_instrumentation(StorInstrument {});
+    conn.set_instrumentation(StorInstrument::default());
     conn
 }
 
-struct StorInstrument;
+#[derive(Default)]
+struct StorInstrument {
+    inside_tx: bool,
+}
 
 impl Instrumentation for StorInstrument {
     fn on_connection_event(&mut self, event: InstrumentationEvent<'_>) {
-        if let InstrumentationEvent::StartQuery { query, .. } = event {
-            trace!("{}", query.to_string());
+        match event {
+            InstrumentationEvent::StartQuery { query, .. } => {
+                let query_str = query.to_string();
+                if !self.inside_tx && query_str != "COMMIT" {
+                    trace!("---s");
+                }
+                trace!("{}", query_str);
+            }
+            InstrumentationEvent::BeginTransaction { .. } => {
+                self.inside_tx = true;
+                trace!("---");
+            }
+            InstrumentationEvent::CommitTransaction { .. }
+            | InstrumentationEvent::RollbackTransaction { .. } => {
+                self.inside_tx = false;
+            }
+            _ => {}
         }
     }
 }
