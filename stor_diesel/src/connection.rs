@@ -11,8 +11,7 @@ pub fn load_db_url_from_env() -> String {
     env::var("DATABASE_URL").expect("DATABASE_URL must be set")
 }
 
-/// todo: How to do this with "impl Trait"?
-// pub type StorConnection = InstrumentedMysqlConnection;
+// pub type StorConnection = MysqlConnection;
 pub type StorConnection = impl Connection<Backend = Mysql> + LoadConnection;
 
 pub fn establish_connection() -> StorConnection {

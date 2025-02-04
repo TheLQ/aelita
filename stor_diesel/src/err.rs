@@ -41,8 +41,8 @@ pub enum StorDieselError {
 }
 
 impl StorDieselError {
-    pub fn ioec(path: PathBuf) -> IOEC<Self> {
-        IOEC::new(path)
+    pub fn ioec(path: impl Into<PathBuf>) -> IOEC<Self> {
+        IOEC::new(path.into())
     }
 }
 

@@ -6,6 +6,7 @@ use crate::models::model_journal::{
     ModelJournalIdCounter, ModelJournalIdCounterUpdate, ModelJournalIdKey, ModelJournalMutation,
 };
 use crate::schema::{jnl_id_counters, jnl_mutation};
+use aelita_commons::tracing_re::debug;
 use diesel::Connection;
 use diesel::prelude::*;
 
@@ -22,13 +23,7 @@ pub fn storapi_journal_mutation_push(
     values: impl IntoIterator<Item = NewMutation>,
 ) -> StorDieselResult<()> {
     conn.transaction(|conn| {
-        let existing_count = match storapi_journal_id_counter_get_opt(conn, ID_KEY_MUTATION)? {
-            Some(v) => v,
-            None => {
-                storapi_journal_id_counter_init(conn, ID_KEY_MUTATION)?;
-                storapi_journal_id_counter_get_opt(conn, ID_KEY_MUTATION)?.unwrap()
-            }
-        };
+        let existing_count = storapi_journal_id_counter_get_or_init(conn, ID_KEY_MUTATION)?;
         let mut existing_count_id = existing_count.counter;
 
         let va: Vec<ModelJournalMutation> = values
@@ -46,47 +41,54 @@ pub fn storapi_journal_mutation_push(
             })
             .collect();
         let va_len = va.len();
+        debug!("len {}", va_len);
 
         let res = diesel::insert_into(jnl_mutation::table)
             .values(va)
             .execute(conn);
         check_insert_num_rows(res, va_len)?;
 
+        storapi_journal_id_counter_update(conn, ID_KEY_MUTATION, existing_count_id)?;
+
         Ok(())
     })
 }
 
-pub fn storapi_journal_id_counter_get_opt(
+pub fn storapi_journal_id_counter_get_or_init(
     conn: &mut StorConnection,
     key: ModelJournalIdKey,
-) -> StorDieselResult<Option<ModelJournalIdCounter>> {
-    jnl_id_counters::table
-        .find(key)
+) -> StorDieselResult<ModelJournalIdCounter> {
+    let value = jnl_id_counters::table
+        .find(&key)
         .select(ModelJournalIdCounter::as_select())
         .for_update() // row lock
         .first(conn)
-        .optional()
-        .map_err(Into::into)
-}
+        .optional()?;
+    if let Some(value) = value {
+        Ok(value)
+    } else {
+        let updated = StorDate::now();
 
-pub fn storapi_journal_id_counter_init(
-    conn: &mut StorConnection,
-    key: ModelJournalIdKey,
-) -> StorDieselResult<()> {
-    let res = diesel::insert_into(jnl_id_counters::table)
-        .values(ModelJournalIdCounter {
+        let res = diesel::insert_into(jnl_id_counters::table)
+            .values(ModelJournalIdCounter {
+                key,
+                counter: 0,
+                updated: updated.clone(),
+            })
+            .execute(conn);
+        check_insert_num_rows(res, 1)?;
+
+        Ok(ModelJournalIdCounter {
             key,
             counter: 0,
-            updated: StorDate::now(),
+            updated,
         })
-        .execute(conn);
-    check_insert_num_rows(res, 1)?;
-    Ok(())
+    }
 }
 
 pub fn storapi_journal_id_counter_update(
     conn: &mut StorConnection,
-    key: String,
+    key: ModelJournalIdKey,
     counter: u32,
 ) -> StorDieselResult<()> {
     let res = diesel::update(jnl_id_counters::table)
@@ -98,4 +100,12 @@ pub fn storapi_journal_id_counter_update(
         .execute(conn);
     check_insert_num_rows(res, 1)?;
     Ok(())
+}
+
+pub fn storapi_journal_reset_all(conn: &mut StorConnection) -> StorDieselResult<()> {
+    conn.transaction(|conn| {
+        diesel::delete(jnl_mutation::table).execute(conn)?;
+        diesel::delete(jnl_id_counters::table).execute(conn)?;
+        Ok(())
+    })
 }

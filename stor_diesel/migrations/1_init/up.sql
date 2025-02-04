@@ -21,7 +21,7 @@ CREATE TABLE `registry_links`
 
 CREATE TABLE `aproject_names`
 (
-    `xrn_project_id` INTEGER UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `xrn_project_id` INTEGER UNSIGNED NOT NULL PRIMARY KEY,
     `title`          TEXT             NOT NULL,
     `description`    TEXT             NOT NULL,
     `published`      VARCHAR(25)      NOT NULL COMMENT "timestamp_rfc3339",
@@ -32,7 +32,7 @@ CREATE TABLE `aproject_names`
 
 CREATE TABLE `aproject_lasers`
 (
-    `xrn_laser_id`  INTEGER UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `xrn_laser_id`  INTEGER UNSIGNED NOT NULL PRIMARY KEY,
     `title`         TEXT             NOT NULL,
     `description`   TEXT             NOT NULL,
     `published`     VARCHAR(25)      NOT NULL COMMENT "timestamp_rfc3339",
@@ -48,4 +48,17 @@ CREATE TABLE `alabel_names`
     `published`      VARCHAR(25)  NOT NULL COMMENT "timestamp_rfc3339",
     `publish_cause`  TEXT         NOT NULL
 );
+
+-- Browser
+
+CREATE TABLE `fire_history`
+(
+    `xrn_firehist_id` INTEGER UNSIGNED NOT NULL PRIMARY KEY,
+    `fire_id`         VARCHAR(13)      NOT NULL COMMENT "browser internal id",
+    `fire_last_visit` INTEGER UNSIGNED NOT NULL,
+    `visit_count`     INTEGER UNSIGNED NOT NULL,
+    `title`           TEXT             NOT NULL,
+    `published`       VARCHAR(25)      NOT NULL COMMENT "timestamp_rfc3339",
+    `publish_cause`   TEXT             NOT NULL
+)
 

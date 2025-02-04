@@ -14,3 +14,11 @@ pub fn check_insert_num_rows(query: QueryResult<usize>, expected: usize) -> Stor
         Ok(())
     }
 }
+
+pub fn with_counter<I, O>(counter: &mut u32, mapper: impl Fn(u32, I) -> O) -> impl FnMut(I) -> O {
+    move |cur| {
+        let res = mapper(*counter, cur);
+        *counter += 1;
+        res
+    }
+}

@@ -28,10 +28,11 @@ pub struct ModelJournalIdCounter {
     pub updated: StorDate,
 }
 
-#[derive(Debug, EnumString, AsRefStr, AsExpression, FromSqlRow)]
+#[derive(Debug, Clone, Copy, EnumString, AsRefStr, AsExpression, FromSqlRow)]
 #[diesel(sql_type = Text)]
 pub enum ModelJournalIdKey {
     Mutation,
+    FireHistory,
 }
 
 impl FromSql<Text, Mysql> for ModelJournalIdKey {
