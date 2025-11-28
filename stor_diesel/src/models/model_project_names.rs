@@ -4,7 +4,6 @@ use diesel::{Insertable, Queryable, Selectable};
 
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name = crate::schema::aproject_names)]
-#[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct ModelProjectName {
     xrn_project_id: u32,
     title: String,
@@ -22,7 +21,6 @@ impl ModelProjectName {
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = crate::schema::aproject_names)]
-#[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct NewModelProjectName {
     pub title: String,
     pub description: String,

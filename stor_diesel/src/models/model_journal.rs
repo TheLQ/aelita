@@ -9,7 +9,6 @@ use strum::{AsRefStr, EnumString};
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = crate::schema::jnl_mutation)]
-#[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct ModelJournalMutation {
     pub(crate) mut_id: u32,
     pub(crate) mut_type: String,
@@ -21,7 +20,6 @@ pub struct ModelJournalMutation {
 // #[derive(Selectable, QueryableByName, Insertable, Debug)]
 #[derive(Queryable, Selectable, Insertable, Debug)]
 #[diesel(table_name = crate::schema::jnl_id_counters)]
-#[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct ModelJournalIdCounter {
     pub key: ModelJournalIdKey,
     pub counter: u32,
@@ -51,7 +49,6 @@ impl ToSql<Text, Mysql> for ModelJournalIdKey {
 
 #[derive(AsChangeset, Debug)]
 #[diesel(table_name = crate::schema::jnl_id_counters)]
-#[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct ModelJournalIdCounterUpdate {
     pub counter: u32,
     pub updated: StorDate,
