@@ -1,6 +1,5 @@
 #![feature(error_generic_member_access)]
 #![feature(iterator_try_collect)]
-#![feature(type_alias_impl_trait)]
 
 pub mod connection;
 pub mod models;

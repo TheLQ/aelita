@@ -11,8 +11,11 @@ pub fn load_db_url_from_env() -> String {
     env::var("DATABASE_URL").expect("DATABASE_URL must be set")
 }
 
-// pub type StorConnection = MysqlConnection;
-pub type StorConnection = impl Connection<Backend = Mysql> + LoadConnection;
+/*
+todo: type_alias_impl_trait
+ when it doesn't need the #[define_opaque(Alias)]
+*/
+pub type StorConnection = MysqlConnection;
 
 pub fn establish_connection() -> StorConnection {
     let database_url = load_db_url_from_env();
