@@ -1,8 +1,7 @@
 use aelita_commons::tracing_re::trace;
 use diesel::Connection;
 use diesel::MysqlConnection;
-use diesel::connection::{Instrumentation, InstrumentationEvent, LoadConnection};
-use diesel::mysql::Mysql;
+use diesel::connection::{Instrumentation, InstrumentationEvent};
 use dotenvy::dotenv;
 use std::env;
 

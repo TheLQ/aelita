@@ -1,12 +1,11 @@
 use crate::api::api_project::{storapi_project_names_push_and_get, storapi_project_names_reset};
-use crate::api::api_registry_ids::{storapi_registry_ids_push, storapi_registry_ids_reset};
+use crate::api::api_registry_ids::storapi_registry_ids_reset;
 use crate::connection::StorConnection;
 use crate::err::StorDieselResult;
 use crate::models::date::StorDate;
-use crate::models::model_project_laser::{ModelProjectLaserSql, NewModelProjectLaserSql};
-use crate::models::{ModelProjectName, ModelRegistryId, NewModelProjectName};
+use crate::models::model_project_laser::NewModelProjectLaserSql;
+use crate::models::{ModelProjectName, NewModelProjectName};
 use aelita_commons::tracing_re::info;
-use diesel::{QueryableByName, RunQueryDsl, Selectable, sql_query};
 
 pub fn create_todo_list(conn: &mut StorConnection) -> StorDieselResult<()> {
     info!("TheWhiteBoard");

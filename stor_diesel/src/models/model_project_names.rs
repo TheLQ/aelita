@@ -6,8 +6,8 @@ use diesel::{Insertable, Queryable, Selectable};
 #[diesel(table_name = crate::schema::aproject_names)]
 pub struct ModelProjectName {
     xrn_project_id: u32,
-    title: String,
-    published: StorDate,
+    pub title: String,
+    pub published: StorDate,
     description: String,
 }
 
