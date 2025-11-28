@@ -5,6 +5,7 @@ use aelita_stor_diesel::diesel_re::MysqlConnection;
 use aelita_stor_diesel::err::StorDieselResult;
 use deadpool_diesel::mysql::{Manager, Pool};
 use std::sync::Arc;
+use std::time::SystemTime;
 
 #[derive(Clone)]
 pub struct SqlState {
@@ -43,4 +44,14 @@ impl SqlController {
         let result = conn.interact(inner).await??;
         Ok(result)
     }
+}
+
+pub fn basic_cause(input: &str) -> String {
+    format!(
+        "{input}-{}",
+        SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+    )
 }

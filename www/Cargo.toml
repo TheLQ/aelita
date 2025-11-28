@@ -11,9 +11,11 @@ aelita_xrn = { path = "../xrn" }
 serde = { workspace = true }
 thiserror = { workspace = true }
 chrono = { workspace = true }
+strum = { workspace = true }
 axum = { version = "0.8.2", features = ["macros"] }
 tokio = { version = "1.43", features = ["full"] }
 deadpool-diesel = { version = "0.6.1", features = ["mysql"] }
 itertools = "0.14.0"
 handlebars = "6.3.0"
+zstd = "0.13.2"
 

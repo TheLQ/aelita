@@ -1,12 +1,12 @@
 use crate::controllers::handlebars::HandlebarsPage;
-use crate::controllers::sqlcontroller::SqlState;
+use crate::controllers::sqlcontroller::{SqlState, basic_cause};
 use crate::err::{WebError, WebResult};
 use crate::server::convert_xrn::XrnFromUrl;
 use aelita_stor_diesel::api::api_project::{
     storapi_project_names_list, storapi_project_names_push,
 };
-use aelita_stor_diesel::date_wrapper::StorDate;
 use aelita_stor_diesel::models::NewModelProjectName;
+use aelita_stor_diesel::models::date::StorDate;
 use aelita_xrn::defs::project_xrn::{ProjectTypeXrn, ProjectXrn};
 use axum::Form;
 use axum::body::Body;
@@ -49,6 +49,7 @@ pub async fn handle_project_post(
         title,
         published,
         description,
+        publish_cause: basic_cause("frontend-form"),
     };
     state
         .sqlfs
@@ -91,7 +92,7 @@ async fn render_dash_primary(state: SqlState, xrn: ProjectXrn) -> WebResult<Body
             .into_iter()
             .map(|extract| ProjectEntry {
                 xrn: extract.xrn().to_string(),
-                published: extract.published.to_stor_string(),
+                published: extract.published.to_string(),
                 title: extract.title,
             })
             .collect(),

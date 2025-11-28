@@ -1,11 +1,11 @@
 use crate::controllers::handlebars::HandlebarsPage;
-use crate::controllers::sqlcontroller::SqlState;
+use crate::controllers::sqlcontroller::{SqlState, basic_cause};
 use crate::err::WebResult;
 use aelita_stor_diesel::api::api_registry_ids::{
     storapi_registry_ids_list, storapi_registry_ids_push,
 };
-use aelita_stor_diesel::date_wrapper::StorDate;
-use aelita_stor_diesel::models::NewModelRegistryId;
+use aelita_stor_diesel::models::ModelRegistryId;
+use aelita_stor_diesel::models::date::StorDate;
 use aelita_xrn::defs::address::XrnAddr;
 use axum::Form;
 use axum::body::Body;
@@ -72,9 +72,10 @@ pub async fn handle_registry_html_post(
     Path(xrn): Path<String>,
     Form(form): Form<PagePost>,
 ) -> WebResult<Body> {
-    let new = vec![NewModelRegistryId {
-        xrn: XrnAddr::from_str(&form.xrn_name)?,
+    let new = vec![ModelRegistryId {
+        xrn: XrnAddr::from_str(&form.xrn_name)?.to_string(),
         published: StorDate::now(),
+        publish_cause: basic_cause("frontend-form"),
     }];
     state
         .sqlfs
