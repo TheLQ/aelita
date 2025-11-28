@@ -6,6 +6,8 @@ pub mod models;
 
 pub mod api;
 pub mod err;
+
+mod example_structure;
 #[allow(unused_imports)]
 pub mod schema;
 pub mod tests;

@@ -8,7 +8,7 @@ use crate::models::{ModelProjectName, ModelRegistryId, NewModelProjectName};
 use aelita_commons::tracing_re::info;
 use diesel::{QueryableByName, RunQueryDsl, Selectable, sql_query};
 
-pub fn create_todo_list(conn: &mut MysqlConnection) -> StorDieselResult<()> {
+pub fn create_todo_list(conn: &mut StorConnection) -> StorDieselResult<()> {
     info!("TheWhiteBoard");
 
     let current_time = StorDate::now();
@@ -23,7 +23,15 @@ struct Model {
 }
 
 impl Model {
-    pub fn synthesize(conn: &mut MysqlConnection, current_time: StorDate) -> StorDieselResult<()> {
+    pub fn synthesize(conn: &mut StorConnection, current_time: StorDate) -> StorDieselResult<()> {
+        // #[derive(QueryableByName)]
+        // #[diesel(check_for_backend(diesel::mysql::Mysql))]
+        // pub struct CountType {
+        //     #[diesel(sql_type = String)]
+        //     pub count: String,
+        // }
+        // let res = sql_query("SELECT @@SESSION.sql_mode").get_result::<CountType>(conn)?;
+
         let mut model = Self::default();
         model.current_time = current_time.clone();
 
@@ -86,19 +94,46 @@ impl Model {
         Ok(())
     }
 
-    fn register_project_xrn(&mut self, conn: &mut MysqlConnection) -> StorDieselResult<()> {
-        let new: Vec<ModelRegistryId> = self
-            .projects
-            .iter()
-            .map(|v| ModelRegistryId {
-                xrn: v.xrn().into_addr(),
+    fn register_project_xrn(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
+        todo!()
+        // let new: Vec<ModelRegistryId> = self
+        //     .projects
+        //     .iter()
+        //     .map(|v| ModelRegistryId {
+        //         xrn: v.xrn().into_addr(),
+        //         published: self.current_time.clone(),
+        //         publish_cause: "todo_list init".into(),
+        //     })
+        //     .collect();
+        // let new_len = new.len();
+        // storapi_registry_ids_push(conn, new)?;
+        // info!("registry new ids {}", new_len);
+        //
+        // Ok(())
+    }
+
+    fn task_initial_1(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
+        let mut laser_names = Vec::new();
+        let laser_names_bases = vec!["nissan", "mazda", "ford", "chevy"];
+        let level_1_max = 5;
+        let level_2_max = 3;
+        for base in laser_names_bases {
+            for level_1 in 0..level_1_max {
+                for level_2 in 0..level_2_max {
+                    laser_names.push(format!("{}-{}.{}", base, level_1, level_2));
+                }
+            }
+        }
+
+        let mut lasers = Vec::new();
+        for laser_name in laser_names {
+            lasers.push(NewModelProjectLaserSql {
                 published: self.current_time.clone(),
-                publish_cause: "todo_list init".into(),
-            })
-            .collect();
-        let new_len = new.len();
-        storapi_registry_ids_push(conn, new)?;
-        info!("registry new ids {}", new_len);
+                publish_cause: "init".into(),
+                title: "title".into(),
+                description: "somedwz".into(),
+            });
+        }
 
         Ok(())
     }
