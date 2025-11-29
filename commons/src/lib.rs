@@ -3,5 +3,4 @@
 pub mod err_utils;
 pub mod logs;
 
-pub use num_format as num_format_re;
-pub use tracing as tracing_re;
+pub use xana_commons_rs::tracing_re;
