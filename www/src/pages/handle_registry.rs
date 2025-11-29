@@ -30,9 +30,8 @@ pub async fn handle_registry_root(
     format!("{extraction}\n{url_xrn}\n")
 }
 
-async fn render_html(state: SqlState, _xrn: String) -> WebResult<Body> {
+async fn render_html_list(state: SqlState) -> WebResult<Body> {
     let query = state.sqlfs.query_stor(storapi_registry_ids_list).await?;
-
     #[derive(Serialize)]
     struct XrnEntry {
         xrn: String,
@@ -55,11 +54,19 @@ async fn render_html(state: SqlState, _xrn: String) -> WebResult<Body> {
     tpl.render(props)
 }
 
-pub async fn handle_registryt_html(
+async fn render_html_detail(state: SqlState, xrn: XrnAddr) -> WebResult<Body> {
+    todo!()
+}
+
+pub async fn handle_registry_html(
     State(state): State<SqlState>,
-    Path(xrn): Path<String>,
+    xrn_raw: Option<Path<String>>,
 ) -> WebResult<Body> {
-    render_html(state, xrn).await
+    if let Some(Path(xrn)) = xrn_raw {
+        render_html_detail(state, XrnAddr::from_str(&xrn)?).await
+    } else {
+        render_html_list(state).await
+    }
 }
 
 #[derive(Deserialize)]
@@ -69,7 +76,6 @@ pub struct PagePost {
 
 pub async fn handle_registry_html_post(
     State(state): State<SqlState>,
-    Path(xrn): Path<String>,
     Form(form): Form<PagePost>,
 ) -> WebResult<Body> {
     let new = vec![ModelRegistryId {
@@ -83,7 +89,7 @@ pub async fn handle_registry_html_post(
         .await?;
 
     // show same page
-    render_html(state, xrn).await
+    handle_registry_html(State(state), None).await
 }
 
 fn get_template() -> &'static HandlebarsPage {
