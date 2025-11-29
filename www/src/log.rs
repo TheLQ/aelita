@@ -1,4 +1,4 @@
-use xana_commons_rs::{MapHugeCrateName, XanaCommonsLogConfig};
+use xana_commons_rs::XanaCommonsLogConfig;
 
 pub fn www_log_init() {
     XanaCommonsLogConfig::new_default()

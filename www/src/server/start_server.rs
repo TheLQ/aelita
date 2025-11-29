@@ -9,8 +9,7 @@ use crate::pages::handle_root::handle_root;
 use axum::Router;
 use axum::http::Request;
 use axum::routing::{get, post};
-use std::marker::PhantomData;
-use tower_http::trace::{DefaultMakeSpan, MakeSpan, TraceLayer};
+use tower_http::trace::{MakeSpan, TraceLayer};
 use xana_commons_rs::tracing_re::Level;
 
 /// Begin magic
