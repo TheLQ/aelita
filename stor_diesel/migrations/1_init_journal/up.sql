@@ -15,7 +15,7 @@ CREATE TABLE `journal_types`
 CREATE TABLE `journal_data_immutable`
 (
     `publish_id`   INTEGER UNSIGNED NOT NULL,
-    `journal_id`   INTEGER UNSIGNED NOT NULL PRIMARY KEY,
+    `journal_id`   INTEGER UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `journal_type` INTEGER UNSIGNED NOT NULL,
     `data`         BLOB             NOT NULL,
     FOREIGN KEY (`publish_id`) REFERENCES `publish_log` (`publish_id`),
@@ -25,7 +25,7 @@ CREATE TABLE `journal_data_immutable`
 CREATE TABLE `journal_data_upgraded`
 (
     `publish_id`            INTEGER UNSIGNED NOT NULL,
-    `journal_id`            INTEGER UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `journal_id`            INTEGER UNSIGNED NOT NULL PRIMARY KEY,
     `overwrites_journal_id` INTEGER UNSIGNED NOT NULL,
     `journal_type`          INTEGER UNSIGNED NOT NULL,
     `data`                  BLOB             NOT NULL,
