@@ -38,8 +38,8 @@ diesel::table! {
     journal_data_upgraded (journal_id) {
         publish_id -> Unsigned<Integer>,
         journal_id -> Unsigned<Integer>,
-        journal_type -> Unsigned<Integer>,
         overwrites_journal_id -> Unsigned<Integer>,
+        journal_type -> Unsigned<Integer>,
         data -> Blob,
     }
 }
