@@ -10,9 +10,8 @@ use strum::{AsRefStr, EnumString};
 
 macro_rules! id_type {
     ($name:ident) => {
-        // #[derive(Debug, AsExpression, diesel::FromSqlRow)]
-        // #[diesel(sql_type = Integer)]
-        #[derive(Debug, diesel::FromSqlRow)]
+        #[derive(Debug, AsExpression, diesel::FromSqlRow)]
+        #[diesel(sql_type = Unsigned<Integer>)]
         pub struct $name(u32);
 
         // core conversions
@@ -28,24 +27,6 @@ macro_rules! id_type {
             fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Mysql>) -> diesel::serialize::Result {
                 out.write_u32::<NativeEndian>(self.0)?;
                 Ok(IsNull::No)
-            }
-        }
-
-        // Manual #[derive(AsExpression)] as it picks Integer not Unsigned<Integer>
-
-        impl diesel::expression::AsExpression<Unsigned<Integer>> for $name {
-            type Expression =
-                diesel::internal::derives::as_expression::Bound<Unsigned<Integer>, Self>;
-            fn as_expression(self) -> Self::Expression {
-                Self::Expression::new(self)
-            }
-        }
-
-        impl diesel::expression::AsExpression<Unsigned<Integer>> for &$name {
-            type Expression =
-                diesel::internal::derives::as_expression::Bound<Unsigned<Integer>, Self>;
-            fn as_expression(self) -> Self::Expression {
-                Self::Expression::new(self)
             }
         }
 
