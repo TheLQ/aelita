@@ -1,2 +1,2 @@
 set -x
-exec diesel migration generate --diff-schema create_posts
+exec diesel migration generate --diff-schema init

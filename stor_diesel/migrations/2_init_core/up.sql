@@ -1,0 +1,20 @@
+CREATE TABLE `space`
+(
+    `publish_id`  INTEGER UNSIGNED NOT NULL,
+    `space_id`    INTEGER UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `space_name`  VARCHAR(50)      NOT NULL,
+    `description` TEXT             NOT NULL,
+    FOREIGN KEY (`publish_id`) REFERENCES `publish_log` (`publish_id`)
+);
+
+CREATE TABLE `space_owned`
+(
+    `publish_id`  INTEGER UNSIGNED NOT NULL,
+    `space_id`    INTEGER UNSIGNED NOT NULL PRIMARY KEY,
+    `description` TEXT             NOT NULL,
+    FOREIGN KEY (`publish_id`) REFERENCES `publish_log` (`publish_id`),
+    FOREIGN KEY (`space_id`) REFERENCES `space` (`space_id`)
+);
+
+--
+
