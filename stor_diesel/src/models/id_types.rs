@@ -1,12 +1,9 @@
-use byteorder::NativeEndian;
-use byteorder::WriteBytesExt;
+use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
-use diesel::mysql::{Mysql, MysqlValue};
 use diesel::serialize::{IsNull, Output, ToSql};
 use diesel::sql_types::{Integer, Text, Unsigned};
 use diesel::{AsExpression, FromSqlRow};
 use std::io::Write;
-use strum::{AsRefStr, EnumString};
 
 macro_rules! id_type {
     ($name:ident) => {
@@ -16,17 +13,22 @@ macro_rules! id_type {
 
         // core conversions
 
-        impl FromSql<Unsigned<Integer>, Mysql> for $name {
-            fn from_sql(bytes: MysqlValue) -> diesel::deserialize::Result<Self> {
-                let t = <u32 as FromSql<Unsigned<Integer>, Mysql>>::from_sql(bytes)?;
-                Ok(Self(t))
+        impl<DB: Backend> FromSql<Unsigned<Integer>, DB> for $name
+        where
+            u32: FromSql<Unsigned<Integer>, DB>,
+        {
+            fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+                let inner = <u32 as FromSql<Unsigned<Integer>, DB>>::from_sql(bytes)?;
+                Ok(Self(inner))
             }
         }
 
-        impl ToSql<Unsigned<Integer>, Mysql> for $name {
-            fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Mysql>) -> diesel::serialize::Result {
-                out.write_u32::<NativeEndian>(self.0)?;
-                Ok(IsNull::No)
+        impl<DB: Backend> ToSql<Unsigned<Integer>, DB> for $name
+        where
+            u32: ToSql<Unsigned<Integer>, DB>,
+        {
+            fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, DB>) -> diesel::serialize::Result {
+                <u32 as ToSql<Unsigned<Integer>, DB>>::to_sql(&self.0, out)
             }
         }
 
@@ -51,8 +53,7 @@ id_type!(ModelJournalId);
 id_type!(ModelJournalType);
 
 // #[derive(Debug, AsExpression, diesel::FromSqlRow)]
-// // #[derive(Debug, diesel::FromSqlRow)]
-// #[diesel(sql_type = Integer)]
+// #[diesel(sql_type = Unsigned<Integer>)]
 // pub struct ModelPublishId(u32);
 //
 // impl diesel::expression::AsExpression<Unsigned<Integer>> for ModelPublishId {
@@ -75,10 +76,12 @@ id_type!(ModelJournalType);
 //     }
 // }
 //
-// impl ToSql<Unsigned<Integer>, Mysql> for ModelPublishId {
-//     fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Mysql>) -> diesel::serialize::Result {
-//         out.write_u32::<NativeEndian>(self.0)?;
-//         Ok(IsNull::No)
+// impl<DB: Backend> ToSql<Unsigned<Integer>, DB> for ModelPublishId
+// where
+//     u32: ToSql<Unsigned<Integer>, DB>,
+// {
+//     fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, DB>) -> diesel::serialize::Result {
+//         <u32 as ToSql<Unsigned<Integer>, DB>>::to_sql(&self.0, out)
 //     }
 // }
 
