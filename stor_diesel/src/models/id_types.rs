@@ -1,13 +1,13 @@
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
-use diesel::serialize::{IsNull, Output, ToSql};
+use diesel::query_builder::bind_collector::RawBytesBindCollector;
+use diesel::serialize::{Output, ToSql};
 use diesel::sql_types::{Integer, Text, Unsigned};
-use diesel::{AsExpression, FromSqlRow};
-use std::io::Write;
+use std::str::FromStr;
 
 macro_rules! id_type {
     ($name:ident) => {
-        #[derive(Debug, AsExpression, diesel::FromSqlRow)]
+        #[derive(Debug, diesel::AsExpression, diesel::FromSqlRow)]
         #[diesel(sql_type = Unsigned<Integer>)]
         pub struct $name(u32);
 
@@ -56,13 +56,6 @@ id_type!(ModelJournalType);
 // #[diesel(sql_type = Unsigned<Integer>)]
 // pub struct ModelPublishId(u32);
 //
-// impl diesel::expression::AsExpression<Unsigned<Integer>> for ModelPublishId {
-//     type Expression = diesel::internal::derives::as_expression::Bound<Unsigned<Integer>, Self>;
-//     fn as_expression(self) -> Self::Expression {
-//         Self::Expression::new(self)
-//     }
-// }
-//
 // impl From<ModelPublishId> for u32 {
 //     fn from(value: ModelPublishId) -> u32 {
 //         value.0
@@ -101,3 +94,38 @@ id_type!(ModelJournalType);
 //         Ok(IsNull::No)
 //     }
 // }
+
+macro_rules! enum_value {
+    ($name:ident) => {
+        impl<DB: Backend> FromSql<Text, DB> for $name
+        where
+            String: FromSql<Text, DB>,
+        {
+            fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+                let inner = <String as FromSql<Text, DB>>::from_sql(bytes)?;
+                Ok(Self::from_str(&inner)?)
+            }
+        }
+
+        impl<DB> ToSql<Text, DB> for $name
+        where
+            // https://github.com/diesel-rs/diesel/blob/0abaf1b3f2ed24ac5643227baf841da9a63d9f1f/diesel/src/type_impls/primitives.rs#L143
+            for<'a> DB: Backend<BindCollector<'a> = RawBytesBindCollector<DB>>,
+        {
+            fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, DB>) -> diesel::serialize::Result {
+                let inner: &'static str = self.into();
+                <str as ToSql<Text, DB>>::to_sql(inner, out)
+            }
+        }
+    };
+}
+
+#[derive(
+    Debug, diesel::AsExpression, diesel::FromSqlRow, strum::EnumString, strum::IntoStaticStr,
+)]
+#[diesel(sql_type = Text)]
+pub enum ModelJournalTypeName {
+    Mutation,
+    FireHistory,
+}
+enum_value!(ModelJournalTypeName);
