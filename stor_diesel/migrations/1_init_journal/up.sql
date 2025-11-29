@@ -8,8 +8,8 @@ CREATE TABLE `publish_log`
 
 CREATE TABLE `journal_types`
 (
-    `journal_type` INTEGER UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `name`         VARCHAR(20)      NOT NULL
+    `journal_type`      INTEGER UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `journal_type_name` VARCHAR(20)      NOT NULL
 );
 
 CREATE TABLE `journal_data_immutable`

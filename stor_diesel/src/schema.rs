@@ -51,7 +51,7 @@ diesel::table! {
     journal_types (journal_type) {
         journal_type -> Unsigned<Integer>,
         #[max_length = 20]
-        name -> Varchar,
+        journal_type_name -> Varchar,
     }
 }
 
