@@ -1,5 +1,5 @@
 //
-// Injest
+// journal
 //
 
 diesel::table! {
@@ -13,8 +13,8 @@ diesel::table! {
 }
 
 diesel::table! {
-    injest_types (injest_type) {
-        injest_type -> Unsigned<Integer>,
+    journal_types (journal_type) {
+        journal_type -> Unsigned<Integer>,
         #[max_length = 20]
         name -> Varchar,
     }
@@ -23,41 +23,44 @@ diesel::table! {
 //
 
 diesel::table! {
-    injest_data_immutable (injest_id) {
+    journal_data_immutable (journal_id) {
         publish_id -> Unsigned<Integer>,
-        injest_id -> Unsigned<Integer>,
-        injest_type -> Unsigned<Integer>,
+        journal_id -> Unsigned<Integer>,
+        journal_type -> Unsigned<Integer>,
         data -> Blob,
     }
 }
-diesel::joinable!(injest_data_immutable -> publish_log (publish_id));
-// diesel::allow_tables_to_appear_in_same_query!(injest_data_immutable, publish_log);
+diesel::joinable!(journal_data_immutable -> publish_log (publish_id));
+diesel::joinable!(journal_data_immutable -> journal_types (journal_type));
+// diesel::allow_tables_to_appear_in_same_query!(journal_data_immutable, publish_log);
 
 diesel::table! {
-    injest_data_upgraded (injest_id) {
+    journal_data_upgraded (journal_id) {
         publish_id -> Unsigned<Integer>,
-        injest_id -> Unsigned<Integer>,
-        injest_type -> Unsigned<Integer>,
+        journal_id -> Unsigned<Integer>,
+        journal_type -> Unsigned<Integer>,
+        overwrites_journal_id -> Unsigned<Integer>,
         data -> Blob,
     }
 }
-diesel::joinable!(injest_data_upgraded -> publish_log (publish_id));
-// diesel::allow_tables_to_appear_in_same_query!(injest_data_upgraded, publish_log);
+diesel::joinable!(journal_data_upgraded -> publish_log (publish_id));
+diesel::joinable!(journal_data_upgraded -> journal_types (journal_type));
+// diesel::allow_tables_to_appear_in_same_query!(journal_data_upgraded, publish_log);
 
 diesel::table! {
-    injest_complete (injest_id) {
+    journal_complete (journal_id) {
         publish_id -> Unsigned<Integer>,
-        injest_id -> Unsigned<Integer>,
+        journal_id -> Unsigned<Integer>,
     }
 }
-diesel::joinable!(injest_complete -> publish_log (publish_id));
-diesel::joinable!(injest_complete -> injest_data_immutable (injest_id));
-diesel::joinable!(injest_complete -> injest_data_upgraded (injest_id));
+diesel::joinable!(journal_complete -> publish_log (publish_id));
+diesel::joinable!(journal_complete -> journal_data_immutable (journal_id));
+diesel::joinable!(journal_complete -> journal_data_upgraded (journal_id));
 // diesel::allow_tables_to_appear_in_same_query!(
-//     injest_complete,
+//     journal_complete,
 //     publish_log,
-//     injest_data_immutable,
-//     injest_data_upgraded
+//     journal_data_immutable,
+//     journal_data_upgraded
 // );
 
 //
@@ -69,7 +72,7 @@ diesel::table! {
         publish_id -> Unsigned<Integer>,
         space_id -> Unsigned<Integer>,
         #[max_length = 50]
-        project_name -> Varchar,
+        space_name -> Varchar,
         description -> Text,
     }
 }
@@ -83,6 +86,7 @@ diesel::table! {
     }
 }
 diesel::joinable!(space_owned -> publish_log (publish_id));
+diesel::joinable!(space_owned -> space (space_id));
 
 //
 // hd1
@@ -90,12 +94,14 @@ diesel::joinable!(space_owned -> publish_log (publish_id));
 
 diesel::table! {
     hd1_sites (hd_site_id) {
+        publish_id -> Unsigned<Integer>,
         hd_site_id -> Unsigned<Integer>,
         #[max_length = 50]
         site_name -> Varchar,
         description -> Text,
     }
 }
+diesel::joinable!(hd1_sites -> publish_log (publish_id));
 
 diesel::table! {
     hd1_galleries (hd_id) {
@@ -115,7 +121,7 @@ diesel::joinable!(hd1_galleries -> hd1_sites (hd_site_id));
 //
 
 diesel::table! {
-    tor1_status_types (publish_id) {
+    tor1_status_types (tor_status_type) {
         tor_status_type -> Unsigned<Integer>,
         #[max_length = 50]
         name -> Varchar
@@ -123,12 +129,14 @@ diesel::table! {
 }
 
 diesel::table! {
-    tor1_qb_host (publish_id) {
+    tor1_qb_host (qb_host_id) {
+        publish_id -> Unsigned<Integer>,
         qb_host_id -> Unsigned<Integer>,
         #[max_length = 50]
         name -> Varchar
     }
 }
+diesel::joinable!(tor1_qb_host -> publish_log (publish_id));
 
 //
 
@@ -143,14 +151,16 @@ diesel::table! {
         qb_host_id -> Unsigned<Integer>,
     }
 }
+diesel::joinable!(tor1_torrents -> publish_log (publish_id));
+diesel::joinable!(tor1_torrents -> space (space_id));
 
 //
 // Other
 //
 
 diesel::allow_tables_to_appear_in_same_query!(
-    injest_complete,
+    journal_complete,
     publish_log,
-    injest_data_immutable,
-    injest_data_upgraded
+    journal_data_immutable,
+    journal_data_upgraded
 );
