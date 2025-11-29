@@ -1,5 +1,4 @@
 use aelita_commons::err_utils::pretty_error;
-use aelita_commons::tracing_re::{error, trace, warn};
 use aelita_xrn::defs::address::XrnAddr;
 use axum::extract::FromRequestParts;
 use axum::http::StatusCode;
@@ -7,6 +6,7 @@ use axum::http::request::Parts;
 use serde::de::StdError;
 use std::fmt::Debug;
 use std::str::FromStr;
+use xana_commons_rs::tracing_re::{error, trace, warn};
 
 /// Axum extractor to parse xrn directly from the path
 pub struct XrnFromUrl<T>(pub T)

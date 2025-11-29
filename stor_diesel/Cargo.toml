@@ -7,6 +7,7 @@ edition = "2024"
 aelita_commons = { path = "../commons" }
 aelita_xrn = { path = "../xrn" }
 #
+xana-commons-rs = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

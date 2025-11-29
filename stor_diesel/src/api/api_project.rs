@@ -3,11 +3,11 @@ use crate::connection::StorConnection;
 use crate::err::StorDieselResult;
 use crate::models::{ModelProjectName, NewModelProjectName};
 use crate::schema::aproject_names;
-use aelita_commons::tracing_re::debug;
 use diesel::dsl::*;
 use diesel::insert_into;
 use diesel::prelude::*;
 use std::ops::Range;
+use xana_commons_rs::tracing_re::debug;
 
 pub fn storapi_project_names_list(
     conn: &mut StorConnection,

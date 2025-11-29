@@ -1,9 +1,9 @@
-use aelita_commons::tracing_re::trace;
 use diesel::Connection;
 use diesel::MysqlConnection;
 use diesel::connection::{Instrumentation, InstrumentationEvent};
 use dotenvy::dotenv;
 use std::env;
+use xana_commons_rs::tracing_re::trace;
 
 pub fn load_db_url_from_env() -> String {
     dotenv().ok();

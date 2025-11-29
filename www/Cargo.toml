@@ -8,6 +8,7 @@ aelita_commons = { path = "../commons" }
 aelita_stor_diesel = { path = "../stor_diesel" }
 aelita_xrn = { path = "../xrn" }
 #
+xana-commons-rs = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 chrono = { workspace = true }

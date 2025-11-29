@@ -5,14 +5,14 @@ use crate::pages::handle_registry::{
     handle_registry_html_post, handle_registry_root, handle_registryt_html,
 };
 use crate::pages::handle_root::handle_root;
-use aelita_commons::logs::log_init_trace;
 use axum::Router;
 use axum::routing::{get, post};
+use xana_commons_rs::XanaCommonsLogConfig;
 
 /// Begin magic
 #[tokio::main]
 pub async fn start_server() {
-    log_init_trace();
+    XanaCommonsLogConfig::new_default().log_init_trace();
 
     let sqlstate = SqlState::new();
 

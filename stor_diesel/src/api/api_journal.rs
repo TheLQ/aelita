@@ -6,9 +6,9 @@ use crate::models::model_journal::{
     ModelJournalIdCounter, ModelJournalIdCounterUpdate, ModelJournalIdKey, ModelJournalMutation,
 };
 use crate::schema::{jnl_id_counters, jnl_mutation};
-use aelita_commons::tracing_re::debug;
 use diesel::Connection;
 use diesel::prelude::*;
+use xana_commons_rs::tracing_re::debug;
 
 const ID_KEY_MUTATION: ModelJournalIdKey = ModelJournalIdKey::Mutation;
 const MUT_TYPE: &str = "mut";

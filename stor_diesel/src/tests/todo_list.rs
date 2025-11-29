@@ -5,7 +5,7 @@ use crate::err::StorDieselResult;
 use crate::models::date::StorDate;
 use crate::models::model_project_laser::NewModelProjectLaserSql;
 use crate::models::{ModelProjectName, NewModelProjectName};
-use aelita_commons::tracing_re::info;
+use xana_commons_rs::tracing_re::info;
 
 pub fn create_todo_list(conn: &mut StorConnection) -> StorDieselResult<()> {
     info!("TheWhiteBoard");
