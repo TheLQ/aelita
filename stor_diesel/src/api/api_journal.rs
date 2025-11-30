@@ -2,10 +2,12 @@ use crate::api::common::check_insert_num_rows;
 use crate::connection::StorConnection;
 use crate::err::StorDieselResult;
 use crate::models::model_journal::{
-    ModelPublishLog, NewModelJournalDataImmutable, NewModelPublishLog,
+    ModelJournalDataImmutable, ModelPublishLog, NewModelJournalDataImmutable,
+    NewModelJournalDataImmutableDiesel, NewModelPublishLog,
 };
 use diesel::Connection;
 use diesel::prelude::*;
+use diesel::query_dsl::InternalJoinDsl;
 
 pub fn storapi_journal_publish_push(
     conn: &mut StorConnection,
@@ -23,14 +25,38 @@ pub fn storapi_journal_publish_get(conn: &mut StorConnection) -> QueryResult<Vec
 
 pub fn storapi_journal_immutable_push(
     conn: &mut StorConnection,
-    values_raw: impl IntoIterator<Item = NewModelJournalDataImmutable> + Clone,
+    values_raw: impl IntoIterator<Item = NewModelJournalDataImmutable>,
 ) -> StorDieselResult<()> {
     conn.transaction(|conn| {
-        let values = values_raw.clone().into_iter().collect::<Vec<_>>();
+        let values = values_raw
+            .into_iter()
+            .map(
+                |NewModelJournalDataImmutable {
+                     journal_type,
+                     data,
+                     publish_id,
+                 }| NewModelJournalDataImmutableDiesel {
+                    journal_type,
+                    data,
+                    publish_id,
+                    committed: false,
+                },
+            )
+            .collect::<Vec<_>>();
         let values_len = values.len();
-        let res = diesel::insert_into(crate::schema::journal_data_immutable::table)
+        let res = diesel::insert_into(crate::schema::journal_immutable::table)
             .values(&values)
             .execute(conn);
         check_insert_num_rows(res, values_len)
+    })
+}
+
+pub fn storapi_journal_immutable_uncommitted(
+    conn: &mut StorConnection,
+) -> QueryResult<Vec<ModelJournalDataImmutable>> {
+    conn.transaction(|conn| {
+        crate::schema::journal_immutable::table
+            .filter(crate::schema::journal_immutable::committed.eq(false))
+            .load(conn)
     })
 }

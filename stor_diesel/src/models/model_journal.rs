@@ -22,20 +22,28 @@ pub struct NewModelPublishLog {
 //
 
 #[derive(Queryable, Selectable, Debug)]
-#[diesel(table_name = crate::schema::journal_data_immutable)]
+#[diesel(table_name = crate::schema::journal_immutable)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct ModelJournalDataImmutable {
     pub publish_id: ModelPublishId,
     pub journal_id: ModelJournalId,
     pub journal_type: ModelJournalType,
     pub data: Vec<u8>,
+    pub committed: bool,
 }
 
-#[derive(Insertable, Debug)]
-#[diesel(table_name = crate::schema::journal_data_immutable)]
-#[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct NewModelJournalDataImmutable {
     pub publish_id: ModelPublishId,
     pub journal_type: ModelJournalType,
     pub data: Vec<u8>,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = crate::schema::journal_immutable)]
+#[diesel(check_for_backend(diesel::mysql::Mysql))]
+pub struct NewModelJournalDataImmutableDiesel {
+    pub publish_id: ModelPublishId,
+    pub journal_type: ModelJournalType,
+    pub data: Vec<u8>,
+    pub committed: bool,
 }
