@@ -22,28 +22,12 @@ diesel::table! {
 }
 
 diesel::table! {
-    journal_complete (journal_id) {
-        publish_id -> Unsigned<Integer>,
-        journal_id -> Unsigned<Integer>,
-    }
-}
-
-diesel::table! {
-    journal_data_immutable (journal_id) {
+    journal_immutable (journal_id) {
         publish_id -> Unsigned<Integer>,
         journal_id -> Unsigned<Integer>,
         journal_type -> Unsigned<Integer>,
         data -> Blob,
-    }
-}
-
-diesel::table! {
-    journal_data_upgraded (journal_id) {
-        publish_id -> Unsigned<Integer>,
-        journal_id -> Unsigned<Integer>,
-        overwrites_journal_id -> Unsigned<Integer>,
-        journal_type -> Unsigned<Integer>,
-        data -> Blob,
+        committed -> Bool,
     }
 }
 
@@ -116,12 +100,8 @@ diesel::joinable!(hd1_galleries -> hd1_sites (hd_site_id));
 diesel::joinable!(hd1_galleries -> publish_log (publish_id));
 diesel::joinable!(hd1_galleries -> space (space_id));
 diesel::joinable!(hd1_sites -> publish_log (publish_id));
-diesel::joinable!(journal_complete -> publish_log (publish_id));
-diesel::joinable!(journal_data_immutable -> journal_types (journal_type));
-diesel::joinable!(journal_data_immutable -> publish_log (publish_id));
-diesel::joinable!(journal_data_upgraded -> journal_data_immutable (overwrites_journal_id));
-diesel::joinable!(journal_data_upgraded -> journal_types (journal_type));
-diesel::joinable!(journal_data_upgraded -> publish_log (publish_id));
+diesel::joinable!(journal_immutable -> journal_types (journal_type));
+diesel::joinable!(journal_immutable -> publish_log (publish_id));
 diesel::joinable!(space -> publish_log (publish_id));
 diesel::joinable!(space_owned -> publish_log (publish_id));
 diesel::joinable!(space_owned -> space (space_id));
@@ -132,9 +112,7 @@ diesel::joinable!(tor1_torrents -> space (space_id));
 diesel::allow_tables_to_appear_in_same_query!(
     hd1_galleries,
     hd1_sites,
-    journal_complete,
-    journal_data_immutable,
-    journal_data_upgraded,
+    journal_immutable,
     journal_types,
     publish_log,
     space,
