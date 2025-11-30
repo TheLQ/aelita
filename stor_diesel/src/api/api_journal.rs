@@ -1,13 +1,14 @@
 use crate::api::common::check_insert_num_rows;
 use crate::connection::StorConnection;
-use crate::err::StorDieselResult;
+use crate::err::{StorDieselError, StorDieselResult};
+use crate::models::id_types::ModelJournalId;
 use crate::models::model_journal::{
     ModelJournalDataImmutable, ModelPublishLog, NewModelJournalDataImmutable,
     NewModelJournalDataImmutableDiesel, NewModelPublishLog,
 };
-use diesel::Connection;
 use diesel::prelude::*;
 use diesel::query_dsl::InternalJoinDsl;
+use diesel::{Connection, dsl};
 
 pub fn storapi_journal_publish_push(
     conn: &mut StorConnection,
@@ -51,12 +52,39 @@ pub fn storapi_journal_immutable_push(
     })
 }
 
-pub fn storapi_journal_immutable_uncommitted(
+pub fn storapi_journal_commit_remain(
     conn: &mut StorConnection,
 ) -> QueryResult<Vec<ModelJournalDataImmutable>> {
+    crate::schema::journal_immutable::table
+        .filter(crate::schema::journal_immutable::committed.eq(false))
+        .load(conn)
+}
+
+pub fn storapi_journal_commit_new(
+    conn: &mut StorConnection,
+    to_commit: ModelJournalId,
+) -> StorDieselResult<()> {
     conn.transaction(|conn| {
-        crate::schema::journal_immutable::table
-            .filter(crate::schema::journal_immutable::committed.eq(false))
-            .load(conn)
+        let highest_committed: Option<u32> = crate::schema::journal_immutable::table
+            .select(dsl::max(crate::schema::journal_immutable::journal_id))
+            .filter(crate::schema::journal_immutable::committed.eq(true))
+            .first(conn)?;
+        if let Some(highest_committed) = highest_committed {
+            if highest_committed + 1 != to_commit.inner_id() {
+                return Err(StorDieselError::query_fail("cursor does not match"));
+            }
+        } else {
+            // nothing commited yet
+            if to_commit.inner_id() != 0 {
+                return Err(StorDieselError::query_fail(
+                    "nothing committed, should be committing 0",
+                ));
+            }
+        }
+        let rows = diesel::update(crate::schema::journal_immutable::table)
+            .filter(crate::schema::journal_immutable::journal_id.gt(to_commit))
+            .set(crate::schema::journal_immutable::committed.eq(true))
+            .execute(conn);
+        check_insert_num_rows(rows, 1)
     })
 }

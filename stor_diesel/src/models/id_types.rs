@@ -11,6 +11,12 @@ macro_rules! id_type {
         #[diesel(sql_type = Unsigned<Integer>)]
         pub struct $name(u32);
 
+        impl $name {
+            pub fn inner_id(&self) -> u32 {
+                self.0
+            }
+        }
+
         // core conversions
 
         impl<DB: Backend> FromSql<Unsigned<Integer>, DB> for $name
