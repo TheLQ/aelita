@@ -6,12 +6,6 @@ CREATE TABLE `publish_log`
     `cause_description` TEXT             NOT NULL
 );
 
-CREATE TABLE `journal_types`
-(
-    `journal_type`      INTEGER UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `journal_type_name` VARCHAR(20)      NOT NULL
-);
-
 CREATE TABLE `journal_immutable`
 (
     `publish_id`   INTEGER UNSIGNED NOT NULL,
@@ -19,6 +13,5 @@ CREATE TABLE `journal_immutable`
     `journal_type` INTEGER UNSIGNED NOT NULL,
     `data`         BLOB             NOT NULL,
     `committed`    BOOLEAN          NOT NULL,
-    FOREIGN KEY (`publish_id`) REFERENCES `publish_log` (`publish_id`),
-    FOREIGN KEY (`journal_type`) REFERENCES `journal_types` (`journal_type`)
+    FOREIGN KEY (`publish_id`) REFERENCES `publish_log` (`publish_id`)
 );

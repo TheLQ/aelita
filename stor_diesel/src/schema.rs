@@ -32,14 +32,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    journal_types (journal_type) {
-        journal_type -> Unsigned<Integer>,
-        #[max_length = 20]
-        journal_type_name -> Varchar,
-    }
-}
-
-diesel::table! {
     publish_log (publish_id) {
         publish_id -> Unsigned<Integer>,
         at -> Timestamp,
@@ -100,7 +92,6 @@ diesel::joinable!(hd1_galleries -> hd1_sites (hd_site_id));
 diesel::joinable!(hd1_galleries -> publish_log (publish_id));
 diesel::joinable!(hd1_galleries -> space (space_id));
 diesel::joinable!(hd1_sites -> publish_log (publish_id));
-diesel::joinable!(journal_immutable -> journal_types (journal_type));
 diesel::joinable!(journal_immutable -> publish_log (publish_id));
 diesel::joinable!(space -> publish_log (publish_id));
 diesel::joinable!(space_owned -> publish_log (publish_id));
@@ -113,7 +104,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     hd1_galleries,
     hd1_sites,
     journal_immutable,
-    journal_types,
     publish_log,
     space,
     space_owned,
