@@ -8,6 +8,7 @@
       <sourceFolder url="file://$MODULE_DIR$/xrn/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/commons/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/www/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/stor_import/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
       <excludeFolder url="file://$MODULE_DIR$/xrn/target" />
     </content>
