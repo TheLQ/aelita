@@ -6,6 +6,7 @@ use crate::models::model_journal::{
     ModelJournalDataImmutable, ModelPublishLog, NewModelJournalDataImmutable,
     NewModelJournalDataImmutableDiesel, NewModelPublishLog,
 };
+use crate::schema;
 use diesel::dsl;
 use diesel::prelude::*;
 use xana_commons_rs::tracing_re::info;
@@ -16,7 +17,7 @@ pub fn storapi_journal_publish_push(
 ) -> StorDieselResult<ModelPublishId> {
     assert_in_transaction();
 
-    let result = diesel::insert_into(crate::schema::publish_log::table)
+    let result = diesel::insert_into(schema::publish_log::table)
         .values(&input)
         .execute(conn);
     check_insert_num_rows(result, 1)?;
@@ -35,8 +36,8 @@ pub fn storapi_journal_immutable_push(
 ) -> StorDieselResult<Vec<ModelJournalId>> {
     assert_in_transaction();
 
-    let max_id: Option<ModelSpaceId> = crate::schema::journal_immutable::table
-        .select(dsl::max(crate::schema::journal_immutable::journal_id))
+    let max_id: Option<ModelSpaceId> = schema::journal_immutable::table
+        .select(dsl::max(schema::journal_immutable::journal_id))
         .get_result(conn)?;
 
     let values = values_raw
@@ -55,19 +56,19 @@ pub fn storapi_journal_immutable_push(
         )
         .collect::<Vec<_>>();
     let values_len = values.len();
-    let res = diesel::insert_into(crate::schema::journal_immutable::table)
+    let res = diesel::insert_into(schema::journal_immutable::table)
         .values(&values)
         .execute(conn);
     check_insert_num_rows(res, values_len)?;
 
     if let Some(max_id) = max_id {
-        Ok(crate::schema::journal_immutable::table
-            .select(crate::schema::journal_immutable::journal_id)
-            .filter(crate::schema::journal_immutable::journal_id.gt(max_id))
+        Ok(schema::journal_immutable::table
+            .select(schema::journal_immutable::journal_id)
+            .filter(schema::journal_immutable::journal_id.gt(max_id))
             .get_results(conn)?)
     } else {
-        Ok(crate::schema::journal_immutable::table
-            .select(crate::schema::journal_immutable::journal_id)
+        Ok(schema::journal_immutable::table
+            .select(schema::journal_immutable::journal_id)
             .get_results(conn)?)
     }
 }
@@ -78,7 +79,7 @@ pub fn storapi_journal_commit_remain(
     assert_in_transaction();
 
     ModelJournalDataImmutable::query()
-        .filter(crate::schema::journal_immutable::committed.eq(false))
+        .filter(schema::journal_immutable::committed.eq(false))
         .load(conn)
 }
 
@@ -88,9 +89,9 @@ pub fn storapi_journal_commit_new(
 ) -> StorDieselResult<()> {
     assert_in_transaction();
 
-    let highest_committed: Option<u32> = crate::schema::journal_immutable::table
-        .select(dsl::max(crate::schema::journal_immutable::journal_id))
-        .filter(crate::schema::journal_immutable::committed.eq(true))
+    let highest_committed: Option<u32> = schema::journal_immutable::table
+        .select(dsl::max(schema::journal_immutable::journal_id))
+        .filter(schema::journal_immutable::committed.eq(true))
         .first(conn)?;
     if let Some(highest_committed) = highest_committed {
         if highest_committed + 1 != to_commit.inner_id() {
@@ -104,9 +105,9 @@ pub fn storapi_journal_commit_new(
             ));
         }
     }
-    let rows = diesel::update(crate::schema::journal_immutable::table)
-        .filter(crate::schema::journal_immutable::journal_id.gt(to_commit))
-        .set(crate::schema::journal_immutable::committed.eq(true))
+    let rows = diesel::update(schema::journal_immutable::table)
+        .filter(schema::journal_immutable::journal_id.gt(to_commit))
+        .set(schema::journal_immutable::committed.eq(true))
         .execute(conn);
     check_insert_num_rows(rows, 1)
 }
@@ -115,8 +116,8 @@ pub fn storapi_reset_journal(conn: &mut StorConnection) -> StorDieselResult<()> 
     assert_in_transaction();
     assert_test_database(conn)?;
 
-    let journal_rows = diesel::delete(crate::schema::journal_immutable::table).execute(conn)?;
-    let publish_rows = diesel::delete(crate::schema::publish_log::table).execute(conn)?;
+    let journal_rows = diesel::delete(schema::journal_immutable::table).execute(conn)?;
+    let publish_rows = diesel::delete(schema::publish_log::table).execute(conn)?;
     info!("Reset {journal_rows} journal {publish_rows} publish rows");
     Ok(())
 }

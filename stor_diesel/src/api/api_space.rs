@@ -3,8 +3,10 @@ use crate::connection::{StorConnection, assert_in_transaction};
 use crate::err::StorDieselResult;
 use crate::models::id_types::{ModelSpaceId, StorIdType};
 use crate::models::model_space::{ModelSpaceNames, ModelSpaceOwned, NewModelSpaceNames};
+use crate::schema;
 use diesel::prelude::*;
 use diesel::{HasQuery, QueryDsl, QueryResult, RunQueryDsl, dsl};
+use std::ops::Range;
 
 pub fn storapi_space_new(
     conn: &mut StorConnection,
@@ -12,7 +14,7 @@ pub fn storapi_space_new(
 ) -> StorDieselResult<ModelSpaceId> {
     assert_in_transaction();
 
-    let rows = diesel::insert_into(crate::schema::space_names::table)
+    let rows = diesel::insert_into(schema::space_names::table)
         .values(space)
         .execute(conn);
     check_insert_num_rows(rows, 1)?;
@@ -31,22 +33,22 @@ pub fn storapi_space_owned_new(
 ) -> StorDieselResult<Vec<ModelSpaceId>> {
     assert_in_transaction();
 
-    let max_id: Option<ModelSpaceId> = crate::schema::space_names::table
-        .select(dsl::max(crate::schema::space_names::space_id))
+    let max_id: Option<ModelSpaceId> = schema::space_names::table
+        .select(dsl::max(schema::space_names::space_id))
         .get_result(conn)?;
-    let rows = diesel::insert_into(crate::schema::space_owned::table)
+    let rows = diesel::insert_into(schema::space_owned::table)
         .values(spaces)
         .execute(conn);
     check_insert_num_rows(rows, 1)?;
 
     if let Some(max_id) = max_id {
-        Ok(crate::schema::space_names::table
-            .select(crate::schema::space_names::space_id)
-            .filter(crate::schema::space_names::space_id.gt(max_id))
+        Ok(schema::space_names::table
+            .select(schema::space_names::space_id)
+            .filter(schema::space_names::space_id.gt(max_id))
             .get_results(conn)?)
     } else {
-        Ok(crate::schema::space_names::table
-            .select(crate::schema::space_names::space_id)
+        Ok(schema::space_names::table
+            .select(schema::space_names::space_id)
             .get_results(conn)?)
     }
 }
