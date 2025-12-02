@@ -1,11 +1,11 @@
-use crate::models::id_types::{ModelPublishId, ModelSpaceId};
+use crate::models::id_types::{ModelJournalId, ModelSpaceId};
 use diesel::{HasQuery, Insertable};
 
 #[derive(HasQuery, Debug)]
 #[diesel(table_name = crate::schema::space_names)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct ModelSpaceNames {
-    publish_id: ModelPublishId,
+    journal_id: ModelJournalId,
     space_id: ModelSpaceId,
     space_name: String,
     description: String,
@@ -15,7 +15,7 @@ pub struct ModelSpaceNames {
 #[diesel(table_name = crate::schema::space_names)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct NewModelSpaceNames {
-    pub publish_id: ModelPublishId,
+    pub journal_id: ModelJournalId,
     pub space_name: String,
     pub description: String,
 }
@@ -24,7 +24,7 @@ pub struct NewModelSpaceNames {
 #[diesel(table_name = crate::schema::space_owned)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct ModelSpaceOwned {
-    pub publish_id: ModelPublishId,
+    pub journal_id: ModelJournalId,
     pub space_id: ModelSpaceId,
     pub child_xrn: String,
     pub description: String,

@@ -12,7 +12,7 @@ pub mod sql_types {
 
 diesel::table! {
     hd1_galleries (hd_id) {
-        publish_id -> Unsigned<Integer>,
+        journal_id -> Unsigned<Integer>,
         hd_site_id -> Unsigned<Integer>,
         hd_id -> Unsigned<Integer>,
         #[max_length = 50]
@@ -22,7 +22,7 @@ diesel::table! {
 
 diesel::table! {
     hd1_sites (hd_site_id) {
-        publish_id -> Unsigned<Integer>,
+        journal_id -> Unsigned<Integer>,
         hd_site_id -> Unsigned<Integer>,
         #[max_length = 50]
         site_name -> Varchar,
@@ -35,18 +35,11 @@ diesel::table! {
     use super::sql_types::JournalImmutableJournalTypeEnum;
 
     journal_immutable (journal_id) {
-        publish_id -> Unsigned<Integer>,
         journal_id -> Unsigned<Integer>,
-        data -> Blob,
-        committed -> Bool,
         #[max_length = 8]
         journal_type -> JournalImmutableJournalTypeEnum,
-    }
-}
-
-diesel::table! {
-    publish_log (publish_id) {
-        publish_id -> Unsigned<Integer>,
+        data -> Blob,
+        committed -> Bool,
         at -> Timestamp,
         #[max_length = 100]
         cause_xrn -> Nullable<Varchar>,
@@ -56,7 +49,7 @@ diesel::table! {
 
 diesel::table! {
     space_names (space_id) {
-        publish_id -> Unsigned<Integer>,
+        journal_id -> Unsigned<Integer>,
         space_id -> Unsigned<Integer>,
         #[max_length = 50]
         space_name -> Varchar,
@@ -66,7 +59,7 @@ diesel::table! {
 
 diesel::table! {
     space_owned (space_id) {
-        publish_id -> Unsigned<Integer>,
+        journal_id -> Unsigned<Integer>,
         space_id -> Unsigned<Integer>,
         #[max_length = 100]
         child_xrn -> Varchar,
@@ -76,7 +69,7 @@ diesel::table! {
 
 diesel::table! {
     tor1_qb_host (qb_host_id) {
-        publish_id -> Unsigned<Integer>,
+        journal_id -> Unsigned<Integer>,
         qb_host_id -> Unsigned<Integer>,
         #[max_length = 50]
         name -> Varchar,
@@ -90,7 +83,7 @@ diesel::table! {
     use super::sql_types::Tor1TorrentsTorStatusTypeEnum;
 
     tor1_torrents (torhash) {
-        publish_id -> Unsigned<Integer>,
+        journal_id -> Unsigned<Integer>,
         #[max_length = 50]
         torhash -> Binary,
         tor_status_changed -> Timestamp,
@@ -101,20 +94,18 @@ diesel::table! {
 }
 
 diesel::joinable!(hd1_galleries -> hd1_sites (hd_site_id));
-diesel::joinable!(hd1_galleries -> publish_log (publish_id));
-diesel::joinable!(hd1_sites -> publish_log (publish_id));
-diesel::joinable!(journal_immutable -> publish_log (publish_id));
-diesel::joinable!(space_names -> publish_log (publish_id));
-diesel::joinable!(space_owned -> publish_log (publish_id));
+diesel::joinable!(hd1_galleries -> journal_immutable (journal_id));
+diesel::joinable!(hd1_sites -> journal_immutable (journal_id));
+diesel::joinable!(space_names -> journal_immutable (journal_id));
+diesel::joinable!(space_owned -> journal_immutable (journal_id));
 diesel::joinable!(space_owned -> space_names (space_id));
-diesel::joinable!(tor1_qb_host -> publish_log (publish_id));
-diesel::joinable!(tor1_torrents -> publish_log (publish_id));
+diesel::joinable!(tor1_qb_host -> journal_immutable (journal_id));
+diesel::joinable!(tor1_torrents -> journal_immutable (journal_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     hd1_galleries,
     hd1_sites,
     journal_immutable,
-    publish_log,
     space_names,
     space_owned,
     tor1_qb_host,

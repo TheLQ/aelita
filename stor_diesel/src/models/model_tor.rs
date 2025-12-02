@@ -1,4 +1,4 @@
-use crate::models::id_types::{ModelPublishId, ModelQbHostId, ModelTorrentStatus};
+use crate::models::id_types::{ModelJournalId, ModelQbHostId, ModelTorrentStatus};
 use crate::models::util_types::TorHashV1Diesel;
 use diesel::{HasQuery, Insertable};
 
@@ -6,7 +6,7 @@ use diesel::{HasQuery, Insertable};
 #[diesel(table_name = crate::schema::tor1_torrents)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct ModelTorrents {
-    publish_id: ModelPublishId,
+    journal_id: ModelJournalId,
     torhash: TorHashV1Diesel,
     qb_host_id: ModelQbHostId,
     tor_status_type: ModelTorrentStatus,
@@ -17,7 +17,7 @@ pub struct ModelTorrents {
 #[diesel(table_name = crate::schema::tor1_qb_host)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct ModelQbHosts {
-    publish_id: ModelPublishId,
+    journal_id: ModelJournalId,
     qb_host_id: ModelQbHostId,
     name: String,
 }
@@ -26,6 +26,6 @@ pub struct ModelQbHosts {
 #[diesel(table_name = crate::schema::tor1_qb_host)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct NewModelQbHosts {
-    publish_id: ModelPublishId,
+    journal_id: ModelJournalId,
     name: String,
 }

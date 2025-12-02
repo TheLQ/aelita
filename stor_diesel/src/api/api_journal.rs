@@ -1,31 +1,22 @@
-use crate::api::common::{assert_test_database, check_insert_num_rows, mysql_last_id};
-use crate::connection::{StorConnection, StorTransaction};
+use crate::api::common::{assert_test_database, check_insert_num_rows};
+use crate::connection::StorTransaction;
 use crate::err::{StorDieselError, StorDieselResult};
-use crate::models::id_types::{ModelJournalId, ModelPublishId, ModelSpaceId, StorIdType};
+use crate::models::id_types::{ModelJournalId, ModelSpaceId, StorIdType};
 use crate::models::model_journal::{
-    ModelJournalDataImmutable, ModelPublishLog, NewModelJournalDataImmutable,
-    NewModelJournalDataImmutableDiesel, NewModelPublishLog,
+    ModelJournalDataImmutable, NewModelJournalDataImmutable, NewModelJournalDataImmutableDiesel,
 };
 use crate::schema;
 use diesel::dsl;
 use diesel::prelude::*;
 use xana_commons_rs::tracing_re::info;
 
-pub fn storapi_journal_publish_push(
+pub fn storapi_journal_immutable_push_single(
     conn: &mut StorTransaction,
-    input: NewModelPublishLog,
-) -> StorDieselResult<ModelPublishId> {
-    let result = diesel::insert_into(schema::publish_log::table)
-        .values(&input)
-        .execute(conn.inner());
-    check_insert_num_rows(result, 1)?;
-    Ok(ModelPublishId::new(mysql_last_id(conn.inner())?))
-}
-
-pub fn storapi_journal_publish_get(
-    conn: &mut StorConnection,
-) -> StorDieselResult<Vec<ModelPublishLog>> {
-    ModelPublishLog::query().load(conn).map_err(Into::into)
+    value_raw: NewModelJournalDataImmutable,
+) -> StorDieselResult<ModelJournalId> {
+    let mut full = storapi_journal_immutable_push(conn, [value_raw])?;
+    assert_eq!(full.len(), 1);
+    Ok(full.remove(0))
 }
 
 pub fn storapi_journal_immutable_push(
@@ -42,12 +33,14 @@ pub fn storapi_journal_immutable_push(
             |NewModelJournalDataImmutable {
                  journal_type,
                  data,
-                 publish_id,
+                 cause_xrn,
+                 cause_description,
              }| NewModelJournalDataImmutableDiesel {
                 journal_type,
                 data,
-                publish_id,
                 committed: false,
+                cause_xrn,
+                cause_description,
             },
         )
         .collect::<Vec<_>>();
@@ -58,11 +51,12 @@ pub fn storapi_journal_immutable_push(
     check_insert_num_rows(res, values_len)?;
 
     if let Some(max_id) = max_id {
-        schema::journal_immutable::table
+        let res = schema::journal_immutable::table
             .select(schema::journal_immutable::journal_id)
             .filter(schema::journal_immutable::journal_id.gt(max_id))
-            .get_results(conn.inner())
-            .map_err(Into::into)
+            .get_results(conn.inner())?;
+        assert_eq!(res.len(), values_len);
+        Ok(res)
     } else {
         schema::journal_immutable::table
             .select(schema::journal_immutable::journal_id)
@@ -111,7 +105,6 @@ pub fn storapi_reset_journal(conn: &mut StorTransaction) -> StorDieselResult<()>
     assert_test_database(conn)?;
 
     let journal_rows = diesel::delete(schema::journal_immutable::table).execute(conn.inner())?;
-    let publish_rows = diesel::delete(schema::publish_log::table).execute(conn.inner())?;
-    info!("Reset {journal_rows} journal {publish_rows} publish rows");
+    info!("Reset {journal_rows} journal rows");
     Ok(())
 }
