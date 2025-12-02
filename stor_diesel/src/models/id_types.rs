@@ -70,6 +70,7 @@ macro_rules! id_type {
 }
 id_type!(ModelPublishId);
 id_type!(ModelJournalId);
+id_type!(ModelSpaceId);
 
 // #[derive(Debug, AsExpression, diesel::FromSqlRow)]
 // #[diesel(sql_type = Unsigned<Integer>)]
