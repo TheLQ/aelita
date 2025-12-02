@@ -7,6 +7,7 @@ use crate::schema;
 use diesel::prelude::*;
 use diesel::{HasQuery, QueryDsl, QueryResult, RunQueryDsl, dsl};
 use std::ops::Range;
+use xana_commons_rs::tracing_re::info;
 
 pub fn storapi_space_new(
     conn: &mut StorConnection,
@@ -68,4 +69,13 @@ pub fn storapi_space_owned_get(conn: &mut StorConnection) -> QueryResult<Vec<Mod
     assert_in_transaction();
 
     ModelSpaceOwned::query().load(conn)
+}
+
+pub fn storapi_reset_space(conn: &mut StorConnection) -> StorDieselResult<()> {
+    assert_in_transaction();
+
+    let space_owned = diesel::delete(schema::space_owned::table).execute(conn)?;
+    let space_names = diesel::delete(schema::space_names::table).execute(conn)?;
+    info!("Reset {space_names} names {space_owned} owned rows");
+    Ok(())
 }

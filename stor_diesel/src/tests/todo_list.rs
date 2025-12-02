@@ -2,7 +2,7 @@ use crate::api::api_journal::{
     storapi_journal_commit_new, storapi_journal_immutable_push, storapi_journal_publish_push,
     storapi_reset_journal,
 };
-use crate::api::api_space::{storapi_space_new, storapi_space_owned_new};
+use crate::api::api_space::{storapi_reset_space, storapi_space_new, storapi_space_owned_new};
 use crate::api::assert_test_database;
 use crate::connection::StorConnection;
 use crate::err::{StorDieselError, StorDieselResult};
@@ -54,7 +54,10 @@ impl Model {
     }
 
     fn reset(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
-        conn.transaction(|conn| storapi_reset_journal(conn))
+        conn.transaction(|conn| {
+            storapi_reset_space(conn)?;
+            storapi_reset_journal(conn)
+        })
     }
 
     fn space_create_1(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
@@ -79,10 +82,10 @@ impl Model {
             Ok::<_, StorDieselError>((publish_id, journal_id))
         })?;
 
-        info!("synth gen");
+        info!("synth space");
 
         conn.transaction_state();
-        conn.transaction(|conn| {
+        let new_spaces = conn.transaction(|conn| {
             let space_id = storapi_space_new(
                 conn,
                 NewModelSpaceNames {
@@ -99,9 +102,7 @@ impl Model {
                     description: "test".into(),
                     child_xrn: "xrn:import:".into(),
                 }],
-            )?;
-
-            Ok::<_, StorDieselError>(())
+            )
         })?;
 
         // let mut project_names: Vec<NewModelProjectName> = Vec::new();
