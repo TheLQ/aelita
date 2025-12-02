@@ -9,7 +9,6 @@ pub mod sql_types {
 diesel::table! {
     hd1_galleries (hd_id) {
         publish_id -> Unsigned<Integer>,
-        space_id -> Unsigned<Integer>,
         hd_site_id -> Unsigned<Integer>,
         hd_id -> Unsigned<Integer>,
         #[max_length = 50]
@@ -91,7 +90,6 @@ diesel::table! {
 diesel::table! {
     tor1_torrents (torhash) {
         publish_id -> Unsigned<Integer>,
-        space_id -> Unsigned<Integer>,
         #[max_length = 50]
         torhash -> Binary,
         tor_status_type -> Unsigned<Integer>,
@@ -102,7 +100,6 @@ diesel::table! {
 
 diesel::joinable!(hd1_galleries -> hd1_sites (hd_site_id));
 diesel::joinable!(hd1_galleries -> publish_log (publish_id));
-diesel::joinable!(hd1_galleries -> space_names (space_id));
 diesel::joinable!(hd1_sites -> publish_log (publish_id));
 diesel::joinable!(journal_immutable -> publish_log (publish_id));
 diesel::joinable!(space_names -> publish_log (publish_id));
@@ -110,7 +107,6 @@ diesel::joinable!(space_owned -> publish_log (publish_id));
 diesel::joinable!(space_owned -> space_names (space_id));
 diesel::joinable!(tor1_qb_host -> publish_log (publish_id));
 diesel::joinable!(tor1_torrents -> publish_log (publish_id));
-diesel::joinable!(tor1_torrents -> space_names (space_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     hd1_galleries,
