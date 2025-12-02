@@ -13,7 +13,7 @@ CREATE TABLE `journal_immutable`
     `journal_id`   INTEGER UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `data`         BLOB             NOT NULL,
     `committed`    BOOLEAN          NOT NULL,
-    `journal_type` ENUM ('Journal1, Space1') NOT NULL,
+    `journal_type` ENUM ('Journal1', 'Space1') NOT NULL,
     -- @formatter:on
     FOREIGN KEY (`publish_id`) REFERENCES `publish_log` (`publish_id`)
 );

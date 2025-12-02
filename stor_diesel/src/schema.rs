@@ -36,7 +36,7 @@ diesel::table! {
         journal_id -> Unsigned<Integer>,
         data -> Blob,
         committed -> Bool,
-        #[max_length = 16]
+        #[max_length = 8]
         journal_type -> JournalImmutableJournalTypeEnum,
     }
 }
