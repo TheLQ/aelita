@@ -3,6 +3,7 @@ use crate::connection::{StorConnection, assert_in_transaction};
 use crate::err::StorDieselResult;
 use crate::models::id_types::{ModelSpaceId, StorIdType};
 use crate::models::model_space::{ModelSpaceNames, ModelSpaceOwned, NewModelSpaceNames};
+use diesel::prelude::*;
 use diesel::{HasQuery, QueryDsl, QueryResult, RunQueryDsl, dsl};
 
 pub fn storapi_space_new(
@@ -28,7 +29,7 @@ pub fn storapi_space_owned_new(
     conn: &mut StorConnection,
     spaces: &[ModelSpaceOwned],
 ) -> StorDieselResult<Vec<ModelSpaceId>> {
-    let max_space_id: Option<ModelSpaceId> = crate::schema::space_names::table
+    let max_id: Option<ModelSpaceId> = crate::schema::space_names::table
         .select(dsl::max(crate::schema::space_names::space_id))
         .get_result(conn)?;
     let rows = diesel::insert_into(crate::schema::space_owned::table)
@@ -36,16 +37,15 @@ pub fn storapi_space_owned_new(
         .execute(conn);
     check_insert_num_rows(rows, 1)?;
 
-    if let Some(max_space_id) = max_space_id {
-        crate::schema::space_names::table
-            .select(crate::schema::space_names::space_id::gt(
-                max_space_id.inner_id(),
-            ))
-            .get_results(conn)
-    } else {
-        crate::schema::space_names::table
+    if let Some(max_id) = max_id {
+        Ok(crate::schema::space_names::table
             .select(crate::schema::space_names::space_id)
-            .get_results(conn)
+            .filter(crate::schema::space_names::space_id.gt(max_id))
+            .get_results(conn)?)
+    } else {
+        Ok(crate::schema::space_names::table
+            .select(crate::schema::space_names::space_id)
+            .get_results(conn)?)
     }
 }
 

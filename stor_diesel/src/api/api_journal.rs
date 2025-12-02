@@ -1,7 +1,7 @@
 use crate::api::common::{assert_test_database, check_insert_num_rows, mysql_last_id};
 use crate::connection::{StorConnection, assert_in_transaction};
 use crate::err::{StorDieselError, StorDieselResult};
-use crate::models::id_types::{ModelJournalId, ModelPublishId, StorIdType};
+use crate::models::id_types::{ModelJournalId, ModelPublishId, ModelSpaceId, StorIdType};
 use crate::models::model_journal::{
     ModelJournalDataImmutable, ModelPublishLog, NewModelJournalDataImmutable,
     NewModelJournalDataImmutableDiesel, NewModelPublishLog,
@@ -32,8 +32,12 @@ pub fn storapi_journal_publish_get(conn: &mut StorConnection) -> QueryResult<Vec
 pub fn storapi_journal_immutable_push(
     conn: &mut StorConnection,
     values_raw: impl IntoIterator<Item = NewModelJournalDataImmutable>,
-) -> StorDieselResult<()> {
+) -> StorDieselResult<Vec<ModelJournalId>> {
     assert_in_transaction();
+
+    let max_id: Option<ModelSpaceId> = crate::schema::journal_immutable::table
+        .select(dsl::max(crate::schema::journal_immutable::journal_id))
+        .get_result(conn)?;
 
     let values = values_raw
         .into_iter()
@@ -54,7 +58,18 @@ pub fn storapi_journal_immutable_push(
     let res = diesel::insert_into(crate::schema::journal_immutable::table)
         .values(&values)
         .execute(conn);
-    check_insert_num_rows(res, values_len)
+    check_insert_num_rows(res, values_len)?;
+
+    if let Some(max_id) = max_id {
+        Ok(crate::schema::journal_immutable::table
+            .select(crate::schema::journal_immutable::journal_id)
+            .filter(crate::schema::journal_immutable::journal_id.gt(max_id))
+            .get_results(conn)?)
+    } else {
+        Ok(crate::schema::journal_immutable::table
+            .select(crate::schema::journal_immutable::journal_id)
+            .get_results(conn)?)
+    }
 }
 
 pub fn storapi_journal_commit_remain(
