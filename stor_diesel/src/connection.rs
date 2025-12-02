@@ -2,9 +2,11 @@ use crate::err::StorDieselResult;
 use diesel::Connection;
 use diesel::MysqlConnection;
 use diesel::connection::{Instrumentation, InstrumentationEvent};
-use dotenvy::dotenv;
+use std::collections::HashMap;
 use std::env;
-use xana_commons_rs::tracing_re::{Level, span, trace};
+use std::path::Path;
+use xana_commons_rs::read_file_better;
+use xana_commons_rs::tracing_re::{Level, info, span, trace};
 
 pub enum PermaStore {
     AelitaNull,
@@ -17,8 +19,28 @@ fn load_db_url_from_env(perma: PermaStore) -> String {
         PermaStore::Edition1 => "edition1",
     };
 
-    dotenv().ok();
-    let mut url_raw = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let env_path = Path::new(".env");
+    let env_map_raw = read_file_better(env_path)
+        .expect("missing .env file")
+        .unwrap();
+    info!(
+        "Loaded environment {}",
+        env_path.canonicalize().unwrap().display()
+    );
+    let env_map = str::from_utf8(&env_map_raw)
+        .unwrap()
+        .split("\n")
+        .filter(|line| !line.is_empty())
+        .map(|line| {
+            line.split_once("=")
+                .unwrap_or_else(|| panic!("Line '{line}' missing equals"))
+        })
+        .collect::<HashMap<_, _>>();
+
+    let mut url_raw = env_map
+        .get("DATABASE_URL")
+        .expect("DATABASE_URL must be set")
+        .to_string();
     let last_slash = url_raw
         .bytes()
         .into_iter()
@@ -37,6 +59,7 @@ pub type StorConnection = MysqlConnection;
 
 pub fn establish_connection(perma: PermaStore) -> StorConnection {
     let database_url = load_db_url_from_env(perma);
+    info!("Connecting to {database_url}");
     // InstrumentedMysqlConnection::establish(&database_url)
     let mut conn = MysqlConnection::establish(&database_url)
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));
