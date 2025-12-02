@@ -19,12 +19,6 @@ CREATE TABLE `hd1_galleries`
 
 --
 
-CREATE TABLE `tor1_status_types`
-(
-    `tor_status_type` INTEGER UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `name`            VARCHAR(50)      NOT NULL
-);
-
 CREATE TABLE `tor1_qb_host`
 (
     `publish_id` INTEGER UNSIGNED NOT NULL,

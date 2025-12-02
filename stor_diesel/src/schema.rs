@@ -80,14 +80,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    tor1_status_types (tor_status_type) {
-        tor_status_type -> Unsigned<Integer>,
-        #[max_length = 50]
-        name -> Varchar,
-    }
-}
-
-diesel::table! {
     tor1_torrents (torhash) {
         publish_id -> Unsigned<Integer>,
         #[max_length = 50]
@@ -116,6 +108,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     space_names,
     space_owned,
     tor1_qb_host,
-    tor1_status_types,
     tor1_torrents,
 );
