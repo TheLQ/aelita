@@ -59,7 +59,6 @@ impl Model {
 
     fn space_create_1(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
         info!("start space 1");
-
         let (publish_id, journal_ids) =
             StorTransaction::new_transaction("new-journal", conn, |conn| {
                 let publish_id = storapi_journal_publish_push(
@@ -81,8 +80,6 @@ impl Model {
             })?;
 
         info!("synth space");
-
-        conn.transaction_state();
         StorTransaction::new_transaction("new-space", conn, |conn| {
             let space_id = storapi_space_new(
                 conn,

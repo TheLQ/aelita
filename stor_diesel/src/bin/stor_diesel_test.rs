@@ -1,7 +1,6 @@
 use aelita_commons::err_utils::pretty_error;
-use aelita_stor_diesel::common::log_init_trace;
-use aelita_stor_diesel::connection::{PermaStore, establish_connection};
 use aelita_stor_diesel::tests::todo_list::create_todo_list;
+use aelita_stor_diesel::{PermaStore, establish_connection, log_init_trace};
 
 fn main() {
     log_init_trace();

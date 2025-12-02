@@ -1,14 +1,15 @@
 #![feature(error_generic_member_access)]
 #![feature(iterator_try_collect)]
 
-pub mod api;
-pub mod common;
-pub mod connection;
-pub mod err;
+mod api;
+mod common;
+mod connection;
+mod err;
 mod example_structure;
-pub mod models;
-#[allow(unused_imports)]
-pub mod schema;
+mod models;
+mod schema;
 pub mod tests;
 
+pub use common::log_init_trace;
+pub use connection::{PermaStore, establish_connection};
 pub use diesel as diesel_re;
