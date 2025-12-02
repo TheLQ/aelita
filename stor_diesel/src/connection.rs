@@ -1,15 +1,10 @@
 use crate::err::StorDieselResult;
+use diesel::Connection;
+use diesel::MysqlConnection;
 use diesel::connection::{Instrumentation, InstrumentationEvent};
-use diesel::{Connection, IntoSql};
-use diesel::{MysqlConnection, QueryResult};
 use dotenvy::dotenv;
-use rand::RngCore;
-use std::borrow::BorrowMut;
-use std::cell::RefCell;
 use std::env;
-use std::fmt::Display;
-use xana_commons_rs::tracing_re::span::EnteredSpan;
-use xana_commons_rs::tracing_re::{Level, Span, span, trace};
+use xana_commons_rs::tracing_re::{Level, span, trace};
 
 pub enum PermaStore {
     AelitaNull,

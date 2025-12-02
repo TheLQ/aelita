@@ -1,13 +1,12 @@
 use crate::api::api_journal::{
-    storapi_journal_commit_new, storapi_journal_immutable_push, storapi_journal_publish_push,
-    storapi_reset_journal,
+    storapi_journal_immutable_push, storapi_journal_publish_push, storapi_reset_journal,
 };
 use crate::api::api_space::{storapi_reset_space, storapi_space_new, storapi_space_owned_new};
 use crate::api::assert_test_database;
 use crate::connection::{StorConnection, StorTransaction};
-use crate::err::{StorDieselError, StorDieselResult};
+use crate::err::StorDieselResult;
 use crate::models::date::StorDate;
-use crate::models::id_types::{ModelJournalTypeName, ModelPublishId};
+use crate::models::id_types::ModelJournalTypeName;
 use crate::models::model_journal::{
     ModelJournalDataImmutable, NewModelJournalDataImmutable, NewModelPublishLog,
 };

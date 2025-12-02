@@ -1,12 +1,12 @@
 use crate::api::common::{check_insert_num_rows, mysql_last_id};
-use crate::connection::{StorConnection, StorTransaction};
+use crate::connection::StorTransaction;
 use crate::err::StorDieselResult;
 use crate::models::id_types::{ModelSpaceId, StorIdType};
 use crate::models::model_space::{ModelSpaceNames, ModelSpaceOwned, NewModelSpaceNames};
 use crate::schema;
 use diesel::prelude::*;
 use diesel::{HasQuery, QueryDsl, RunQueryDsl, dsl};
-use std::ops::{DerefMut, Range};
+use std::ops::Range;
 use xana_commons_rs::tracing_re::info;
 
 pub fn storapi_space_new(

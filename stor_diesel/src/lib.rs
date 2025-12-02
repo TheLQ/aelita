@@ -4,7 +4,6 @@
 pub mod api;
 pub mod common;
 pub mod connection;
-mod db_bootstrap;
 pub mod err;
 mod example_structure;
 pub mod models;

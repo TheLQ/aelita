@@ -1,6 +1,3 @@
-#[macro_use]
-mod macro_gen;
-
 pub mod date;
 pub mod id_types;
 pub mod model_journal;

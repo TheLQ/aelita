@@ -1,5 +1,5 @@
 use crate::models::id_types::{ModelJournalId, ModelJournalTypeName, ModelPublishId};
-use diesel::{HasQuery, Insertable, Queryable, Selectable};
+use diesel::{HasQuery, Insertable};
 
 #[derive(HasQuery, Debug)]
 #[diesel(table_name = crate::schema::publish_log)]
