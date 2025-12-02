@@ -11,7 +11,6 @@ use crate::models::model_journal::{
     ModelJournalDataImmutable, NewModelJournalDataImmutable, NewModelPublishLog,
 };
 use crate::models::model_space::{ModelSpaceOwned, NewModelSpaceNames};
-use diesel::Connection;
 use xana_commons_rs::tracing_re::info;
 
 pub fn create_todo_list(conn: &mut StorConnection) -> StorDieselResult<()> {

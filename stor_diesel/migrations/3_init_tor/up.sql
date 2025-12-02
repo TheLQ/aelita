@@ -35,7 +35,7 @@ CREATE TABLE `tor1_torrents`
     `torhash`            BINARY(50)          NOT NULL PRIMARY KEY,
     `tor_status_changed` TIMESTAMP           NOT NULL,
     `qb_host_id`         INTEGER UNSIGNED    NOT NULL,
-    `tor_status_type`    ENUM('Queued', 'Downloading', 'FullMoving', 'FullArchive') NOT NULL,
+    `tor_status_type`    ENUM('Ignore', 'Queued', 'Downloading', 'FullMoving', 'FullArchive') NOT NULL,
     -- @formatter:on
     FOREIGN KEY (`publish_id`) REFERENCES `publish_log` (`publish_id`)
 );

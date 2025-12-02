@@ -1,5 +1,6 @@
 use crate::err::StorDieselError;
 use crate::schema::sql_types::JournalImmutableJournalTypeEnum;
+use crate::schema::sql_types::Tor1TorrentsTorStatusTypeEnum;
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
 use diesel::mysql::{Mysql, MysqlValue};
@@ -83,6 +84,7 @@ macro_rules! id_type {
 id_type!(ModelPublishId);
 id_type!(ModelJournalId);
 id_type!(ModelSpaceId);
+id_type!(ModelQbHostId);
 
 // #[derive(Debug, AsExpression, diesel::FromSqlRow)]
 // #[diesel(sql_type = Unsigned<Integer>)]
@@ -128,13 +130,13 @@ id_type!(ModelSpaceId);
 // }
 
 macro_rules! enum_value {
-    ($name:ident) => {
+    ($diesel_type:ident -> $name:ident) => {
         /*
         todo: Assume we can use rust utf8 strings. Mysql only? Then why sqlite has a Binary+Text conversion?
         https://github.com/adwhit/diesel-derive-enum/blob/816ebe062a99056a69a194b4ba15532980558c19/src/lib.rs#L580
         */
 
-        impl FromSql<JournalImmutableJournalTypeEnum, Mysql> for $name {
+        impl FromSql<$diesel_type, Mysql> for $name {
             fn from_sql(input_raw: MysqlValue) -> diesel::deserialize::Result<Self> {
                 let input = str::from_utf8(input_raw.as_bytes()).map_err(|e| {
                     Box::new(StorDieselError::query_fail(format!(
@@ -150,7 +152,7 @@ macro_rules! enum_value {
             }
         }
 
-        impl ToSql<JournalImmutableJournalTypeEnum, Mysql> for $name {
+        impl ToSql<$diesel_type, Mysql> for $name {
             fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Mysql>) -> diesel::serialize::Result {
                 let as_str: &str = self.into();
                 out.write_all(as_str.as_bytes())?;
@@ -176,15 +178,25 @@ pub enum ModelJournalTypeName {
     Journal1,
     Space1,
 }
-enum_value!(ModelJournalTypeName);
+enum_value!(JournalImmutableJournalTypeEnum -> ModelJournalTypeName);
 
-// impl StorValues for ModelJournalTypeName {
-//     type Id = ModelJournalTypeId;
-//
-//     fn to_int_id(&self) -> u32 {
-//         match self {
-//             Self::Journal1 => 1,
-//             Self::Space1 => 2,
-//         }
-//     }
-// }
+#[derive(
+    Debug,
+    Hash,
+    Eq,
+    PartialEq,
+    diesel::AsExpression,
+    diesel::FromSqlRow,
+    strum::EnumString,
+    strum::IntoStaticStr,
+    strum::VariantArray,
+)]
+#[diesel(sql_type = Tor1TorrentsTorStatusTypeEnum)]
+pub enum ModelTorrentStatus {
+    Ignore,
+    Queued,
+    Downloading,
+    FullMoving,
+    FullArchive,
+}
+enum_value!(Tor1TorrentsTorStatusTypeEnum -> ModelTorrentStatus);

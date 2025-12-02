@@ -1,5 +1,7 @@
 #![feature(error_generic_member_access)]
 #![feature(iterator_try_collect)]
+#![feature(slice_as_array)]
+#![feature(slice_pattern)]
 
 mod api;
 mod common;
