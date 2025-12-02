@@ -29,6 +29,8 @@ pub fn storapi_space_owned_new(
     conn: &mut StorConnection,
     spaces: &[ModelSpaceOwned],
 ) -> StorDieselResult<Vec<ModelSpaceId>> {
+    assert_in_transaction();
+
     let max_id: Option<ModelSpaceId> = crate::schema::space_names::table
         .select(dsl::max(crate::schema::space_names::space_id))
         .get_result(conn)?;
