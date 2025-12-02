@@ -65,6 +65,8 @@ diesel::table! {
     space_owned (space_id) {
         publish_id -> Unsigned<Integer>,
         space_id -> Unsigned<Integer>,
+        #[max_length = 100]
+        child_xrn -> Varchar,
         description -> Text,
     }
 }
