@@ -12,6 +12,7 @@ mod models;
 mod schema;
 pub mod tests;
 
+pub use api::*;
 pub use common::log_init_trace;
 pub use connection::{PermaStore, establish_connection};
 pub use diesel as diesel_re;

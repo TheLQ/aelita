@@ -17,5 +17,4 @@ strum = { workspace = true }
 diesel = { version = "2.3.4", features = ["mysql", "chrono"] }
 dotenvy = "0.15"
 zstd = "0.13.2"
-rand = "0.9.2"
 

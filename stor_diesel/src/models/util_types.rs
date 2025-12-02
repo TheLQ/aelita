@@ -1,10 +1,8 @@
-use core::slice::SlicePattern;
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
 use diesel::serialize::{Output, ToSql};
 use diesel::sql_types::Binary;
 use xana_commons_rs::bencode_torrent_re::TorHashV1;
-use zstd::zstd_safe::WriteBuf;
 
 #[derive(Debug, diesel::FromSqlRow, diesel::AsExpression)]
 #[diesel(sql_type = Binary)]
