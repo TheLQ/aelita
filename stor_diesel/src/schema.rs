@@ -1,5 +1,11 @@
 // @generated automatically by Diesel CLI.
 
+pub mod sql_types {
+    #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
+    #[diesel(mysql_type(name = "Enum"))]
+    pub struct JournalImmutableJournalTypeEnum;
+}
+
 diesel::table! {
     hd1_galleries (hd_id) {
         publish_id -> Unsigned<Integer>,
@@ -22,12 +28,16 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::JournalImmutableJournalTypeEnum;
+
     journal_immutable (journal_id) {
         publish_id -> Unsigned<Integer>,
         journal_id -> Unsigned<Integer>,
-        journal_type -> Unsigned<Integer>,
         data -> Blob,
         committed -> Bool,
+        #[max_length = 16]
+        journal_type -> JournalImmutableJournalTypeEnum,
     }
 }
 

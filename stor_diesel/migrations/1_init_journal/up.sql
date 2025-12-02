@@ -8,10 +8,12 @@ CREATE TABLE `publish_log`
 
 CREATE TABLE `journal_immutable`
 (
+    -- @formatter:off for massive enum
     `publish_id`   INTEGER UNSIGNED NOT NULL,
     `journal_id`   INTEGER UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `journal_type` INTEGER UNSIGNED NOT NULL,
     `data`         BLOB             NOT NULL,
     `committed`    BOOLEAN          NOT NULL,
+    `journal_type` ENUM ('Journal1, Space1') NOT NULL,
+    -- @formatter:on
     FOREIGN KEY (`publish_id`) REFERENCES `publish_log` (`publish_id`)
 );
