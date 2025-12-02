@@ -10,6 +10,7 @@ use crate::models::id_types::ModelJournalTypeName;
 use crate::models::model_journal::{
     ModelJournalDataImmutable, NewModelJournalDataImmutable, NewModelPublishLog,
 };
+use diesel::Connection;
 use xana_commons_rs::tracing_re::info;
 
 pub fn create_todo_list(conn: &mut StorConnection) -> StorDieselResult<()> {
@@ -51,28 +52,29 @@ impl Model {
     }
 
     fn reset(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
-        storapi_reset_journal(conn)?;
-        Ok(())
+        conn.transaction(|conn| storapi_reset_journal(conn))
     }
 
     fn space_create_1(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
         info!("start space 1");
 
-        let publish_id = storapi_journal_publish_push(
-            conn,
-            NewModelPublishLog {
-                cause_description: "space 1 create".into(),
-                cause_xrn: None,
-            },
-        )?;
-        storapi_journal_immutable_push(
-            conn,
-            [NewModelJournalDataImmutable {
-                publish_id,
-                journal_type: ModelJournalTypeName::Space1,
-                data: "hello_world".as_bytes().to_vec(),
-            }],
-        )
+        conn.transaction(|conn| {
+            let publish_id = storapi_journal_publish_push(
+                conn,
+                NewModelPublishLog {
+                    cause_description: "space 1 create".into(),
+                    cause_xrn: None,
+                },
+            )?;
+            storapi_journal_immutable_push(
+                conn,
+                [NewModelJournalDataImmutable {
+                    publish_id,
+                    journal_type: ModelJournalTypeName::Space1,
+                    data: "hello_world".as_bytes().to_vec(),
+                }],
+            )
+        })
 
         // let mut project_names: Vec<NewModelProjectName> = Vec::new();
         // project_names.push(NewModelProjectName {

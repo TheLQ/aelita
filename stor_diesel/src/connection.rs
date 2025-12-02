@@ -64,17 +64,27 @@ impl Instrumentation for StorInstrument {
                 let id_num = rand::rng().next_u32();
                 let id_value = format!("{:x}", id_num);
                 let span = span!(Level::INFO, "q", tx = id_value);
-
                 let prev = TX_SPAN.replace(Some(span.entered()));
                 assert!(prev.is_none());
+
+                // todo: nested transaction
+                // let prev = TX_SPAN.take();
+                // if let None = prev {
+                //     let span = span!(Level::INFO, "q", tx = id_value);
+                //     TX_SPAN.set(Some(span.entered()));
+                // }
             }
             InstrumentationEvent::FinishQuery { query, .. } => {
                 if matches!(query.to_string().as_str(), "COMMIT" | "ROLLBACK") {
                     let prev = TX_SPAN.take();
-                    let _ = prev.unwrap();
+                    assert!(prev.is_some());
                 }
             }
             _ => (),
         }
     }
+}
+
+pub fn assert_in_transaction() {
+    assert!(TX_SPAN.with_borrow(|v| v.is_some()))
 }
