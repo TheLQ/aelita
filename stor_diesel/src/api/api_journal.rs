@@ -6,8 +6,8 @@ use crate::models::model_journal::{
     ModelJournalDataImmutable, ModelPublishLog, NewModelJournalDataImmutable,
     NewModelJournalDataImmutableDiesel, NewModelPublishLog,
 };
+use diesel::dsl;
 use diesel::prelude::*;
-use diesel::{Connection, dsl};
 use xana_commons_rs::tracing_re::info;
 
 pub fn storapi_journal_publish_push(

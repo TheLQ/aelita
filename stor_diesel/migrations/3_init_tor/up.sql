@@ -15,7 +15,7 @@ CREATE TABLE `hd1_galleries`
     `hd_id`      INTEGER UNSIGNED NOT NULL PRIMARY KEY,
     `tor_hash`   BINARY(50)       NOT NULL,
     FOREIGN KEY (`publish_id`) REFERENCES `publish_log` (`publish_id`),
-    FOREIGN KEY (`space_id`) REFERENCES `space` (`space_id`),
+    FOREIGN KEY (`space_id`) REFERENCES `space_names` (`space_id`),
     FOREIGN KEY (`hd_site_id`) REFERENCES `hd1_sites` (`hd_site_id`)
 );
 
@@ -44,7 +44,7 @@ CREATE TABLE `tor1_torrents`
     `tor_status_changed` TIMESTAMP        NOT NULL,
     `qb_host_id`         INTEGER UNSIGNED NOT NULL,
     FOREIGN KEY (`publish_id`) REFERENCES `publish_log` (`publish_id`),
-    FOREIGN KEY (`space_id`) REFERENCES `space` (`space_id`)
+    FOREIGN KEY (`space_id`) REFERENCES `space_names` (`space_id`)
 );
 
 

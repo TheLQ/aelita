@@ -1,4 +1,4 @@
-CREATE TABLE `space`
+CREATE TABLE `space_names`
 (
     `publish_id`  INTEGER UNSIGNED NOT NULL,
     `space_id`    INTEGER UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -14,7 +14,7 @@ CREATE TABLE `space_owned`
     `child_xrn`   VARCHAR(100)     NOT NULL,
     `description` TEXT             NOT NULL,
     FOREIGN KEY (`publish_id`) REFERENCES `publish_log` (`publish_id`),
-    FOREIGN KEY (`space_id`) REFERENCES `space` (`space_id`),
+    FOREIGN KEY (`space_id`) REFERENCES `space_names` (`space_id`),
     UNIQUE KEY `association` (`space_id`, `child_xrn`)
 );
 
