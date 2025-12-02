@@ -1,9 +1,12 @@
-use diesel::Connection;
 use diesel::MysqlConnection;
 use diesel::connection::{Instrumentation, InstrumentationEvent};
+use diesel::{Connection, IntoSql};
 use dotenvy::dotenv;
+use rand::RngCore;
+use std::cell::RefCell;
 use std::env;
-use xana_commons_rs::tracing_re::trace;
+use xana_commons_rs::tracing_re::span::EnteredSpan;
+use xana_commons_rs::tracing_re::{Level, span, trace};
 
 pub enum PermaStore {
     AelitaNull,
@@ -43,30 +46,35 @@ pub fn establish_connection(perma: PermaStore) -> StorConnection {
     conn
 }
 
-#[derive(Default)]
-struct StorInstrument {
-    inside_tx: bool,
+thread_local! {
+    static TX_SPAN: RefCell<Option<EnteredSpan>> = RefCell::new(None);
 }
+
+#[derive(Default)]
+struct StorInstrument {}
 
 impl Instrumentation for StorInstrument {
     fn on_connection_event(&mut self, event: InstrumentationEvent<'_>) {
         match event {
             InstrumentationEvent::StartQuery { query, .. } => {
                 let query_str = query.to_string();
-                if !self.inside_tx && query_str != "COMMIT" {
-                    trace!("---s");
-                }
                 trace!("{}", query_str);
             }
             InstrumentationEvent::BeginTransaction { .. } => {
-                self.inside_tx = true;
-                trace!("---");
+                let id_num = rand::rng().next_u32();
+                let id_value = format!("{:x}", id_num);
+                let span = span!(Level::INFO, "q", tx = id_value);
+
+                let prev = TX_SPAN.replace(Some(span.entered()));
+                assert!(prev.is_none());
             }
-            InstrumentationEvent::CommitTransaction { .. }
-            | InstrumentationEvent::RollbackTransaction { .. } => {
-                self.inside_tx = false;
+            InstrumentationEvent::FinishQuery { query, .. } => {
+                if matches!(query.to_string().as_str(), "COMMIT" | "ROLLBACK") {
+                    let prev = TX_SPAN.take();
+                    let _ = prev.unwrap();
+                }
             }
-            _ => {}
+            _ => (),
         }
     }
 }
