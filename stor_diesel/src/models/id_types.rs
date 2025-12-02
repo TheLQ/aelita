@@ -1,9 +1,19 @@
+use crate::err::StorDieselError;
+use crate::schema::sql_types::JournalImmutableJournalTypeEnum;
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
+use diesel::mysql::{Mysql, MysqlValue};
 use diesel::query_builder::bind_collector::RawBytesBindCollector;
-use diesel::serialize::{Output, ToSql};
+use diesel::serialize::{IsNull, Output, ToSql};
 use diesel::sql_types::{Integer, Text, Unsigned};
+use std::io::Write;
 use std::str::FromStr;
+
+pub trait StorIdType {
+    fn new(inner: u32) -> Self;
+
+    fn inner_id(&self) -> u32;
+}
 
 macro_rules! id_type {
     ($name:ident) => {
@@ -11,8 +21,12 @@ macro_rules! id_type {
         #[diesel(sql_type = Unsigned<Integer>)]
         pub struct $name(u32);
 
-        impl $name {
-            pub fn inner_id(&self) -> u32 {
+        impl StorIdType for $name {
+            fn new(inner: u32) -> Self {
+                Self(inner)
+            }
+
+            fn inner_id(&self) -> u32 {
                 self.0
             }
         }
@@ -56,7 +70,6 @@ macro_rules! id_type {
 }
 id_type!(ModelPublishId);
 id_type!(ModelJournalId);
-id_type!(ModelJournalType);
 
 // #[derive(Debug, AsExpression, diesel::FromSqlRow)]
 // #[diesel(sql_type = Unsigned<Integer>)]
@@ -103,35 +116,62 @@ id_type!(ModelJournalType);
 
 macro_rules! enum_value {
     ($name:ident) => {
-        impl<DB: Backend> FromSql<Text, DB> for $name
-        where
-            String: FromSql<Text, DB>,
-        {
-            fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
-                let inner = <String as FromSql<Text, DB>>::from_sql(bytes)?;
-                Ok(Self::from_str(&inner)?)
+        /*
+        todo: Assume we can use rust utf8 strings. Mysql only? Then why sqlite has a Binary+Text conversion?
+        https://github.com/adwhit/diesel-derive-enum/blob/816ebe062a99056a69a194b4ba15532980558c19/src/lib.rs#L580
+        */
+
+        impl FromSql<JournalImmutableJournalTypeEnum, Mysql> for $name {
+            fn from_sql(input_raw: MysqlValue) -> diesel::deserialize::Result<Self> {
+                let input = str::from_utf8(input_raw.as_bytes()).map_err(|e| {
+                    Box::new(StorDieselError::query_fail(format!(
+                        "variant not bytes {e}"
+                    )))
+                })?;
+                Self::from_str(input).map_err(|e| {
+                    Box::new(StorDieselError::query_fail(format!(
+                        "unsupported variant {e}"
+                    )))
+                    .into()
+                })
             }
         }
 
-        impl<DB> ToSql<Text, DB> for $name
-        where
-            // https://github.com/diesel-rs/diesel/blob/0abaf1b3f2ed24ac5643227baf841da9a63d9f1f/diesel/src/type_impls/primitives.rs#L143
-            for<'a> DB: Backend<BindCollector<'a> = RawBytesBindCollector<DB>>,
-        {
-            fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, DB>) -> diesel::serialize::Result {
-                let inner: &'static str = self.into();
-                <str as ToSql<Text, DB>>::to_sql(inner, out)
+        impl ToSql<JournalImmutableJournalTypeEnum, Mysql> for $name {
+            fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Mysql>) -> diesel::serialize::Result {
+                let as_str: &str = self.into();
+                out.write_all(as_str.as_bytes())?;
+                Ok(IsNull::No)
             }
         }
     };
 }
 
 #[derive(
-    Debug, diesel::AsExpression, diesel::FromSqlRow, strum::EnumString, strum::IntoStaticStr,
+    Debug,
+    Hash,
+    Eq,
+    PartialEq,
+    diesel::AsExpression,
+    diesel::FromSqlRow,
+    strum::EnumString,
+    strum::IntoStaticStr,
+    strum::VariantArray,
 )]
-#[diesel(sql_type = Text)]
+#[diesel(sql_type = JournalImmutableJournalTypeEnum)]
 pub enum ModelJournalTypeName {
-    Mutation,
-    FireHistory,
+    Journal1,
+    Space1,
 }
 enum_value!(ModelJournalTypeName);
+
+// impl StorValues for ModelJournalTypeName {
+//     type Id = ModelJournalTypeId;
+//
+//     fn to_int_id(&self) -> u32 {
+//         match self {
+//             Self::Journal1 => 1,
+//             Self::Space1 => 2,
+//         }
+//     }
+// }

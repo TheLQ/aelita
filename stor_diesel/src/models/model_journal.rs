@@ -1,7 +1,7 @@
-use crate::models::id_types::{ModelJournalId, ModelJournalType, ModelPublishId};
-use diesel::{Insertable, Queryable, Selectable};
+use crate::models::id_types::{ModelJournalId, ModelJournalTypeName, ModelPublishId};
+use diesel::{HasQuery, Insertable, Queryable, Selectable};
 
-#[derive(Queryable, Selectable, Debug)]
+#[derive(HasQuery, Debug)]
 #[diesel(table_name = crate::schema::publish_log)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct ModelPublishLog {
@@ -21,20 +21,20 @@ pub struct NewModelPublishLog {
 
 //
 
-#[derive(Queryable, Selectable, Debug)]
+#[derive(HasQuery, Debug)]
 #[diesel(table_name = crate::schema::journal_immutable)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct ModelJournalDataImmutable {
     pub publish_id: ModelPublishId,
     pub journal_id: ModelJournalId,
-    pub journal_type: ModelJournalType,
+    pub journal_type: ModelJournalTypeName,
     pub data: Vec<u8>,
     pub committed: bool,
 }
 
 pub struct NewModelJournalDataImmutable {
     pub publish_id: ModelPublishId,
-    pub journal_type: ModelJournalType,
+    pub journal_type: ModelJournalTypeName,
     pub data: Vec<u8>,
 }
 
@@ -43,7 +43,7 @@ pub struct NewModelJournalDataImmutable {
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct NewModelJournalDataImmutableDiesel {
     pub publish_id: ModelPublishId,
-    pub journal_type: ModelJournalType,
+    pub journal_type: ModelJournalTypeName,
     pub data: Vec<u8>,
     pub committed: bool,
 }

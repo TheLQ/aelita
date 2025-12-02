@@ -1,27 +1,30 @@
-use crate::api::common::check_insert_num_rows;
+use crate::api::common::{assert_test_database, check_insert_num_rows, mysql_last_id};
 use crate::connection::StorConnection;
 use crate::err::{StorDieselError, StorDieselResult};
-use crate::models::id_types::ModelJournalId;
+use crate::models::id_types::{ModelJournalId, ModelPublishId, StorIdType};
 use crate::models::model_journal::{
     ModelJournalDataImmutable, ModelPublishLog, NewModelJournalDataImmutable,
     NewModelJournalDataImmutableDiesel, NewModelPublishLog,
 };
 use diesel::prelude::*;
-use diesel::query_dsl::InternalJoinDsl;
 use diesel::{Connection, dsl};
+use xana_commons_rs::tracing_re::info;
 
 pub fn storapi_journal_publish_push(
     conn: &mut StorConnection,
     input: NewModelPublishLog,
-) -> StorDieselResult<()> {
-    let result = diesel::insert_into(crate::schema::publish_log::table)
-        .values(&input)
-        .execute(conn);
-    check_insert_num_rows(result, 1)
+) -> StorDieselResult<ModelPublishId> {
+    conn.transaction(|conn| {
+        let result = diesel::insert_into(crate::schema::publish_log::table)
+            .values(&input)
+            .execute(conn);
+        check_insert_num_rows(result, 1)?;
+        Ok(ModelPublishId::new(mysql_last_id(conn)?))
+    })
 }
 
 pub fn storapi_journal_publish_get(conn: &mut StorConnection) -> QueryResult<Vec<ModelPublishLog>> {
-    crate::schema::publish_log::table.load::<ModelPublishLog>(conn)
+    ModelPublishLog::query().load(conn)
 }
 
 pub fn storapi_journal_immutable_push(
@@ -55,7 +58,7 @@ pub fn storapi_journal_immutable_push(
 pub fn storapi_journal_commit_remain(
     conn: &mut StorConnection,
 ) -> QueryResult<Vec<ModelJournalDataImmutable>> {
-    crate::schema::journal_immutable::table
+    ModelJournalDataImmutable::query()
         .filter(crate::schema::journal_immutable::committed.eq(false))
         .load(conn)
 }
@@ -86,5 +89,15 @@ pub fn storapi_journal_commit_new(
             .set(crate::schema::journal_immutable::committed.eq(true))
             .execute(conn);
         check_insert_num_rows(rows, 1)
+    })
+}
+
+pub fn storapi_reset_journal(conn: &mut StorConnection) -> StorDieselResult<()> {
+    assert_test_database(conn)?;
+    conn.transaction(|conn| {
+        let journal_rows = diesel::delete(crate::schema::journal_immutable::table).execute(conn)?;
+        let publish_rows = diesel::delete(crate::schema::publish_log::table).execute(conn)?;
+        info!("Reset {journal_rows} journal {publish_rows} publish rows");
+        Ok(())
     })
 }
