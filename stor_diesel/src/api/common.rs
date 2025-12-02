@@ -1,4 +1,4 @@
-use crate::connection::StorConnection;
+use crate::connection::{StorConnection, StorTransaction};
 use crate::err::{StorDieselError, StorDieselResult};
 use aelita_commons::err_utils::xbt;
 use diesel::sql_types::{Integer, Text, Unsigned};
@@ -26,8 +26,8 @@ pub fn with_counter<I, O>(counter: &mut u32, mapper: impl Fn(u32, I) -> O) -> im
     }
 }
 
-pub fn assert_test_database(conn: &mut StorConnection) -> QueryResult<()> {
-    let db_name: String = diesel::select(diesel::dsl::sql::<Text>("DATABASE()")).first(conn)?;
+pub fn assert_test_database(conn: &mut StorTransaction) -> QueryResult<()> {
+    let db_name: String = diesel::select(dsl::sql::<Text>("DATABASE()")).first(conn.inner())?;
     info!("database name: {}", db_name);
     assert_eq!(db_name, "aelita_null");
     Ok(())

@@ -1,12 +1,15 @@
-use diesel::MysqlConnection;
+use crate::err::StorDieselResult;
 use diesel::connection::{Instrumentation, InstrumentationEvent};
 use diesel::{Connection, IntoSql};
+use diesel::{MysqlConnection, QueryResult};
 use dotenvy::dotenv;
 use rand::RngCore;
+use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::env;
+use std::fmt::Display;
 use xana_commons_rs::tracing_re::span::EnteredSpan;
-use xana_commons_rs::tracing_re::{Level, span, trace};
+use xana_commons_rs::tracing_re::{Level, Span, span, trace};
 
 pub enum PermaStore {
     AelitaNull,
@@ -46,10 +49,6 @@ pub fn establish_connection(perma: PermaStore) -> StorConnection {
     conn
 }
 
-thread_local! {
-    static TX_SPAN: RefCell<Option<EnteredSpan>> = RefCell::new(None);
-}
-
 #[derive(Default)]
 struct StorInstrument {}
 
@@ -60,31 +59,48 @@ impl Instrumentation for StorInstrument {
                 let query_str = query.to_string();
                 trace!("{}", query_str);
             }
-            InstrumentationEvent::BeginTransaction { .. } => {
-                let id_num = rand::rng().next_u32();
-                let id_value = format!("{:x}", id_num);
-                let span = span!(Level::INFO, "q", tx = id_value);
-                let prev = TX_SPAN.replace(Some(span.entered()));
-                assert!(prev.is_none());
-
-                // todo: nested transaction
-                // let prev = TX_SPAN.take();
-                // if let None = prev {
-                //     let span = span!(Level::INFO, "q", tx = id_value);
-                //     TX_SPAN.set(Some(span.entered()));
-                // }
-            }
-            InstrumentationEvent::FinishQuery { query, .. } => {
-                if matches!(query.to_string().as_str(), "COMMIT" | "ROLLBACK") {
-                    let prev = TX_SPAN.take();
-                    assert!(prev.is_some());
-                }
-            }
             _ => (),
         }
     }
 }
 
-pub fn assert_in_transaction() {
-    assert!(TX_SPAN.with_borrow(|v| v.is_some()))
+pub struct StorTransaction<'s>(&'s mut StorConnection);
+
+impl<'s> StorTransaction<'s> {
+    pub fn new_transaction<T>(
+        name: &str,
+        conn: &mut StorConnection,
+        callback: impl FnOnce(&mut StorTransaction) -> StorDieselResult<T>,
+    ) -> StorDieselResult<T> {
+        conn.transaction(|conn_raw| {
+            let mut wrapped = StorTransaction(conn_raw);
+            let _span = span!(Level::INFO, "q", name).entered();
+            callback(&mut wrapped)
+                .map_err(|e| diesel::result::Error::QueryBuilderError(Box::new(e)))
+        })
+        .map_err(|e| match e {
+            // only possible error
+            diesel::result::Error::QueryBuilderError(e) => *e.downcast().unwrap(),
+            _ => unreachable!(),
+        })
+    }
+
+    pub fn inner(&mut self) -> &mut StorConnection {
+        self.0
+    }
 }
+
+// todo:😢
+// impl Deref for StorTransaction<'_> {
+//     type Target = StorConnection;
+//
+//     fn deref(&self) -> &Self::Target {
+//         self.0
+//     }
+// }
+//
+// impl DerefMut for StorTransaction<'_> {
+//     fn deref_mut(&mut self) -> &mut Self::Target {
+//         self.0
+//     }
+// }

@@ -1,81 +1,76 @@
 use crate::api::common::{check_insert_num_rows, mysql_last_id};
-use crate::connection::{StorConnection, assert_in_transaction};
+use crate::connection::{StorConnection, StorTransaction};
 use crate::err::StorDieselResult;
 use crate::models::id_types::{ModelSpaceId, StorIdType};
 use crate::models::model_space::{ModelSpaceNames, ModelSpaceOwned, NewModelSpaceNames};
 use crate::schema;
 use diesel::prelude::*;
-use diesel::{HasQuery, QueryDsl, QueryResult, RunQueryDsl, dsl};
-use std::ops::Range;
+use diesel::{HasQuery, QueryDsl, RunQueryDsl, dsl};
+use std::ops::{DerefMut, Range};
 use xana_commons_rs::tracing_re::info;
 
 pub fn storapi_space_new(
-    conn: &mut StorConnection,
+    conn: &mut StorTransaction,
     space: NewModelSpaceNames,
 ) -> StorDieselResult<ModelSpaceId> {
-    assert_in_transaction();
-
     let rows = diesel::insert_into(schema::space_names::table)
         .values(space)
-        .execute(conn);
+        .execute(conn.inner());
     check_insert_num_rows(rows, 1)?;
-    Ok(ModelSpaceId::new(mysql_last_id(conn)?))
+    Ok(ModelSpaceId::new(mysql_last_id(conn.inner())?))
 }
 
-pub fn storapi_space_get(conn: &mut StorConnection) -> QueryResult<Vec<ModelSpaceNames>> {
-    assert_in_transaction();
-
-    ModelSpaceNames::query().load(conn)
+pub fn storapi_space_get(conn: &mut StorTransaction) -> StorDieselResult<Vec<ModelSpaceNames>> {
+    ModelSpaceNames::query()
+        .load(conn.inner())
+        .map_err(Into::into)
 }
 
 pub fn storapi_space_get_filtered(
-    conn: &mut StorConnection,
+    conn: &mut StorTransaction,
     range: Range<u32>,
-) -> QueryResult<Vec<ModelSpaceNames>> {
-    assert_in_transaction();
-
+) -> StorDieselResult<Vec<ModelSpaceNames>> {
     ModelSpaceNames::query()
         .filter(schema::space_names::space_id.between(range.start, range.end))
-        .load(conn)
+        .load(conn.inner())
+        .map_err(Into::into)
 }
 
 pub fn storapi_space_owned_new(
-    conn: &mut StorConnection,
+    conn: &mut StorTransaction,
     spaces: &[ModelSpaceOwned],
 ) -> StorDieselResult<Vec<ModelSpaceId>> {
-    assert_in_transaction();
-
     let max_id: Option<ModelSpaceId> = schema::space_names::table
         .select(dsl::max(schema::space_names::space_id))
-        .get_result(conn)?;
+        .get_result(conn.inner())?;
     let rows = diesel::insert_into(schema::space_owned::table)
         .values(spaces)
-        .execute(conn);
+        .execute(conn.inner());
     check_insert_num_rows(rows, 1)?;
 
     if let Some(max_id) = max_id {
         Ok(schema::space_names::table
             .select(schema::space_names::space_id)
             .filter(schema::space_names::space_id.gt(max_id))
-            .get_results(conn)?)
+            .get_results(conn.inner())?)
     } else {
         Ok(schema::space_names::table
             .select(schema::space_names::space_id)
-            .get_results(conn)?)
+            .get_results(conn.inner())?)
     }
 }
 
-pub fn storapi_space_owned_get(conn: &mut StorConnection) -> QueryResult<Vec<ModelSpaceOwned>> {
-    assert_in_transaction();
-
-    ModelSpaceOwned::query().load(conn)
+pub fn storapi_space_owned_get(
+    conn: &mut StorTransaction,
+) -> StorDieselResult<Vec<ModelSpaceOwned>> {
+    ModelSpaceOwned::query()
+        .load(conn.inner())
+        .map_err(Into::into)
 }
 
-pub fn storapi_reset_space(conn: &mut StorConnection) -> StorDieselResult<()> {
-    assert_in_transaction();
-
-    let space_owned = diesel::delete(schema::space_owned::table).execute(conn)?;
-    let space_names = diesel::delete(schema::space_names::table).execute(conn)?;
+pub fn storapi_reset_space(conn: &mut StorTransaction) -> StorDieselResult<()> {
+    let space_owned = diesel::delete(schema::space_owned::table).execute(conn.inner())?;
+    let space_names = diesel::delete(schema::space_names::table).execute(conn.inner())?;
     info!("Reset {space_names} names {space_owned} owned rows");
     Ok(())
 }

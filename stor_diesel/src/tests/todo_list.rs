@@ -4,7 +4,7 @@ use crate::api::api_journal::{
 };
 use crate::api::api_space::{storapi_reset_space, storapi_space_new, storapi_space_owned_new};
 use crate::api::assert_test_database;
-use crate::connection::StorConnection;
+use crate::connection::{StorConnection, StorTransaction};
 use crate::err::{StorDieselError, StorDieselResult};
 use crate::models::date::StorDate;
 use crate::models::id_types::{ModelJournalTypeName, ModelPublishId};
@@ -39,13 +39,10 @@ impl Model {
         // }
         // let res = sql_query("SELECT @@SESSION.sql_mode").get_result::<CountType>(conn)?;
 
-        assert_test_database(conn)?;
-
         let mut model = Self::default();
         model.current_time = current_time.clone();
 
         model.reset(conn)?;
-
         model.space_create_1(conn)?;
         // model.projects_initial_2(conn)?;
         // model.register_project_xrn(conn)?;
@@ -54,7 +51,8 @@ impl Model {
     }
 
     fn reset(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
-        conn.transaction(|conn| {
+        StorTransaction::new_transaction("reset", conn, |conn| {
+            assert_test_database(conn)?;
             storapi_reset_space(conn)?;
             storapi_reset_journal(conn)
         })
@@ -63,29 +61,30 @@ impl Model {
     fn space_create_1(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
         info!("start space 1");
 
-        let (publish_id, journal_id) = conn.transaction(|conn| {
-            let publish_id = storapi_journal_publish_push(
-                conn,
-                NewModelPublishLog {
-                    cause_description: "space 1 create".into(),
-                    cause_xrn: None,
-                },
-            )?;
-            let journal_id = storapi_journal_immutable_push(
-                conn,
-                [NewModelJournalDataImmutable {
-                    publish_id,
-                    journal_type: ModelJournalTypeName::Space1,
-                    data: "hello_world".as_bytes().to_vec(),
-                }],
-            )?;
-            Ok::<_, StorDieselError>((publish_id, journal_id))
-        })?;
+        let (publish_id, journal_ids) =
+            StorTransaction::new_transaction("new-journal", conn, |conn| {
+                let publish_id = storapi_journal_publish_push(
+                    conn,
+                    NewModelPublishLog {
+                        cause_description: "space 1 create".into(),
+                        cause_xrn: None,
+                    },
+                )?;
+                let journal_ids = storapi_journal_immutable_push(
+                    conn,
+                    [NewModelJournalDataImmutable {
+                        publish_id,
+                        journal_type: ModelJournalTypeName::Space1,
+                        data: "hello_world".as_bytes().to_vec(),
+                    }],
+                )?;
+                Ok((publish_id, journal_ids))
+            })?;
 
         info!("synth space");
 
         conn.transaction_state();
-        let new_spaces = conn.transaction(|conn| {
+        StorTransaction::new_transaction("new-space", conn, |conn| {
             let space_id = storapi_space_new(
                 conn,
                 NewModelSpaceNames {
@@ -96,12 +95,15 @@ impl Model {
             )?;
             storapi_space_owned_new(
                 conn,
-                &[ModelSpaceOwned {
-                    publish_id,
-                    space_id,
-                    description: "test".into(),
-                    child_xrn: "xrn:import:".into(),
-                }],
+                &journal_ids
+                    .into_iter()
+                    .map(|journal_id| ModelSpaceOwned {
+                        publish_id,
+                        space_id,
+                        description: "test".into(),
+                        child_xrn: format!("xrn:import:{journal_id}"),
+                    })
+                    .collect::<Vec<_>>(),
             )
         })?;
 

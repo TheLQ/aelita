@@ -6,6 +6,7 @@ use diesel::mysql::{Mysql, MysqlValue};
 use diesel::query_builder::bind_collector::RawBytesBindCollector;
 use diesel::serialize::{IsNull, Output, ToSql};
 use diesel::sql_types::{Integer, Text, Unsigned};
+use std::fmt::{Display, Formatter};
 use std::io::Write;
 use std::str::FromStr;
 
@@ -53,6 +54,14 @@ macro_rules! id_type {
         {
             fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, DB>) -> diesel::serialize::Result {
                 <u32 as ToSql<Unsigned<Integer>, DB>>::to_sql(&self.0, out)
+            }
+        }
+
+        // format macro
+
+        impl Display for $name {
+            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                self.0.fmt(f)
             }
         }
 
