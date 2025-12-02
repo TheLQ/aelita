@@ -27,6 +27,17 @@ pub fn storapi_space_get(conn: &mut StorConnection) -> QueryResult<Vec<ModelSpac
     ModelSpaceNames::query().load(conn)
 }
 
+pub fn storapi_space_get_filtered(
+    conn: &mut StorConnection,
+    range: Range<u32>,
+) -> QueryResult<Vec<ModelSpaceNames>> {
+    assert_in_transaction();
+
+    ModelSpaceNames::query()
+        .filter(schema::space_names::space_id.between(range.start, range.end))
+        .load(conn)
+}
+
 pub fn storapi_space_owned_new(
     conn: &mut StorConnection,
     spaces: &[ModelSpaceOwned],
