@@ -2,7 +2,7 @@
 mod macro_gen;
 
 pub mod date;
-mod id_types;
+pub mod id_types;
 pub mod model_journal;
 pub mod model_project_laser;
 pub mod model_project_names;

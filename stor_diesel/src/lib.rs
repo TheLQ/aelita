@@ -1,13 +1,13 @@
 #![feature(error_generic_member_access)]
 #![feature(iterator_try_collect)]
 
-pub mod connection;
-pub mod models;
-
 pub mod api;
+pub mod common;
+pub mod connection;
+mod db_bootstrap;
 pub mod err;
-
 mod example_structure;
+pub mod models;
 #[allow(unused_imports)]
 pub mod schema;
 pub mod tests;

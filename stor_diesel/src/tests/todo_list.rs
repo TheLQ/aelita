@@ -1,10 +1,15 @@
-use crate::api::api_project::{storapi_project_names_push_and_get, storapi_project_names_reset};
-use crate::api::api_registry_ids::storapi_registry_ids_reset;
+use crate::api::api_journal::{
+    storapi_journal_commit_new, storapi_journal_immutable_push, storapi_journal_publish_push,
+    storapi_reset_journal,
+};
+use crate::api::common::assert_test_database;
 use crate::connection::StorConnection;
 use crate::err::StorDieselResult;
 use crate::models::date::StorDate;
-use crate::models::model_project_laser::NewModelProjectLaserSql;
-use crate::models::{ModelProjectName, NewModelProjectName};
+use crate::models::id_types::ModelJournalTypeName;
+use crate::models::model_journal::{
+    ModelJournalDataImmutable, NewModelJournalDataImmutable, NewModelPublishLog,
+};
 use xana_commons_rs::tracing_re::info;
 
 pub fn create_todo_list(conn: &mut StorConnection) -> StorDieselResult<()> {
@@ -17,7 +22,7 @@ pub fn create_todo_list(conn: &mut StorConnection) -> StorDieselResult<()> {
 
 #[derive(Default)]
 struct Model {
-    projects: Vec<ModelProjectName>,
+    projects: Vec<ModelJournalDataImmutable>,
     current_time: StorDate,
 }
 
@@ -31,109 +36,125 @@ impl Model {
         // }
         // let res = sql_query("SELECT @@SESSION.sql_mode").get_result::<CountType>(conn)?;
 
+        assert_test_database(conn)?;
+
         let mut model = Self::default();
         model.current_time = current_time.clone();
 
         model.reset(conn)?;
 
-        model.projects_initial_1(conn)?;
-        model.projects_initial_2(conn)?;
-        model.register_project_xrn(conn)?;
+        model.space_create_1(conn)?;
+        // model.projects_initial_2(conn)?;
+        // model.register_project_xrn(conn)?;
 
         Ok(())
     }
 
     fn reset(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
-        let added_rows = storapi_registry_ids_reset(conn)?;
-        info!("reset registry_ids of {} rows", added_rows);
-        let added_rows = storapi_project_names_reset(conn)?;
-        info!("reset project_names of {} rows", added_rows);
+        storapi_reset_journal(conn)?;
         Ok(())
     }
 
-    fn projects_initial_1(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
-        info!("start push1");
-        let mut project_names: Vec<NewModelProjectName> = Vec::new();
-        project_names.push(NewModelProjectName {
-            title: "alpha".into(),
-            description: "what what??".into(),
-            published: self.current_time.clone(),
-            publish_cause: "todo_list init".into(),
-        });
+    fn space_create_1(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
+        info!("start space 1");
 
-        let mut output_projects = storapi_project_names_push_and_get(conn, project_names)?;
-        for project in &output_projects {
-            info!("Inserted Project {:?}", project);
-        }
-        self.projects.append(&mut output_projects);
-        Ok(())
-    }
+        let publish_id = storapi_journal_publish_push(
+            conn,
+            NewModelPublishLog {
+                cause_description: "space 1 create".into(),
+                cause_xrn: None,
+            },
+        )?;
+        storapi_journal_immutable_push(
+            conn,
+            [NewModelJournalDataImmutable {
+                publish_id,
+                journal_type: ModelJournalTypeName::Space1,
+                data: "hello_world".as_bytes().to_vec(),
+            }],
+        )
 
-    fn projects_initial_2(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
-        info!("start push2");
-        let mut project_names = Vec::new();
-        project_names.push(NewModelProjectName {
-            title: "beta".into(),
-            description: "hell yea brother??".into(),
-            published: self.current_time.clone(),
-            publish_cause: "todo_list init".into(),
-        });
-        project_names.push(NewModelProjectName {
-            title: "gamma".into(),
-            description: "yeaoo??".into(),
-            published: self.current_time.clone(),
-            publish_cause: "todo_list init".into(),
-        });
-
-        let mut output_projects = storapi_project_names_push_and_get(conn, project_names)?;
-        for project in &output_projects {
-            info!("project {:?}", project);
-        }
-        self.projects.append(&mut output_projects);
-        Ok(())
-    }
-
-    fn register_project_xrn(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
-        todo!()
-        // let new: Vec<ModelRegistryId> = self
-        //     .projects
-        //     .iter()
-        //     .map(|v| ModelRegistryId {
-        //         xrn: v.xrn().into_addr(),
-        //         published: self.current_time.clone(),
-        //         publish_cause: "todo_list init".into(),
-        //     })
-        //     .collect();
-        // let new_len = new.len();
-        // storapi_registry_ids_push(conn, new)?;
-        // info!("registry new ids {}", new_len);
+        // let mut project_names: Vec<NewModelProjectName> = Vec::new();
+        // project_names.push(NewModelProjectName {
+        //     title: "alpha".into(),
+        //     description: "what what??".into(),
+        //     published: self.current_time.clone(),
+        //     publish_cause: "todo_list init".into(),
+        // });
         //
+        // let mut output_projects = storapi_project_names_push_and_get(conn, project_names)?;
+        // for project in &output_projects {
+        //     info!("Inserted Project {:?}", project);
+        // }
+        // self.projects.append(&mut output_projects);
         // Ok(())
     }
 
-    fn task_initial_1(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
-        let mut laser_names = Vec::new();
-        let laser_names_bases = vec!["nissan", "mazda", "ford", "chevy"];
-        let level_1_max = 5;
-        let level_2_max = 3;
-        for base in laser_names_bases {
-            for level_1 in 0..level_1_max {
-                for level_2 in 0..level_2_max {
-                    laser_names.push(format!("{}-{}.{}", base, level_1, level_2));
-                }
-            }
-        }
-
-        let mut lasers = Vec::new();
-        for laser_name in laser_names {
-            lasers.push(NewModelProjectLaserSql {
-                published: self.current_time.clone(),
-                publish_cause: "init".into(),
-                title: "title".into(),
-                description: "somedwz".into(),
-            });
-        }
-
-        Ok(())
-    }
+    // fn projects_initial_2(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
+    //     info!("start push2");
+    //     let mut project_names = Vec::new();
+    //     project_names.push(NewModelProjectName {
+    //         title: "beta".into(),
+    //         description: "hell yea brother??".into(),
+    //         published: self.current_time.clone(),
+    //         publish_cause: "todo_list init".into(),
+    //     });
+    //     project_names.push(NewModelProjectName {
+    //         title: "gamma".into(),
+    //         description: "yeaoo??".into(),
+    //         published: self.current_time.clone(),
+    //         publish_cause: "todo_list init".into(),
+    //     });
+    //
+    //     let mut output_projects = storapi_project_names_push_and_get(conn, project_names)?;
+    //     for project in &output_projects {
+    //         info!("project {:?}", project);
+    //     }
+    //     self.projects.append(&mut output_projects);
+    //     Ok(())
+    // }
+    //
+    // fn register_project_xrn(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
+    //     todo!()
+    //     // let new: Vec<ModelRegistryId> = self
+    //     //     .projects
+    //     //     .iter()
+    //     //     .map(|v| ModelRegistryId {
+    //     //         xrn: v.xrn().into_addr(),
+    //     //         published: self.current_time.clone(),
+    //     //         publish_cause: "todo_list init".into(),
+    //     //     })
+    //     //     .collect();
+    //     // let new_len = new.len();
+    //     // storapi_registry_ids_push(conn, new)?;
+    //     // info!("registry new ids {}", new_len);
+    //     //
+    //     // Ok(())
+    // }
+    //
+    // fn task_initial_1(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
+    //     let mut laser_names = Vec::new();
+    //     let laser_names_bases = vec!["nissan", "mazda", "ford", "chevy"];
+    //     let level_1_max = 5;
+    //     let level_2_max = 3;
+    //     for base in laser_names_bases {
+    //         for level_1 in 0..level_1_max {
+    //             for level_2 in 0..level_2_max {
+    //                 laser_names.push(format!("{}-{}.{}", base, level_1, level_2));
+    //             }
+    //         }
+    //     }
+    //
+    //     let mut lasers = Vec::new();
+    //     for laser_name in laser_names {
+    //         lasers.push(NewModelProjectLaserSql {
+    //             published: self.current_time.clone(),
+    //             publish_cause: "init".into(),
+    //             title: "title".into(),
+    //             description: "somedwz".into(),
+    //         });
+    //     }
+    //
+    //     Ok(())
+    // }
 }

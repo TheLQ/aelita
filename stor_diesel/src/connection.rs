@@ -5,9 +5,27 @@ use dotenvy::dotenv;
 use std::env;
 use xana_commons_rs::tracing_re::trace;
 
-pub fn load_db_url_from_env() -> String {
+pub enum PermaStore {
+    AelitaNull,
+    Edition1,
+}
+
+fn load_db_url_from_env(perma: PermaStore) -> String {
+    let perma_name = match perma {
+        PermaStore::AelitaNull => "aelita_null",
+        PermaStore::Edition1 => "edition1",
+    };
+
     dotenv().ok();
-    env::var("DATABASE_URL").expect("DATABASE_URL must be set")
+    let mut url_raw = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let last_slash = url_raw
+        .bytes()
+        .into_iter()
+        .rposition(|v| v == b'/')
+        .unwrap()
+        + /*slash*/1;
+    url_raw.replace_range(last_slash.., perma_name);
+    url_raw
 }
 
 /*
@@ -16,8 +34,8 @@ todo: type_alias_impl_trait
 */
 pub type StorConnection = MysqlConnection;
 
-pub fn establish_connection() -> StorConnection {
-    let database_url = load_db_url_from_env();
+pub fn establish_connection(perma: PermaStore) -> StorConnection {
+    let database_url = load_db_url_from_env(perma);
     // InstrumentedMysqlConnection::establish(&database_url)
     let mut conn = MysqlConnection::establish(&database_url)
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));

@@ -38,11 +38,18 @@ pub enum StorDieselError {
 
     #[error("WebError_Diesel {0:?}")]
     Diesel(#[from] diesel::result::Error, Backtrace),
+
+    #[error("QueryFail {0:?}")]
+    QueryFail(String, Backtrace),
 }
 
 impl StorDieselError {
     pub fn ioec(path: impl Into<PathBuf>) -> IOEC<Self> {
         IOEC::new(path.into())
+    }
+
+    pub fn query_fail(input: impl Into<String>) -> Self {
+        Self::QueryFail(input.into(), Backtrace::capture())
     }
 }
 
