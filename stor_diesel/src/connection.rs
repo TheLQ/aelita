@@ -1,7 +1,7 @@
 use crate::err::StorDieselResult;
-use diesel::MysqlConnection;
+use diesel::Connection;
 use diesel::connection::{Instrumentation, InstrumentationEvent};
-use diesel::{Connection, ConnectionResult};
+use diesel::{ConnectionError, MysqlConnection};
 use std::collections::HashMap;
 use std::path::Path;
 use xana_commons_rs::read_file_better;
@@ -56,13 +56,22 @@ todo: type_alias_impl_trait
 */
 pub type StorConnection = MysqlConnection;
 
-pub fn establish_connection(perma: PermaStore) -> ConnectionResult<StorConnection> {
+pub fn establish_connection(
+    perma: PermaStore,
+) -> Result<StorConnection, (String, ConnectionError)> {
     let database_url = load_db_url_from_env(perma);
     info!("Connecting to {database_url}");
     // InstrumentedMysqlConnection::establish(&database_url)
-    let mut conn = MysqlConnection::establish(&database_url)?;
+    let mut conn = MysqlConnection::establish(&database_url).map_err(|e| (database_url, e))?;
     conn.set_instrumentation(StorInstrument::default());
     Ok(conn)
+}
+
+pub fn establish_connection_or_panic(perma: PermaStore) -> StorConnection {
+    match establish_connection(perma) {
+        Ok(conn) => conn,
+        Err((url, e)) => panic!("Failed to connect to {url}: {e}"),
+    }
 }
 
 #[derive(Default)]

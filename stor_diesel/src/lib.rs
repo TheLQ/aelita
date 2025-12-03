@@ -14,5 +14,8 @@ pub mod tests;
 
 pub use api::*;
 pub use common::log_init_trace;
-pub use connection::{PermaStore, StorTransaction, establish_connection};
+pub use connection::{
+    PermaStore, StorTransaction, establish_connection, establish_connection_or_panic,
+};
+pub use err::{StorDieselError, StorDieselResult};
 // pub use diesel as diesel_re;
