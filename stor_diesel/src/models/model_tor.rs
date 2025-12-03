@@ -17,15 +17,15 @@ pub struct ModelTorrents {
 #[diesel(table_name = crate::schema::tor1_qb_host)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct ModelQbHosts {
-    journal_id: ModelJournalId,
     qb_host_id: ModelQbHostId,
     name: String,
+    address: String,
 }
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = crate::schema::tor1_qb_host)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct NewModelQbHosts {
-    journal_id: ModelJournalId,
     name: String,
+    address: String,
 }

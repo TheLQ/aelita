@@ -21,11 +21,9 @@ CREATE TABLE `hd1_galleries`
 
 CREATE TABLE `tor1_qb_host`
 (
-    `journal_id` INTEGER UNSIGNED NOT NULL,
     `qb_host_id` INTEGER UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `name`       VARCHAR(50)      NOT NULL,
-    `address`    VARCHAR(50)      NOT NULL,
-    FOREIGN KEY (`journal_id`) REFERENCES `journal_immutable` (`journal_id`)
+    `address`    VARCHAR(50)      NOT NULL
 );
 
 CREATE TABLE `tor1_torrents`

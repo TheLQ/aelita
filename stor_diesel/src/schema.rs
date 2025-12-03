@@ -69,7 +69,6 @@ diesel::table! {
 
 diesel::table! {
     tor1_qb_host (qb_host_id) {
-        journal_id -> Unsigned<Integer>,
         qb_host_id -> Unsigned<Integer>,
         #[max_length = 50]
         name -> Varchar,
@@ -99,7 +98,6 @@ diesel::joinable!(hd1_sites -> journal_immutable (journal_id));
 diesel::joinable!(space_names -> journal_immutable (journal_id));
 diesel::joinable!(space_owned -> journal_immutable (journal_id));
 diesel::joinable!(space_owned -> space_names (space_id));
-diesel::joinable!(tor1_qb_host -> journal_immutable (journal_id));
 diesel::joinable!(tor1_torrents -> journal_immutable (journal_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
