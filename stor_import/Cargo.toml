@@ -1,6 +1,7 @@
 [package]
-name = "stor_import"
+name = "aelita_stor_import"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+aelita_stor_diesel = { path = "../stor_diesel" }

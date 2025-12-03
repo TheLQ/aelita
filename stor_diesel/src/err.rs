@@ -13,9 +13,6 @@ pub enum StorDieselError {
     #[error("StorDieselError_IO {0} {1}")]
     IO(PathBuf, io::Error),
 
-    #[error("StorDieselError_Serde {0} {1}")]
-    Serde(PathBuf, serde_json::Error, Backtrace),
-
     #[error("StorDieselError_LibxrnError {0}")]
     LibxrnError(
         #[from]
@@ -56,11 +53,5 @@ impl StorDieselError {
 impl From<IOECStd> for StorDieselError {
     fn from(IOECStd { path, err }: IOECStd) -> Self {
         Self::IO(path, err)
-    }
-}
-
-impl From<IOECSerde> for StorDieselError {
-    fn from(IOECSerde { path, err }: IOECSerde) -> Self {
-        Self::Serde(path, err, xbt())
     }
 }
