@@ -44,6 +44,7 @@ name = "aelita_stor_import"
 version = "0.1.0"
 dependencies = [
  "aelita_stor_diesel",
+ "xana-commons-rs",
 ]
 
 [[package]]

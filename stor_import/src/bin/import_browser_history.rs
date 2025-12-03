@@ -44,36 +44,42 @@ fn inner_main() -> StorDieselResult<()> {
     let conn = &mut establish_connection();
     storapi_journal_reset_all(conn)?;
 
-    insert_data(conn, vec![
-        HistoryItem {
-            id: "somefire".into(),
+    insert_data(
+        conn,
+        vec![
+            HistoryItem {
+                id: "somefire".into(),
+                last_visit_time: 9999,
+                title: Some("sometitle".into()),
+                url: "http://your-done.com".into(),
+                visit_count: 1,
+            },
+            HistoryItem {
+                id: "morefire".into(),
+                last_visit_time: 9999,
+                title: Some("moretitle".into()),
+                url: "http://more-done.com".into(),
+                visit_count: 1,
+            },
+        ],
+    )?;
+
+    insert_data(
+        conn,
+        vec![HistoryItem {
+            id: "extrsafire".into(),
             last_visit_time: 9999,
-            title: Some("sometitle".into()),
+            title: Some("extratitle".into()),
             url: "http://your-done.com".into(),
             visit_count: 1,
-        },
-        HistoryItem {
-            id: "morefire".into(),
-            last_visit_time: 9999,
-            title: Some("moretitle".into()),
-            url: "http://more-done.com".into(),
-            visit_count: 1,
-        },
-    ])?;
-
-    insert_data(conn, vec![HistoryItem {
-        id: "extrsafire".into(),
-        last_visit_time: 9999,
-        title: Some("extratitle".into()),
-        url: "http://your-done.com".into(),
-        visit_count: 1,
-    }])?;
+        }],
+    )?;
 
     Ok(())
 }
 
 fn load_file() -> StorDieselResult<Vec<HistoryItem>> {
-    let input_path = Path::new("./browser_history_desktop_2025-02-01.json");
+    let input_path = Path::new("../../../browser_history_desktop_2025-02-01.json");
     let ioec = StorDieselError::ioec(&input_path);
 
     let contents = fs::read_to_string(input_path).map_err(ioec.io())?;
