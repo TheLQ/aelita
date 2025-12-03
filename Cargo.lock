@@ -16,6 +16,7 @@ dependencies = [
  "serde",
  "strum 0.26.3",
  "thiserror",
+ "tokio",
  "xana-commons-rs",
  "zstd",
 ]
@@ -25,6 +26,9 @@ name = "aelita_stor_import"
 version = "0.1.0"
 dependencies = [
  "aelita_stor_diesel",
+ "bytes",
+ "thiserror",
+ "tokio",
  "xana-commons-rs",
 ]
 

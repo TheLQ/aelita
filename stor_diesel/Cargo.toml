@@ -15,4 +15,4 @@ strum = { workspace = true }
 #
 diesel = { version = "2.3.4", features = ["mysql", "chrono"] }
 zstd = "0.13.2"
-
+tokio = { workspace = true }

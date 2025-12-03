@@ -4,6 +4,7 @@ use diesel::connection::{Instrumentation, InstrumentationEvent};
 use diesel::{ConnectionError, MysqlConnection};
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Arc;
 use xana_commons_rs::read_file_better;
 use xana_commons_rs::tracing_re::{Level, info, span, trace};
 
@@ -92,16 +93,20 @@ impl Instrumentation for StorInstrument {
 pub struct StorTransaction<'s>(&'s mut StorConnection);
 
 impl<'s> StorTransaction<'s> {
-    pub fn new_transaction<T>(
+    pub fn new_transaction<T, E>(
         name: &str,
         conn: &mut StorConnection,
-        callback: impl FnOnce(&mut StorTransaction) -> StorDieselResult<T>,
-    ) -> StorDieselResult<T> {
+        callback: impl FnOnce(&mut StorTransaction) -> Result<T, E>,
+    ) -> Result<T, E>
+    where
+        E: std::error::Error + Send + Sync + 'static,
+    {
         conn.transaction(|conn_raw| {
             let mut wrapped = StorTransaction(conn_raw);
-            let _span = span!(Level::INFO, "q", name).entered();
-            callback(&mut wrapped)
-                .map_err(|e| diesel::result::Error::QueryBuilderError(Box::new(e)))
+            span!(Level::INFO, "q", name).in_scope(|| {
+                callback(&mut wrapped)
+                    .map_err(|e| diesel::result::Error::QueryBuilderError(Box::new(e)))
+            })
         })
         .map_err(|e| match e {
             // only possible error
@@ -109,6 +114,42 @@ impl<'s> StorTransaction<'s> {
             _ => unreachable!(),
         })
     }
+
+    // pub async fn new_transaction_async<T, E, Callback, CallbackResult>(
+    //     name: impl Into<String>,
+    //     conn: &'s mut StorConnection,
+    //     callback: Callback,
+    // ) -> Result<T, E>
+    // where
+    //     E: std::error::Error + Send + Sync + 'static,
+    //     // spawn_blocking only needs Send
+    //     T: Send + 'static,
+    //     Callback: FnOnce(&mut StorTransaction) -> CallbackResult + Send + Sync + 'static,
+    //     CallbackResult: Future<Output = Result<T, E>>,
+    // {
+    //     let name = name.into();
+    //     let conn_arc = Arc::new(conn);
+    //
+    //     tokio::task::spawn_blocking(move || {
+    //         let mut conn_arc = conn_arc.clone();
+    //         conn_arc
+    //             .transaction(move |conn_raw| {
+    //                 let mut wrapped = StorTransaction(conn_raw);
+    //                 let _span = span!(Level::INFO, "q", name).entered();
+    //
+    //                 let rt = tokio::runtime::Handle::current();
+    //                 rt.block_on(async { callback(&mut wrapped).await })
+    //                     .map_err(|e| diesel::result::Error::QueryBuilderError(Box::new(e)))
+    //             })
+    //             .map_err(|e| match e {
+    //                 // only possible error
+    //                 diesel::result::Error::QueryBuilderError(e) => *e.downcast().unwrap(),
+    //                 _ => unreachable!(),
+    //             })
+    //     })
+    //     .await
+    //     .unwrap()
+    // }
 
     pub fn inner(&mut self) -> &mut StorConnection {
         self.0

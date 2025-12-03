@@ -1,3 +1,4 @@
+use crate::StorDieselError;
 use crate::api::api_journal::{storapi_journal_immutable_push_single, storapi_reset_journal};
 use crate::api::api_space::{storapi_reset_space, storapi_space_new, storapi_space_owned_new};
 use crate::api::assert_test_database;
@@ -54,18 +55,19 @@ impl Model {
 
     fn space_create(&mut self, conn: &mut StorConnection) -> StorDieselResult<()> {
         info!("start space 1");
-        let journal_id = StorTransaction::new_transaction("new-journal", conn, |conn| {
-            storapi_journal_immutable_push_single(
-                conn,
-                NewModelJournalDataImmutable {
-                    journal_type: ModelJournalTypeName::Space1,
-                    data: "hello_world".as_bytes().to_vec(),
-                    cause_description: "space 1 create".into(),
-                    cause_xrn: None,
-                },
-            )
-            .map_err(Into::into)
-        })?;
+        let journal_id =
+            StorTransaction::new_transaction::<_, StorDieselError>("new-journal", conn, |conn| {
+                storapi_journal_immutable_push_single(
+                    conn,
+                    NewModelJournalDataImmutable {
+                        journal_type: ModelJournalTypeName::Space1,
+                        data: "hello_world".as_bytes().to_vec(),
+                        cause_description: "space 1 create".into(),
+                        cause_xrn: None,
+                    },
+                )
+                .map_err(Into::into)
+            })?;
 
         info!("synth space");
         StorTransaction::new_transaction("new-space", conn, |conn| {
