@@ -1,8 +1,8 @@
 use crate::connection::{StorConnection, StorTransaction};
 use crate::err::{StorDieselError, StorDieselResult};
-use aelita_commons::err_utils::xbt;
 use diesel::sql_types::{Integer, Text, Unsigned};
 use diesel::{QueryResult, RunQueryDsl, dsl};
+use std::backtrace::Backtrace;
 use xana_commons_rs::tracing_re::info;
 
 pub fn check_insert_num_rows(query: QueryResult<usize>, expected: usize) -> StorDieselResult<()> {
@@ -11,7 +11,7 @@ pub fn check_insert_num_rows(query: QueryResult<usize>, expected: usize) -> Stor
         Err(StorDieselError::ResultLen {
             actual: result_size,
             expected,
-            backtrace: xbt(),
+            backtrace: Backtrace::capture(),
         })
     } else {
         Ok(())

@@ -1,9 +1,8 @@
 use crate::err::StorDieselResult;
-use diesel::Connection;
 use diesel::MysqlConnection;
 use diesel::connection::{Instrumentation, InstrumentationEvent};
+use diesel::{Connection, ConnectionResult};
 use std::collections::HashMap;
-use std::env;
 use std::path::Path;
 use xana_commons_rs::read_file_better;
 use xana_commons_rs::tracing_re::{Level, info, span, trace};
@@ -57,14 +56,13 @@ todo: type_alias_impl_trait
 */
 pub type StorConnection = MysqlConnection;
 
-pub fn establish_connection(perma: PermaStore) -> StorConnection {
+pub fn establish_connection(perma: PermaStore) -> ConnectionResult<StorConnection> {
     let database_url = load_db_url_from_env(perma);
     info!("Connecting to {database_url}");
     // InstrumentedMysqlConnection::establish(&database_url)
-    let mut conn = MysqlConnection::establish(&database_url)
-        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));
+    let mut conn = MysqlConnection::establish(&database_url)?;
     conn.set_instrumentation(StorInstrument::default());
-    conn
+    Ok(conn)
 }
 
 #[derive(Default)]

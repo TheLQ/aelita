@@ -1,24 +1,14 @@
-use aelita_commons::err_utils::{IOEC, IOECSerde, IOECStd, xbt};
-use aelita_xrn::err::LibxrnError;
 use std::backtrace::Backtrace;
-use std::io;
 use std::num::TryFromIntError;
-use std::path::PathBuf;
 use thiserror::Error;
+use xana_commons_rs::{MyBacktrace, SimpleIoError};
 
 pub type StorDieselResult<T> = Result<T, StorDieselError>;
 
 #[derive(Error, Debug)]
 pub enum StorDieselError {
-    #[error("StorDieselError_IO {0} {1}")]
-    IO(PathBuf, io::Error),
-
-    #[error("StorDieselError_LibxrnError {0}")]
-    LibxrnError(
-        #[from]
-        #[backtrace]
-        LibxrnError,
-    ),
+    #[error("StorDieselError_IO {0}")]
+    IO(#[from] SimpleIoError),
 
     #[error("StorDieselError_ChronoParse {0}")]
     ChronoParse(#[from] chrono::ParseError, Backtrace),
@@ -41,17 +31,20 @@ pub enum StorDieselError {
 }
 
 impl StorDieselError {
-    pub fn ioec(path: impl Into<PathBuf>) -> IOEC<Self> {
-        IOEC::new(path.into())
-    }
-
     pub fn query_fail(input: impl Into<String>) -> Self {
         Self::QueryFail(input.into(), Backtrace::capture())
     }
 }
 
-impl From<IOECStd> for StorDieselError {
-    fn from(IOECStd { path, err }: IOECStd) -> Self {
-        Self::IO(path, err)
+impl MyBacktrace for StorDieselError {
+    fn my_backtrace(&self) -> &Backtrace {
+        match self {
+            StorDieselError::IO(e) => e.my_backtrace(),
+            StorDieselError::ChronoParse(_, bt) => bt,
+            StorDieselError::ResultLen { backtrace, .. } => backtrace,
+            StorDieselError::TryFromNumber(_, bt) => bt,
+            StorDieselError::Diesel(_, bt) => bt,
+            StorDieselError::QueryFail(_, bt) => bt,
+        }
     }
 }

@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 aelita_commons = { path = "../commons" }
-aelita_xrn = { path = "../xrn" }
+#aelita_xrn = { path = "../xrn" }
 #
 xana-commons-rs = { workspace = true }
 serde = { workspace = true }
