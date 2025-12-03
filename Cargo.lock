@@ -20,9 +20,6 @@ checksum = "512761e0bb2578dd7380c6baaa0f4ce03e84f95e960231d1dec8bf4d7d6e2627"
 [[package]]
 name = "aelita_commons"
 version = "0.1.0"
-dependencies = [
- "serde_json",
-]
 
 [[package]]
 name = "aelita_stor_diesel"
