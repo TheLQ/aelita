@@ -3,4 +3,5 @@ pub mod id_types;
 pub mod model_journal;
 pub mod model_space;
 pub mod model_tor;
+pub mod model_variables;
 mod util_types;
