@@ -6,12 +6,11 @@ use diesel::{RunQueryDsl, dsl};
 // todo: diesel::sql_query expects everything to be untyped?
 // pub fn storapi_variables_get(
 //     conn: &mut StorConnection,
-//     filter_like: impl Display,
-// ) -> StorDieselResult<ModelVariable> {
+//     name: impl AsRef<str>,
+// ) -> StorDieselResult<i32> {
 //     // LIKE '{filter_like}'
-//     diesel::sql_query(format!("SHOW VARIABLES "))
-//         .get_result(conn)
-//         .map_err(Into::into)
+//     let model: ModelVariable = diesel::sql_query(format!("SHOW VARIABLES ")).get_result(conn)?;
+//     Ok(model.value)
 // }
 
 pub fn storapi_variables_get(
