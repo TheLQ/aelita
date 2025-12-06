@@ -2,7 +2,7 @@ use crate::api::common::{check_insert_num_rows, mysql_last_id};
 use crate::connection::StorTransaction;
 use crate::err::StorDieselResult;
 use crate::models::id_types::{ModelQbHostId, StorIdType};
-use crate::models::model_tor::{ModelQbHosts, ModelTorrents, NewModelQbHosts};
+use crate::models::model_tor::{ModelQbHost, ModelTorrents, NewModelQbHosts};
 use crate::schema;
 use diesel::{HasQuery, Insertable, RunQueryDsl};
 
@@ -20,8 +20,8 @@ pub fn storapi_tor_host_new(
     }
 }
 
-pub fn storapi_tor_host_get(conn: &mut StorTransaction) -> StorDieselResult<Vec<ModelQbHosts>> {
-    ModelQbHosts::query()
+pub fn storapi_tor_host_get(conn: &mut StorTransaction) -> StorDieselResult<Vec<ModelQbHost>> {
+    ModelQbHost::query()
         .get_results(conn.inner())
         .map_err(Into::into)
 }

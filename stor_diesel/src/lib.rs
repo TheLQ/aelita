@@ -18,5 +18,5 @@ pub use connection::{
     PermaStore, StorTransaction, establish_connection, establish_connection_or_panic,
 };
 pub use err::{StorDieselError, StorDieselResult};
-pub use models::{id_types, model_journal, model_space, model_tor};
+pub use models::{id_types, model_journal, model_space, model_tor, util_types};
 // pub use diesel as diesel_re;

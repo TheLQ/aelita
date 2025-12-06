@@ -62,6 +62,7 @@ impl Model {
                     NewModelJournalDataImmutable {
                         journal_type: ModelJournalTypeName::Space1,
                         data: "hello_world".as_bytes().to_vec(),
+                        metadata: None,
                         cause_description: "space 1 create".into(),
                         cause_xrn: None,
                     },

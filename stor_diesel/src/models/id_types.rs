@@ -18,12 +18,21 @@ pub trait StorIdType {
 
 macro_rules! id_type {
     ($name:ident) => {
-        #[derive(Copy, Clone, Debug, diesel::AsExpression, diesel::FromSqlRow)]
+        #[derive(
+            Copy,
+            Clone,
+            Debug,
+            serde::Serialize,
+            serde::Deserialize,
+            diesel::AsExpression,
+            diesel::FromSqlRow,
+        )]
         // PartialEq,
         //             Eq,
         //             PartialOrd,
         //             Ord,
         #[diesel(sql_type = Unsigned<Integer>)]
+        #[serde(transparent)]
         pub struct $name(u32);
 
         impl StorIdType for $name {

@@ -33,11 +33,13 @@ pub fn storapi_journal_immutable_push(
             |NewModelJournalDataImmutable {
                  journal_type,
                  data,
+                 metadata,
                  cause_xrn,
                  cause_description,
              }| NewModelJournalDataImmutableDiesel {
                 journal_type,
                 data,
+                metadata,
                 committed: false,
                 cause_xrn,
                 cause_description,

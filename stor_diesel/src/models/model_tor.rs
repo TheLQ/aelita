@@ -16,13 +16,13 @@ pub struct ModelTorrents {
 #[derive(HasQuery, Debug)]
 #[diesel(table_name = crate::schema::tor1_qb_host)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
-pub struct ModelQbHosts {
+pub struct ModelQbHost {
     pub qb_host_id: ModelQbHostId,
     pub name: String,
     pub address: String,
 }
 
-impl ModelQbHosts {
+impl ModelQbHost {
     pub fn gui_name(&self) -> String {
         format!("{}({})", self.name, self.address)
     }
