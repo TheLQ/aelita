@@ -1,0 +1,6 @@
+CREATE DATABASE IF NOT EXISTS `aelita_null`;
+CREATE DATABASE IF NOT EXISTS `edition1`;
+CREATE USER 'aelita_dev'@'%' IDENTIFIED BY 'codeaelitadev';
+GRANT CREATE, ALTER, DROP, INSERT, UPDATE, DELETE, SELECT on aelita_null.* TO 'aelita_dev'@'%';
+GRANT CREATE, ALTER, DROP, INSERT, UPDATE, DELETE, SELECT on edition1.* TO 'aelita_dev'@'%';
+FLUSH PRIVILEGES;
