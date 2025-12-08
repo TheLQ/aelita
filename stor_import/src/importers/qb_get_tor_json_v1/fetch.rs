@@ -1,21 +1,22 @@
-use crate::err::StorImportResult;
+use crate::err::{StorImportError, StorImportResult};
+use crate::importers::qb_get_tor_json_v1::defs::ImportQbMetadata;
 use aelita_stor_diesel::StorTransaction;
 use aelita_stor_diesel::api_journal::{
-    storapi_journal_commit_new, storapi_journal_immutable_push,
-    storapi_journal_immutable_push_single,
+    storapi_journal_immutable_push, storapi_journal_immutable_push_single,
 };
 use aelita_stor_diesel::api_tor::storapi_tor_host_get;
 use aelita_stor_diesel::id_types::ModelJournalTypeName;
 use aelita_stor_diesel::model_journal::NewModelJournalDataImmutable;
-use aelita_stor_diesel::model_tor::ModelQbHosts;
+use aelita_stor_diesel::model_tor::ModelQbHost;
+use aelita_stor_diesel::util_types::RawDieselJson;
 use bytes::Bytes;
 use tokio::runtime::Handle;
 use tokio::task::JoinSet;
-use xana_commons_rs::SimpleIoMap;
+use xana_commons_rs::BasicWatch;
 use xana_commons_rs::qbittorrent_re::QBittorrentClientBuilder;
 use xana_commons_rs::tracing_re::{Level, info, span};
 
-pub fn storfetch_journal_torrents<'t>(conn: &mut StorTransaction<'t>) -> StorImportResult<()> {
+pub fn storfetch_journal_torrents(conn: &mut StorTransaction<'_>) -> StorImportResult<()> {
     let hosts = storapi_tor_host_get(conn)?;
     info!(
         "connecting to {} hosts: {}",
@@ -28,26 +29,35 @@ pub fn storfetch_journal_torrents<'t>(conn: &mut StorTransaction<'t>) -> StorImp
     );
     let hosts_num = hosts.len();
 
-    let res = fetch_async_start(hosts)?;
-    storapi_journal_immutable_push(
-        conn,
-        res.into_iter()
-            .map(|(model, v)| NewModelJournalDataImmutable {
+    let fetch_results = fetch_async_start(hosts)?;
+    let fetch_diesel = fetch_results
+        .into_iter()
+        .map(|(model, v)| {
+            Ok::<_, StorImportError>(NewModelJournalDataImmutable {
                 journal_type: ModelJournalTypeName::Journal1,
                 data: v.into(),
+                metadata: Some(RawDieselJson::serialize(ImportQbMetadata {
+                    qb_host_id: model.qb_host_id,
+                })?),
                 cause_description: format!("stor {hosts_num} qb hosts"),
                 cause_xrn: None,
-            }),
-    )?;
+            })
+        })
+        .try_collect::<Vec<_>>()?;
+    storapi_journal_immutable_push(conn, fetch_diesel)?;
 
     Ok(())
 }
 
-fn fetch_async_start(hosts: Vec<ModelQbHosts>) -> StorImportResult<Vec<(ModelQbHosts, Bytes)>> {
-    tokio::task::block_in_place(move || Handle::current().block_on(_fetch_async(hosts)))
+fn fetch_async_start(hosts: Vec<ModelQbHost>) -> StorImportResult<Vec<(ModelQbHost, Bytes)>> {
+    let hosts_len = hosts.len();
+    let watch = BasicWatch::start();
+    let res = tokio::task::block_in_place(move || Handle::current().block_on(_fetch_async(hosts)));
+    info!("Fetched {hosts_len} hosts in {watch}");
+    res
 }
 
-async fn _fetch_async(hosts: Vec<ModelQbHosts>) -> StorImportResult<Vec<(ModelQbHosts, Bytes)>> {
+async fn _fetch_async(hosts: Vec<ModelQbHost>) -> StorImportResult<Vec<(ModelQbHost, Bytes)>> {
     let mut queries = JoinSet::new();
     for host in hosts {
         queries.spawn(async {
@@ -59,7 +69,7 @@ async fn _fetch_async(hosts: Vec<ModelQbHosts>) -> StorImportResult<Vec<(ModelQb
     queries.join_all().await.into_iter().try_collect::<Vec<_>>()
 }
 
-async fn fetch_async_host(host: ModelQbHosts) -> StorImportResult<(ModelQbHosts, Bytes)> {
+async fn fetch_async_host(host: ModelQbHost) -> StorImportResult<(ModelQbHost, Bytes)> {
     let span = span!(Level::ERROR, "fetch_async", name = host.name);
     span.in_scope(async || {
         let client = QBittorrentClientBuilder {

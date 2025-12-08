@@ -10,3 +10,4 @@ xana-commons-rs = { workspace = true }
 bytes = { workspace = true }
 tokio = { workspace = true }
 thiserror = { workspace = true }
+serde = { workspace = true }
