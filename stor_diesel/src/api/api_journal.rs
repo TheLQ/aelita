@@ -8,7 +8,8 @@ use crate::models::model_journal::{
 use crate::schema;
 use diesel::dsl;
 use diesel::prelude::*;
-use xana_commons_rs::tracing_re::info;
+use xana_commons_rs::BasicWatch;
+use xana_commons_rs::tracing_re::{debug, info, trace};
 
 pub fn storapi_journal_immutable_push_single(
     conn: &mut StorTransaction,
@@ -46,11 +47,14 @@ pub fn storapi_journal_immutable_push(
             },
         )
         .collect::<Vec<_>>();
+    let watch = BasicWatch::start();
     let values_len = values.len();
+    trace!("inserting {values_len} journal entries...");
     let res = diesel::insert_into(schema::journal_immutable::table)
         .values(&values)
         .execute(conn.inner());
     check_insert_num_rows(res, values_len)?;
+    debug!("inserted {values_len} journal entries in {watch}");
 
     if let Some(max_id) = max_id {
         let res = schema::journal_immutable::table

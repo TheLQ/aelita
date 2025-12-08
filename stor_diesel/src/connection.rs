@@ -1,12 +1,10 @@
-use crate::err::StorDieselResult;
 use diesel::Connection;
 use diesel::connection::{Instrumentation, InstrumentationEvent};
 use diesel::{ConnectionError, MysqlConnection};
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::Arc;
 use xana_commons_rs::read_file_better;
-use xana_commons_rs::tracing_re::{Level, info, span, trace};
+use xana_commons_rs::tracing_re::{Level, info, span};
 
 pub enum PermaStore {
     AelitaNull,
@@ -82,8 +80,14 @@ impl Instrumentation for StorInstrument {
     fn on_connection_event(&mut self, event: InstrumentationEvent<'_>) {
         match event {
             InstrumentationEvent::StartQuery { query, .. } => {
-                let query_str = query.to_string();
-                trace!("{}", query_str);
+                let mut query_str = query.to_string();
+                let limit = 100;
+                if query_str.len() > limit {
+                    let suffix = &format!("...truncate {} chars ...", query_str.len() - limit);
+                    query_str.truncate(limit);
+                    query_str.push_str(suffix);
+                }
+                info!("{}", query_str);
             }
             _ => (),
         }
@@ -111,7 +115,7 @@ impl<'s> StorTransaction<'s> {
         .map_err(|e| match e {
             // only possible error
             diesel::result::Error::QueryBuilderError(e) => *e.downcast().unwrap(),
-            _ => unreachable!(),
+            e => unreachable!("unreachable {e}"),
         })
     }
 
