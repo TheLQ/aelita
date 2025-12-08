@@ -54,6 +54,10 @@ impl RawDieselJson {
     pub fn deserialize<'d, D: serde::Deserialize<'d>>(&'d self) -> StorDieselResult<D> {
         serde_json::from_slice(&self.0).map_err(Into::into)
     }
+
+    pub fn into_inner(self) -> Vec<u8> {
+        self.0
+    }
 }
 
 impl FromSql<Json, Mysql> for RawDieselJson {

@@ -16,7 +16,7 @@ use xana_commons_rs::BasicWatch;
 use xana_commons_rs::qbittorrent_re::QBittorrentClientBuilder;
 use xana_commons_rs::tracing_re::{Level, info, span};
 
-pub fn storfetch_journal_torrents(conn: &mut StorTransaction<'_>) -> StorImportResult<()> {
+pub fn storfetch_torrents(conn: &mut StorTransaction<'_>) -> StorImportResult<()> {
     let hosts = storapi_tor_host_get(conn)?;
     info!(
         "connecting to {} hosts: {}",

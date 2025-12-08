@@ -5,4 +5,4 @@ pub mod common;
 pub mod err;
 mod importers;
 
-pub use importers::qb_get_tor_json_v1::fetch::storfetch_journal_torrents;
+pub use importers::qb_get_tor_json_v1::{commit::storcommit_torrents, fetch::storfetch_torrents};

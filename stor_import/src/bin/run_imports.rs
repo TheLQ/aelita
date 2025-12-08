@@ -4,7 +4,7 @@ use aelita_stor_diesel::api_variables::storapi_variables_get;
 use aelita_stor_diesel::{PermaStore, StorTransaction, establish_connection_or_panic};
 use aelita_stor_import::common::log_init_trace;
 use aelita_stor_import::err::StorImportResult;
-use aelita_stor_import::storfetch_journal_torrents;
+use aelita_stor_import::storfetch_torrents;
 use std::process::ExitCode;
 use xana_commons_rs::pretty_main_async;
 use xana_commons_rs::tracing_re::info;
@@ -36,9 +36,7 @@ async fn run() -> StorImportResult<()> {
         );
     }
 
-    StorTransaction::new_transaction("cli-import", &mut conn, |conn| {
-        storfetch_journal_torrents(conn)
-    })?;
+    StorTransaction::new_transaction("cli-import", &mut conn, |conn| storfetch_torrents(conn))?;
 
     Ok(())
 }
