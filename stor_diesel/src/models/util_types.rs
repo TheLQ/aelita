@@ -43,15 +43,20 @@ where
 /// Further, FromSql/ToSql do not use generics because the
 /// generic bounds get weird not actually being a BLOB type
 #[derive(Debug, diesel::FromSqlRow, diesel::AsExpression)]
+#[diesel(sql_type = diesel::sql_types::Binary)]
 #[diesel(sql_type = Json)]
-pub struct RawDieselJson(Vec<u8>);
+pub struct RawDieselBytes(Vec<u8>);
 
-impl RawDieselJson {
-    pub fn serialize<V: Serialize>(value: V) -> StorDieselResult<Self> {
+impl RawDieselBytes {
+    pub fn new(bytes: Vec<u8>) -> Self {
+        Self(bytes)
+    }
+
+    pub fn serialize_json<V: Serialize>(value: V) -> StorDieselResult<Self> {
         Ok(Self(serde_json::to_vec(&value)?))
     }
 
-    pub fn deserialize<'d, D: serde::Deserialize<'d>>(&'d self) -> StorDieselResult<D> {
+    pub fn deserialize_json<'d, D: serde::Deserialize<'d>>(&'d self) -> StorDieselResult<D> {
         serde_json::from_slice(&self.0).map_err(Into::into)
     }
 
@@ -60,16 +65,35 @@ impl RawDieselJson {
     }
 }
 
-impl FromSql<Json, Mysql> for RawDieselJson {
+impl FromSql<Json, Mysql> for RawDieselBytes {
     fn from_sql(bytes: MysqlValue) -> diesel::deserialize::Result<Self> {
         let inner = bytes.as_bytes().to_vec();
         Ok(Self(inner))
     }
 }
 
-impl ToSql<Json, Mysql> for RawDieselJson {
+impl ToSql<Json, Mysql> for RawDieselBytes {
     fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Mysql>) -> diesel::serialize::Result {
         out.write_all(self.0.as_slice())?;
         Ok(IsNull::No)
+    }
+}
+
+impl<Db: Backend> FromSql<Binary, Db> for RawDieselBytes
+where
+    *const [u8]: FromSql<Binary, Db>,
+{
+    fn from_sql(bytes: Db::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+        let vec = <Vec<u8> as FromSql<Binary, Db>>::from_sql(bytes)?;
+        Ok(Self(vec))
+    }
+}
+
+impl<Db: Backend> ToSql<Binary, Db> for RawDieselBytes
+where
+    [u8]: ToSql<Binary, Db>,
+{
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Db>) -> diesel::serialize::Result {
+        <[u8] as ToSql<Binary, Db>>::to_sql(&self.0, out)
     }
 }

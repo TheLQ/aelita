@@ -1,5 +1,5 @@
 use crate::models::id_types::{ModelJournalId, ModelJournalTypeName};
-use crate::models::util_types::RawDieselJson;
+use crate::models::util_types::RawDieselBytes;
 use diesel::{HasQuery, Insertable};
 
 #[derive(HasQuery, Debug)]
@@ -8,8 +8,8 @@ use diesel::{HasQuery, Insertable};
 pub struct ModelJournalDataImmutable {
     pub journal_id: ModelJournalId,
     pub journal_type: ModelJournalTypeName,
-    pub data: Vec<u8>,
-    pub metadata: Option<RawDieselJson>,
+    pub data: RawDieselBytes,
+    pub metadata: Option<RawDieselBytes>,
     pub committed: bool,
     pub cause_description: String,
     pub cause_xrn: Option<String>,
@@ -17,8 +17,8 @@ pub struct ModelJournalDataImmutable {
 
 pub struct NewModelJournalDataImmutable {
     pub journal_type: ModelJournalTypeName,
-    pub data: Vec<u8>,
-    pub metadata: Option<RawDieselJson>,
+    pub data: RawDieselBytes,
+    pub metadata: Option<RawDieselBytes>,
     pub cause_description: String,
     pub cause_xrn: Option<String>,
 }
@@ -28,8 +28,8 @@ pub struct NewModelJournalDataImmutable {
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct NewModelJournalDataImmutableDiesel {
     pub journal_type: ModelJournalTypeName,
-    pub data: Vec<u8>,
-    pub metadata: Option<RawDieselJson>,
+    pub data: RawDieselBytes,
+    pub metadata: Option<RawDieselBytes>,
     pub committed: bool,
     pub cause_description: String,
     pub cause_xrn: Option<String>,

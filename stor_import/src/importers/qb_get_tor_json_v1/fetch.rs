@@ -8,7 +8,7 @@ use aelita_stor_diesel::api_tor::storapi_tor_host_get;
 use aelita_stor_diesel::id_types::ModelJournalTypeName;
 use aelita_stor_diesel::model_journal::NewModelJournalDataImmutable;
 use aelita_stor_diesel::model_tor::ModelQbHost;
-use aelita_stor_diesel::util_types::RawDieselJson;
+use aelita_stor_diesel::util_types::RawDieselBytes;
 use bytes::Bytes;
 use tokio::runtime::Handle;
 use tokio::task::JoinSet;
@@ -35,8 +35,8 @@ pub fn storfetch_torrents(conn: &mut StorTransaction<'_>) -> StorImportResult<()
         .map(|(model, v)| {
             Ok::<_, StorImportError>(NewModelJournalDataImmutable {
                 journal_type: ModelJournalTypeName::Journal1,
-                data: v.into(),
-                metadata: Some(RawDieselJson::serialize(ImportQbMetadata {
+                data: RawDieselBytes::new(v.into()),
+                metadata: Some(RawDieselBytes::serialize_json(ImportQbMetadata {
                     qb_host_id: model.qb_host_id,
                 })?),
                 cause_description: format!("stor {hosts_num} qb hosts"),

@@ -17,9 +17,7 @@ dependencies = [
  "serde_json",
  "strum 0.26.3",
  "thiserror",
- "tokio",
  "xana-commons-rs",
- "zstd",
 ]
 
 [[package]]
@@ -29,6 +27,7 @@ dependencies = [
  "aelita_stor_diesel",
  "bytes",
  "serde",
+ "serde_json",
  "thiserror",
  "tokio",
  "xana-commons-rs",

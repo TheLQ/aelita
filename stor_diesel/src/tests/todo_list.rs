@@ -8,6 +8,7 @@ use crate::models::date::StorDate;
 use crate::models::id_types::ModelJournalTypeName;
 use crate::models::model_journal::{ModelJournalDataImmutable, NewModelJournalDataImmutable};
 use crate::models::model_space::{ModelSpaceOwned, NewModelSpaceNames};
+use crate::util_types::RawDieselBytes;
 use xana_commons_rs::tracing_re::info;
 
 pub fn create_todo_list(conn: &mut StorConnection) -> StorDieselResult<()> {
@@ -61,7 +62,7 @@ impl Model {
                     conn,
                     NewModelJournalDataImmutable {
                         journal_type: ModelJournalTypeName::Space1,
-                        data: "hello_world".as_bytes().to_vec(),
+                        data: RawDieselBytes::new("hello_world".as_bytes().to_vec()),
                         metadata: None,
                         cause_description: "space 1 create".into(),
                         cause_xrn: None,
