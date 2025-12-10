@@ -33,7 +33,7 @@ CREATE TABLE `tor1_torrents`
     `torhash`            BINARY(50)          NOT NULL PRIMARY KEY,
     `tor_status_changed` TIMESTAMP           NOT NULL,
     `qb_host_id`         INTEGER UNSIGNED    NOT NULL,
-    `tor_status_type`    ENUM('Ignore', 'Queued', 'Downloading', 'FullMoving', 'FullArchive') NOT NULL,
+    `tor_status`         ENUM('error', 'missingFiles', 'uploading', 'pausedUP', 'queuedUP', 'stalledUP', 'checkingUP', 'forcedUP', 'allocating', 'metaDL', 'downloading', 'pausedDL', 'queuedDL', 'stalledDL', 'checkingDL', 'forcedDL', 'checkingResumeData', 'moving', 'unknown', 'stoppedDL', 'stoppedUP') NOT NULL,
     -- @formatter:on
     FOREIGN KEY (`journal_id`) REFERENCES `journal_immutable` (`journal_id`)
 );

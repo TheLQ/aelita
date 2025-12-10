@@ -6,11 +6,11 @@ use diesel::{HasQuery, Insertable};
 #[diesel(table_name = crate::schema::tor1_torrents)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct ModelTorrents {
-    journal_id: ModelJournalId,
-    torhash: TorHashV1Diesel,
-    qb_host_id: ModelQbHostId,
-    tor_status_type: ModelTorrentStatus,
-    tor_status_changed: chrono::NaiveDateTime,
+    pub journal_id: ModelJournalId,
+    pub torhash: TorHashV1Diesel,
+    pub qb_host_id: ModelQbHostId,
+    pub tor_status: ModelTorrentStatus,
+    pub tor_status_changed: chrono::NaiveDateTime,
 }
 
 #[derive(HasQuery, Debug)]

@@ -7,7 +7,7 @@ pub mod sql_types {
 
     #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
     #[diesel(mysql_type(name = "Enum"))]
-    pub struct Tor1TorrentsTorStatusTypeEnum;
+    pub struct Tor1TorrentsTorStatusEnum;
 }
 
 diesel::table! {
@@ -36,7 +36,7 @@ diesel::table! {
 
     journal_immutable (journal_id) {
         journal_id -> Unsigned<Integer>,
-        #[max_length = 8]
+        #[max_length = 13]
         journal_type -> JournalImmutableJournalTypeEnum,
         data -> Longblob,
         metadata -> Nullable<Json>,
@@ -80,7 +80,7 @@ diesel::table! {
 
 diesel::table! {
     use diesel::sql_types::*;
-    use super::sql_types::Tor1TorrentsTorStatusTypeEnum;
+    use super::sql_types::Tor1TorrentsTorStatusEnum;
 
     tor1_torrents (torhash) {
         journal_id -> Unsigned<Integer>,
@@ -88,8 +88,8 @@ diesel::table! {
         torhash -> Binary,
         tor_status_changed -> Timestamp,
         qb_host_id -> Unsigned<Integer>,
-        #[max_length = 11]
-        tor_status_type -> Tor1TorrentsTorStatusTypeEnum,
+        #[max_length = 18]
+        tor_status -> Tor1TorrentsTorStatusEnum,
     }
 }
 

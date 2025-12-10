@@ -1,6 +1,6 @@
 use crate::err::StorDieselError;
 use crate::schema::sql_types::JournalImmutableJournalTypeEnum;
-use crate::schema::sql_types::Tor1TorrentsTorStatusTypeEnum;
+use crate::schema::sql_types::Tor1TorrentsTorStatusEnum;
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
 use diesel::mysql::{Mysql, MysqlValue};
@@ -9,6 +9,7 @@ use diesel::sql_types::{Integer, Unsigned};
 use std::fmt::{Display, Formatter};
 use std::io::Write;
 use std::str::FromStr;
+use xana_commons_rs::qbittorrent_re::TorrentState;
 
 pub trait StorIdType {
     fn new(inner: u32) -> Self;
@@ -188,23 +189,30 @@ pub enum ModelJournalTypeName {
 }
 enum_value!(JournalImmutableJournalTypeEnum -> ModelJournalTypeName);
 
-#[derive(
-    Debug,
-    Hash,
-    Eq,
-    PartialEq,
-    diesel::AsExpression,
-    diesel::FromSqlRow,
-    strum::EnumString,
-    strum::IntoStaticStr,
-    strum::VariantArray,
-)]
-#[diesel(sql_type = Tor1TorrentsTorStatusTypeEnum)]
-pub enum ModelTorrentStatus {
-    Ignore,
-    Queued,
-    Downloading,
-    FullMoving,
-    FullArchive,
+#[derive(Debug, Hash, Eq, PartialEq, diesel::AsExpression, diesel::FromSqlRow)]
+#[diesel(sql_type = Tor1TorrentsTorStatusEnum)]
+pub struct ModelTorrentStatus(TorrentState);
+enum_value!(Tor1TorrentsTorStatusEnum -> ModelTorrentStatus);
+
+/// strum passthru
+impl FromStr for ModelTorrentStatus {
+    type Err = strum::ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        TorrentState::from_str(s).map(|inner| Self(inner))
+    }
 }
-enum_value!(Tor1TorrentsTorStatusTypeEnum -> ModelTorrentStatus);
+
+/// strum passthru
+impl<'s> From<&'s ModelTorrentStatus> for &'static str {
+    fn from(value: &'s ModelTorrentStatus) -> Self {
+        Self::from(&value.0)
+    }
+}
+
+/// strum passthru
+impl From<ModelTorrentStatus> for &'static str {
+    fn from(value: ModelTorrentStatus) -> Self {
+        Self::from(&value.0)
+    }
+}
