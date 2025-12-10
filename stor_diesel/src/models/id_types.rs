@@ -183,7 +183,7 @@ macro_rules! enum_value {
 )]
 #[diesel(sql_type = JournalImmutableJournalTypeEnum)]
 pub enum ModelJournalTypeName {
-    Journal1,
+    QbGetTorJson1,
     Space1,
 }
 enum_value!(JournalImmutableJournalTypeEnum -> ModelJournalTypeName);

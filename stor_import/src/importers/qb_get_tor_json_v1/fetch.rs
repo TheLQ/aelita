@@ -34,7 +34,7 @@ pub fn storfetch_torrents(conn: &mut StorTransaction<'_>) -> StorImportResult<()
         .into_iter()
         .map(|(model, v)| {
             Ok::<_, StorImportError>(NewModelJournalDataImmutable {
-                journal_type: ModelJournalTypeName::Journal1,
+                journal_type: ModelJournalTypeName::QbGetTorJson1,
                 data: RawDieselBytes::new(v.into()),
                 metadata: Some(RawDieselBytes::serialize_json(ImportQbMetadata {
                     qb_host_id: model.qb_host_id,
