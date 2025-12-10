@@ -14,6 +14,7 @@ pub mod tests;
 pub use api::*;
 pub use connection::{
     PermaStore, StorTransaction, establish_connection, establish_connection_or_panic,
+    with_quiet_sql_log_spam,
 };
 pub use err::{StorDieselError, StorDieselResult};
 pub use models::{id_types, model_journal, model_space, model_tor, util_types};

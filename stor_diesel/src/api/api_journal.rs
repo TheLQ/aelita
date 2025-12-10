@@ -74,11 +74,13 @@ pub fn storapi_journal_immutable_push(
 pub fn storapi_journal_commit_remain(
     conn: &mut StorTransaction,
 ) -> StorDieselResult<Vec<ModelJournalDataImmutable>> {
-    ModelJournalDataImmutable::query()
+    let watch = BasicWatch::start();
+    let res = ModelJournalDataImmutable::query()
         .filter(schema::journal_immutable::committed.eq(false))
-        .limit(1)
-        .load(conn.inner())
-        .map_err(Into::into)
+        // .limit(1)
+        .load(conn.inner())?;
+    debug!("Fetch {} journal entries in {watch}", res.len());
+    Ok(res)
 }
 
 pub fn storapi_journal_commit_new(

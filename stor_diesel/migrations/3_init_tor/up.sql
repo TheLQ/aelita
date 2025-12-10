@@ -30,8 +30,8 @@ CREATE TABLE `tor1_torrents`
 (
     -- @formatter:off for massive enum
     `journal_id`         INTEGER UNSIGNED    NOT NULL,
-    `torhash`            BINARY(50)          NOT NULL PRIMARY KEY,
-    `tor_status_changed` TIMESTAMP           NOT NULL,
+    `torhash`            BINARY(20)          NOT NULL PRIMARY KEY,
+    `tor_status_changed` TIMESTAMP           NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `qb_host_id`         INTEGER UNSIGNED    NOT NULL,
     `tor_status`         ENUM('error', 'missingFiles', 'uploading', 'pausedUP', 'queuedUP', 'stalledUP', 'checkingUP', 'forcedUP', 'allocating', 'metaDL', 'downloading', 'pausedDL', 'queuedDL', 'stalledDL', 'checkingDL', 'forcedDL', 'checkingResumeData', 'moving', 'unknown', 'stoppedDL', 'stoppedUP') NOT NULL,
     -- @formatter:on

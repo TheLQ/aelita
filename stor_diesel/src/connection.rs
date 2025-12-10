@@ -3,6 +3,7 @@ use diesel::connection::{Instrumentation, InstrumentationEvent};
 use diesel::{ConnectionError, MysqlConnection};
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use xana_commons_rs::read_file_better;
 use xana_commons_rs::tracing_re::{Level, info, span};
 
@@ -80,6 +81,9 @@ impl Instrumentation for StorInstrument {
     fn on_connection_event(&mut self, event: InstrumentationEvent<'_>) {
         match event {
             InstrumentationEvent::StartQuery { query, .. } => {
+                if QUIET_LOG_SPAM.load(Ordering::Relaxed) {
+                    return;
+                }
                 let mut query_str = query.to_string();
                 let limit = 1000;
                 if query_str.len() > limit {
@@ -92,6 +96,15 @@ impl Instrumentation for StorInstrument {
             _ => (),
         }
     }
+}
+
+static QUIET_LOG_SPAM: AtomicBool = AtomicBool::new(false);
+
+pub fn with_quiet_sql_log_spam<R>(callback: impl FnOnce() -> R) -> R {
+    QUIET_LOG_SPAM.store(true, Ordering::Relaxed);
+    let res = callback();
+    QUIET_LOG_SPAM.store(false, Ordering::Relaxed);
+    res
 }
 
 pub struct StorTransaction<'s>(&'s mut StorConnection);

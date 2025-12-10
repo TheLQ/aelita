@@ -84,7 +84,7 @@ diesel::table! {
 
     tor1_torrents (torhash) {
         journal_id -> Unsigned<Integer>,
-        #[max_length = 50]
+        #[max_length = 20]
         torhash -> Binary,
         tor_status_changed -> Timestamp,
         qb_host_id -> Unsigned<Integer>,
