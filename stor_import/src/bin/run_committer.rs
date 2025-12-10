@@ -1,13 +1,16 @@
 use aelita_commons::log_init;
-use aelita_stor_diesel::api_journal::{storapi_journal_commit_new, storapi_journal_commit_remain};
+use aelita_stor_diesel::api_journal::{
+    storapi_journal_commit_new, storapi_journal_commit_remain_next,
+};
 use aelita_stor_diesel::id_types::ModelJournalTypeName;
 use aelita_stor_diesel::model_journal::ModelJournalDataImmutable;
 use aelita_stor_diesel::{PermaStore, StorTransaction, establish_connection_or_panic};
 use aelita_stor_import::err::{StorImportError, StorImportResult};
 use aelita_stor_import::storcommit_torrents;
+use std::ops::ControlFlow;
 use std::process::ExitCode;
-use xana_commons_rs::pretty_main;
 use xana_commons_rs::tracing_re::info;
+use xana_commons_rs::{BasicWatch, pretty_main};
 
 fn main() -> ExitCode {
     log_init();
@@ -20,25 +23,33 @@ const MEGA_TRANSACTION: bool = false;
 fn run() -> StorImportResult<()> {
     let mut conn = establish_connection_or_panic(PermaStore::AelitaNull);
 
+    let total_watch = BasicWatch::start();
+    let mut total_commit = 0;
     if MEGA_TRANSACTION {
         StorTransaction::new_transaction("cli-import", &mut conn, |conn| {
-            let rows = storapi_journal_commit_remain(conn)?;
-            for row in rows {
+            while let Some(row) = storapi_journal_commit_remain_next(conn)? {
                 process_row(conn, row)?;
+                total_commit += 1;
             }
             Ok::<_, StorImportError>(())
         })?;
     } else {
-        let rows = StorTransaction::new_transaction("cli-import-init", &mut conn, |conn| {
-            storapi_journal_commit_remain(conn)
-        })?;
-
-        for row in rows {
-            StorTransaction::new_transaction("cli-import", &mut conn, |conn| {
-                process_row(conn, row)
+        loop {
+            let next = StorTransaction::new_transaction("cli-import", &mut conn, |conn| {
+                if let Some(row) = storapi_journal_commit_remain_next(conn)? {
+                    process_row(conn, row)?;
+                    total_commit += 1;
+                    Ok::<_, StorImportError>(ControlFlow::Continue(()))
+                } else {
+                    Ok(ControlFlow::Break(()))
+                }
             })?;
+            if next.is_break() {
+                break;
+            }
         }
     }
+    info!("commit {total_commit} journal in {total_watch}");
 
     Ok(())
 }

@@ -37,5 +37,3 @@ CREATE TABLE `tor1_torrents`
     -- @formatter:on
     FOREIGN KEY (`journal_id`) REFERENCES `journal_immutable` (`journal_id`)
 );
-
-

@@ -9,6 +9,7 @@ mod err;
 mod example_structure;
 mod models;
 mod schema;
+mod schema_temp;
 pub mod tests;
 
 pub use api::*;

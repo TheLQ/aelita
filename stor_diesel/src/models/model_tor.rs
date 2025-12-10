@@ -1,6 +1,7 @@
 use crate::models::id_types::{ModelJournalId, ModelQbHostId, ModelTorrentState};
 use crate::models::util_types::TorHashV1Diesel;
 use diesel::{HasQuery, Insertable};
+use xana_commons_rs::bencode_torrent_re::TorHashV1;
 
 #[derive(HasQuery, Debug)]
 #[diesel(table_name = crate::schema::tor1_torrents)]
@@ -44,4 +45,12 @@ impl ModelQbHost {
 pub struct NewModelQbHosts {
     name: String,
     address: String,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = crate::schema_temp::fast_tor_update)]
+#[diesel(check_for_backend(diesel::mysql::Mysql))]
+pub struct ModelSuperfast {
+    pub tor_hash: TorHashV1Diesel,
+    pub tor_state: String,
 }

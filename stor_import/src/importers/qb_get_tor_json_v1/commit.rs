@@ -3,6 +3,7 @@ use crate::importers::qb_get_tor_json_v1::defs::{ImportQbMetadata, ImportQbTorre
 use crate::util::HashExtractor;
 use aelita_stor_diesel::api_tor::{
     storapi_tor_torrents_get_by_hash, storapi_tor_torrents_new, storapi_tor_torrents_update_status,
+    storapi_tor_torrents_update_status_batch,
 };
 use aelita_stor_diesel::id_types::ModelJournalTypeName;
 use aelita_stor_diesel::model_journal::ModelJournalDataImmutable;
@@ -38,8 +39,8 @@ pub fn storcommit_torrents(
     info!("existing {}", db_tors_raw.len());
     let db_tors = db_tors_raw.as_tor_lookup_by_hash();
 
-    let mut new_torrents = Vec::new();
-
+    let mut rows_new = Vec::new();
+    let mut rows_update = Vec::new();
     let mut count_existing_same = 0;
     let mut count_existing_changed = 0;
     for (local_hash, local_tor) in local_tors {
@@ -48,13 +49,11 @@ pub fn storcommit_torrents(
                 // don't update anything
                 count_existing_same += 1;
             } else {
-                with_quiet_sql_log_spam(|| {
-                    storapi_tor_torrents_update_status(conn, &local_hash, &local_tor.state)
-                })?;
+                rows_update.push((local_hash.clone(), local_tor.state));
                 count_existing_changed += 1;
             }
         } else {
-            new_torrents.push(NewModelTorrents {
+            rows_new.push(NewModelTorrents {
                 journal_id: row.journal_id,
                 torhash: local_hash.into(),
                 qb_host_id: metadata.qb_host_id,
@@ -64,9 +63,14 @@ pub fn storcommit_torrents(
     }
     info!(
         "torrents {} inserted {count_existing_same} same {count_existing_changed} changed",
-        new_torrents.len()
+        rows_new.len()
     );
-    storapi_tor_torrents_new(conn, &new_torrents)?;
+    if !rows_update.is_empty() {
+        storapi_tor_torrents_update_status_batch(conn, rows_update)?;
+    }
+    if !rows_new.is_empty() {
+        storapi_tor_torrents_new(conn, &rows_new)?;
+    }
 
     Ok(())
 }

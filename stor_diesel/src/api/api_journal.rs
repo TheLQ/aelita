@@ -71,16 +71,24 @@ pub fn storapi_journal_immutable_push(
     }
 }
 
-pub fn storapi_journal_commit_remain(
+pub fn storapi_journal_commit_remain_next(
     conn: &mut StorTransaction,
-) -> StorDieselResult<Vec<ModelJournalDataImmutable>> {
+) -> StorDieselResult<Option<ModelJournalDataImmutable>> {
     let watch = BasicWatch::start();
-    let res = ModelJournalDataImmutable::query()
+
+    let Some(next): Option<ModelJournalId> = schema::journal_immutable::table
+        .select(dsl::min(schema::journal_immutable::journal_id))
         .filter(schema::journal_immutable::committed.eq(false))
-        // .limit(1)
-        .load(conn.inner())?;
-    debug!("Fetch {} journal entries in {watch}", res.len());
-    Ok(res)
+        .get_result(conn.inner())?
+    else {
+        return Ok(None);
+    };
+
+    let res = ModelJournalDataImmutable::query()
+        .filter(schema::journal_immutable::journal_id.eq(next))
+        .get_result(conn.inner())?;
+    debug!("Fetch {} journal entries in {watch}", 1);
+    Ok(Some(res))
 }
 
 pub fn storapi_journal_commit_new(
