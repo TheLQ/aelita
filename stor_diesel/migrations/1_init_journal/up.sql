@@ -1,4 +1,4 @@
-CREATE TABLE `journal_immutable`
+CREATE TABLE IF NOT EXISTS `journal_immutable`
 (
     -- @formatter:off for massive enum
     `journal_id`        INTEGER UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
