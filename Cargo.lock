@@ -5,6 +5,9 @@ version = 4
 [[package]]
 name = "aelita_commons"
 version = "0.1.0"
+dependencies = [
+ "xana-commons-rs",
+]
 
 [[package]]
 name = "aelita_stor_diesel"
@@ -24,6 +27,7 @@ dependencies = [
 name = "aelita_stor_import"
 version = "0.1.0"
 dependencies = [
+ "aelita_commons",
  "aelita_stor_diesel",
  "bytes",
  "serde",

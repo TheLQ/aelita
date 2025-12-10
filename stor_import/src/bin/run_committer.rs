@@ -1,15 +1,15 @@
+use aelita_commons::log_init;
 use aelita_stor_diesel::api_journal::{storapi_journal_commit_new, storapi_journal_commit_remain};
 use aelita_stor_diesel::id_types::ModelJournalTypeName;
 use aelita_stor_diesel::{PermaStore, StorTransaction, establish_connection_or_panic};
-use aelita_stor_import::common::log_init_trace;
 use aelita_stor_import::err::{StorImportError, StorImportResult};
-use aelita_stor_import::{storcommit_torrents, storfetch_torrents};
+use aelita_stor_import::storcommit_torrents;
 use std::process::ExitCode;
 use xana_commons_rs::pretty_main;
 use xana_commons_rs::tracing_re::info;
 
 fn main() -> ExitCode {
-    log_init_trace();
+    log_init();
 
     pretty_main(run)
 }

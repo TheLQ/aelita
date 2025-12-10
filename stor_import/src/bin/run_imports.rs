@@ -1,8 +1,8 @@
 #![feature(iterator_try_collect)]
 
+use aelita_commons::log_init;
 use aelita_stor_diesel::api_variables::storapi_variables_get;
 use aelita_stor_diesel::{PermaStore, StorTransaction, establish_connection_or_panic};
-use aelita_stor_import::common::log_init_trace;
 use aelita_stor_import::err::StorImportResult;
 use aelita_stor_import::storfetch_torrents;
 use std::process::ExitCode;
@@ -10,7 +10,7 @@ use xana_commons_rs::pretty_main_async;
 use xana_commons_rs::tracing_re::info;
 
 fn main() -> ExitCode {
-    log_init_trace();
+    log_init();
 
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()

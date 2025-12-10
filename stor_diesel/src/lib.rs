@@ -4,7 +4,6 @@
 #![feature(slice_pattern)]
 
 mod api;
-mod common;
 mod connection;
 mod err;
 mod example_structure;
@@ -13,7 +12,6 @@ mod schema;
 pub mod tests;
 
 pub use api::*;
-pub use common::log_init_trace;
 pub use connection::{
     PermaStore, StorTransaction, establish_connection, establish_connection_or_panic,
 };

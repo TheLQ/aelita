@@ -1,3 +1,3 @@
-// #![feature(error_generic_member_access)]
+mod log;
 
-// pub mod err_utils;
+pub use log::log_init;
