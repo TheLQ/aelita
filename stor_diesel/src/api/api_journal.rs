@@ -76,32 +76,35 @@ pub fn storapi_journal_commit_remain(
 ) -> StorDieselResult<Vec<ModelJournalDataImmutable>> {
     ModelJournalDataImmutable::query()
         .filter(schema::journal_immutable::committed.eq(false))
+        .limit(1)
         .load(conn.inner())
         .map_err(Into::into)
 }
 
 pub fn storapi_journal_commit_new(
     conn: &mut StorTransaction,
-    to_commit: ModelJournalId,
+    to_commit: &ModelJournalId,
 ) -> StorDieselResult<()> {
-    let highest_committed: Option<u32> = schema::journal_immutable::table
-        .select(dsl::max(schema::journal_immutable::journal_id))
-        .filter(schema::journal_immutable::committed.eq(true))
-        .first(conn.inner())?;
-    if let Some(highest_committed) = highest_committed {
-        if highest_committed + 1 != to_commit.inner_id() {
-            return Err(StorDieselError::query_fail("cursor does not match"));
+    let expected_commit: Option<u32> = schema::journal_immutable::table
+        .select(dsl::min(schema::journal_immutable::journal_id))
+        .filter(schema::journal_immutable::committed.eq(false))
+        .get_result(conn.inner())?;
+    match expected_commit {
+        Some(v) if v == to_commit.inner_id() => {
+            // good
         }
-    } else {
-        // nothing commited yet
-        if to_commit.inner_id() != 0 {
-            return Err(StorDieselError::query_fail(
-                "nothing committed, should be committing 0",
-            ));
+        Some(v) => {
+            return Err(StorDieselError::query_fail(format!(
+                "expected commit latest {v} but got {to_commit}"
+            )));
+        }
+        None => {
+            return Err(StorDieselError::query_fail("no un-committed journal rows"));
         }
     }
+
     let rows = diesel::update(schema::journal_immutable::table)
-        .filter(schema::journal_immutable::journal_id.gt(to_commit))
+        .filter(schema::journal_immutable::journal_id.eq(to_commit))
         .set(schema::journal_immutable::committed.eq(true))
         .execute(conn.inner());
     check_insert_num_rows(rows, 1)

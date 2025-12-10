@@ -1,7 +1,6 @@
 use crate::StorDieselResult;
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
-use diesel::internal::derives::multiconnection::array_comparison::In;
 use diesel::mysql::{Mysql, MysqlValue};
 use diesel::serialize::{IsNull, Output, ToSql};
 use diesel::sql_types::{Binary, Json};
@@ -16,6 +15,18 @@ pub struct TorHashV1Diesel(TorHashV1);
 impl TorHashV1Diesel {
     pub fn inner_hash(&self) -> &TorHashV1 {
         &self.0
+    }
+}
+
+impl From<TorHashV1> for TorHashV1Diesel {
+    fn from(value: TorHashV1) -> Self {
+        Self(value)
+    }
+}
+
+impl<'t> From<&'t TorHashV1> for TorHashV1Diesel {
+    fn from(value: &'t TorHashV1) -> Self {
+        Self(value.clone())
     }
 }
 

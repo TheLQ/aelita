@@ -1,10 +1,15 @@
-use crate::api::common::{check_insert_num_rows, mysql_last_id};
+use crate::api::common::{SQL_PLACEHOLDER_MAX, check_insert_num_rows, mysql_last_id};
 use crate::connection::StorTransaction;
 use crate::err::StorDieselResult;
+use crate::id_types::ModelTorrentState;
+use crate::model_tor::NewModelTorrents;
 use crate::models::id_types::{ModelQbHostId, StorIdType};
 use crate::models::model_tor::{ModelQbHost, ModelTorrents, NewModelQbHosts};
 use crate::schema;
-use diesel::{HasQuery, Insertable, RunQueryDsl};
+use crate::util_types::TorHashV1Diesel;
+use diesel::{ExpressionMethods, HasQuery, Insertable, QueryDsl, RunQueryDsl};
+use xana_commons_rs::bencode_torrent_re::TorHashV1;
+use xana_commons_rs::qbittorrent_re::TorrentState;
 
 pub fn storapi_tor_host_new(
     conn: &mut StorTransaction,
@@ -28,20 +33,41 @@ pub fn storapi_tor_host_get(conn: &mut StorTransaction) -> StorDieselResult<Vec<
 
 pub fn storapi_tor_torrents_new(
     conn: &mut StorTransaction,
-    torrents: &[ModelTorrents],
+    torrents: &[NewModelTorrents],
 ) -> StorDieselResult<()> {
-    let rows = diesel::insert_into(schema::tor1_torrents::table)
-        .values(torrents)
-        .execute(conn.inner());
-    check_insert_num_rows(rows, torrents.len())
+    for chunk in torrents.chunks(SQL_PLACEHOLDER_MAX / /*columns*/4) {
+        let rows = diesel::insert_into(schema::tor1_torrents::table)
+            .values(chunk)
+            .execute(conn.inner());
+        check_insert_num_rows(rows, chunk.len())?;
+    }
+    Ok(())
 }
 
-pub fn storapi_tor_torrents_get(
+pub fn storapi_tor_torrents_get_by_hash(
     conn: &mut StorTransaction,
+    info_hashes: &[TorHashV1Diesel],
 ) -> StorDieselResult<Vec<ModelTorrents>> {
-    ModelTorrents::query()
-        .get_results(conn.inner())
-        .map_err(Into::into)
+    let mut res = Vec::new();
+    for chunk in info_hashes.chunks(SQL_PLACEHOLDER_MAX) {
+        let rows = ModelTorrents::query()
+            .filter(schema::tor1_torrents::torhash.eq_any(chunk))
+            .get_results(conn.inner())?;
+        res.extend(rows);
+    }
+    Ok(res)
+}
+
+pub fn storapi_tor_torrents_update_status(
+    conn: &mut StorTransaction,
+    hash: &TorHashV1,
+    state: &TorrentState,
+) -> StorDieselResult<()> {
+    let rows = diesel::update(schema::tor1_torrents::table)
+        .filter(schema::tor1_torrents::torhash.eq(TorHashV1Diesel::from(hash)))
+        .set(schema::tor1_torrents::tor_status.eq(ModelTorrentState::from(state)))
+        .execute(conn.inner());
+    check_insert_num_rows(rows, 1)
 }
 
 pub fn storapi_tor_reset(conn: &mut StorTransaction) -> StorDieselResult<()> {

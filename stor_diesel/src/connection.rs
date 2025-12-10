@@ -18,13 +18,13 @@ fn load_db_url_from_env(perma: PermaStore) -> String {
     };
 
     let env_path = Path::new(".env");
+    info!(
+        "Loading environment {}",
+        env_path.canonicalize().unwrap().display()
+    );
     let env_map_raw = read_file_better(env_path)
         .expect("missing .env file")
         .unwrap();
-    info!(
-        "Loaded environment {}",
-        env_path.canonicalize().unwrap().display()
-    );
     let env_map = str::from_utf8(&env_map_raw)
         .unwrap()
         .split("\n")
@@ -81,7 +81,7 @@ impl Instrumentation for StorInstrument {
         match event {
             InstrumentationEvent::StartQuery { query, .. } => {
                 let mut query_str = query.to_string();
-                let limit = 100;
+                let limit = 1000;
                 if query_str.len() > limit {
                     let suffix = &format!("...truncate {} chars ...", query_str.len() - limit);
                     query_str.truncate(limit);

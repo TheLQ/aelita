@@ -5,6 +5,9 @@ use diesel::{QueryResult, RunQueryDsl, dsl};
 use std::backtrace::Backtrace;
 use xana_commons_rs::tracing_re::info;
 
+/// Avoid "Prepared statement contains too many placeholders"
+pub const SQL_PLACEHOLDER_MAX: usize = 60_000;
+
 pub fn check_insert_num_rows(query: QueryResult<usize>, expected: usize) -> StorDieselResult<()> {
     let result_size = query?;
     if result_size != expected {

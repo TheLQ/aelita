@@ -191,11 +191,29 @@ enum_value!(JournalImmutableJournalTypeEnum -> ModelJournalTypeName);
 
 #[derive(Debug, Hash, Eq, PartialEq, diesel::AsExpression, diesel::FromSqlRow)]
 #[diesel(sql_type = Tor1TorrentsTorStatusEnum)]
-pub struct ModelTorrentStatus(TorrentState);
-enum_value!(Tor1TorrentsTorStatusEnum -> ModelTorrentStatus);
+pub struct ModelTorrentState(TorrentState);
+enum_value!(Tor1TorrentsTorStatusEnum -> ModelTorrentState);
+
+impl ModelTorrentState {
+    pub fn inner(&self) -> &TorrentState {
+        &self.0
+    }
+}
+
+impl From<TorrentState> for ModelTorrentState {
+    fn from(value: TorrentState) -> Self {
+        Self(value)
+    }
+}
+
+impl<'t> From<&'t TorrentState> for ModelTorrentState {
+    fn from(value: &'t TorrentState) -> Self {
+        Self(value.clone())
+    }
+}
 
 /// strum passthru
-impl FromStr for ModelTorrentStatus {
+impl FromStr for ModelTorrentState {
     type Err = strum::ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -204,15 +222,15 @@ impl FromStr for ModelTorrentStatus {
 }
 
 /// strum passthru
-impl<'s> From<&'s ModelTorrentStatus> for &'static str {
-    fn from(value: &'s ModelTorrentStatus) -> Self {
+impl<'s> From<&'s ModelTorrentState> for &'static str {
+    fn from(value: &'s ModelTorrentState) -> Self {
         Self::from(&value.0)
     }
 }
 
 /// strum passthru
-impl From<ModelTorrentStatus> for &'static str {
-    fn from(value: ModelTorrentStatus) -> Self {
+impl From<ModelTorrentState> for &'static str {
+    fn from(value: ModelTorrentState) -> Self {
         Self::from(&value.0)
     }
 }
