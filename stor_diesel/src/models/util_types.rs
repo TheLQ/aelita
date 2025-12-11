@@ -8,7 +8,7 @@ use serde::Serialize;
 use std::io::Write;
 use xana_commons_rs::bencode_torrent_re::TorHashV1;
 
-#[derive(Debug, diesel::FromSqlRow, diesel::AsExpression)]
+#[derive(Debug, diesel::expression::AsExpression, diesel::deserialize::FromSqlRow)]
 #[diesel(sql_type = diesel::sql_types::Binary)]
 pub struct TorHashV1Diesel(TorHashV1);
 
@@ -53,7 +53,7 @@ where
 ///
 /// Further, FromSql/ToSql do not use generics because the
 /// generic bounds get weird not actually being a BLOB type
-#[derive(Debug, diesel::FromSqlRow, diesel::AsExpression)]
+#[derive(Debug, diesel::expression::AsExpression, diesel::deserialize::FromSqlRow)]
 #[diesel(sql_type = diesel::sql_types::Binary)]
 #[diesel(sql_type = Json)]
 pub struct RawDieselBytes(Vec<u8>);

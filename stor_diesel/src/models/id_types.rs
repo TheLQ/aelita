@@ -25,8 +25,8 @@ macro_rules! id_type {
             Debug,
             serde::Serialize,
             serde::Deserialize,
-            diesel::AsExpression,
-            diesel::FromSqlRow,
+            diesel::expression::AsExpression,
+            diesel::deserialize::FromSqlRow,
         )]
         // PartialEq,
         //             Eq,
@@ -176,8 +176,8 @@ macro_rules! enum_value {
     Hash,
     Eq,
     PartialEq,
-    diesel::AsExpression,
-    diesel::FromSqlRow,
+    diesel::expression::AsExpression,
+    diesel::deserialize::FromSqlRow,
     strum::EnumString,
     strum::IntoStaticStr,
     strum::VariantArray,
@@ -189,7 +189,9 @@ pub enum ModelJournalTypeName {
 }
 enum_value!(JournalImmutableJournalTypeEnum -> ModelJournalTypeName);
 
-#[derive(Debug, Hash, Eq, PartialEq, diesel::AsExpression, diesel::FromSqlRow)]
+#[derive(
+    Debug, Hash, Eq, PartialEq, diesel::expression::AsExpression, diesel::deserialize::FromSqlRow,
+)]
 #[diesel(sql_type = Tor1TorrentsTorStatusEnum)]
 #[diesel(sql_type = Text)]
 pub struct ModelTorrentState(TorrentState);

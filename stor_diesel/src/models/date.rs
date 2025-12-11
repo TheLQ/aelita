@@ -4,14 +4,13 @@ use diesel::deserialize::FromSql;
 use diesel::mysql::{Mysql, MysqlValue};
 use diesel::serialize::{IsNull, Output, ToSql};
 use diesel::sql_types::Text;
-use diesel::{AsExpression, FromSqlRow};
 use std::fmt::{Debug, Display, Formatter};
 use std::io::Write;
 use std::str::FromStr;
 
 pub type StorDateType = DateTime<Utc>;
 
-#[derive(Clone, Default, AsExpression, FromSqlRow)]
+#[derive(Clone, Default, diesel::expression::AsExpression, diesel::deserialize::FromSqlRow)]
 #[diesel(sql_type = Text)]
 #[repr(transparent)]
 pub struct StorDate(StorDateType);
