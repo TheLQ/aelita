@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS `journal_immutable`
 (
     -- @formatter:off for massive enum
     `journal_id`        INTEGER UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `journal_type`      ENUM ('QbGetTorJson1', 'Space1') NOT NULL,
+    `journal_type`      ENUM ('Space1', 'QbGetTorJson1', 'NData1') NOT NULL,
     `data`              LONGBLOB         NOT NULL,
     `metadata`          JSON,
     `committed`         BOOLEAN          NOT NULL,

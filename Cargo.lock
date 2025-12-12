@@ -30,6 +30,7 @@ dependencies = [
  "aelita_commons",
  "aelita_stor_diesel",
  "bytes",
+ "indexmap",
  "serde",
  "serde_json",
  "thiserror",
