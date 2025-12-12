@@ -1,7 +1,7 @@
 use crate::importers::n_data_v1::defs::CompressedPaths;
 use aelita_stor_diesel::api_journal::storapi_journal_immutable_push_single;
 use aelita_stor_diesel::id_types::ModelJournalTypeName;
-use aelita_stor_diesel::model_journal::NewModelJournalDataImmutable;
+use aelita_stor_diesel::model_journal::NewModelJournalImmutable;
 use aelita_stor_diesel::util_types::RawDieselBytes;
 use aelita_stor_diesel::{StorDieselError, StorDieselResult, StorTransaction};
 use std::cell::LazyCell;
@@ -88,7 +88,7 @@ pub fn storfetch_ndata(conn: &mut StorTransaction) -> StorDieselResult<()> {
 
     let journal_id = storapi_journal_immutable_push_single(
         conn,
-        NewModelJournalDataImmutable {
+        NewModelJournalImmutable {
             journal_type: ModelJournalTypeName::NData1,
             data,
             metadata: None,

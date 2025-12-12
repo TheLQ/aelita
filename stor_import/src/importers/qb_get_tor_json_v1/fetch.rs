@@ -4,7 +4,7 @@ use aelita_stor_diesel::StorTransaction;
 use aelita_stor_diesel::api_journal::storapi_journal_immutable_push_single;
 use aelita_stor_diesel::api_tor::storapi_tor_host_get;
 use aelita_stor_diesel::id_types::ModelJournalTypeName;
-use aelita_stor_diesel::model_journal::NewModelJournalDataImmutable;
+use aelita_stor_diesel::model_journal::NewModelJournalImmutable;
 use aelita_stor_diesel::model_tor::ModelQbHost;
 use aelita_stor_diesel::util_types::RawDieselBytes;
 use bytes::Bytes;
@@ -31,7 +31,7 @@ pub fn storfetch_torrents(conn: &mut StorTransaction<'_>) -> StorImportResult<()
     for (model, data) in fetch_results {
         storapi_journal_immutable_push_single(
             conn,
-            NewModelJournalDataImmutable {
+            NewModelJournalImmutable {
                 journal_type: ModelJournalTypeName::QbGetTorJson1,
                 data: RawDieselBytes::new(data.into()),
                 metadata: Some(RawDieselBytes::serialize_json(ImportQbMetadata {

@@ -3,7 +3,7 @@ use aelita_stor_diesel::api_journal::{
     storapi_journal_commit_new, storapi_journal_commit_remain_next,
 };
 use aelita_stor_diesel::id_types::ModelJournalTypeName;
-use aelita_stor_diesel::model_journal::ModelJournalDataImmutable;
+use aelita_stor_diesel::model_journal::ModelJournalImmutable;
 use aelita_stor_diesel::{PermaStore, StorTransaction, establish_connection_or_panic};
 use aelita_stor_import::err::{StorImportError, StorImportResult};
 use aelita_stor_import::storcommit_torrents;
@@ -54,7 +54,7 @@ fn run() -> StorImportResult<()> {
     Ok(())
 }
 
-fn process_row(conn: &mut StorTransaction, row: ModelJournalDataImmutable) -> StorImportResult<()> {
+fn process_row(conn: &mut StorTransaction, row: ModelJournalImmutable) -> StorImportResult<()> {
     let journal_id = row.journal_id.clone();
     info!("-- Commit journal {journal_id} --");
     match row.journal_type {

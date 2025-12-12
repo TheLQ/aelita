@@ -1,10 +1,10 @@
 use crate::api::common::{assert_test_database, check_insert_num_rows, mysql_last_id};
 use crate::connection::StorTransaction;
 use crate::err::{StorDieselError, StorDieselResult};
-use crate::model_journal::ModelJournalDataImmutableDiesel;
+use crate::model_journal::ModelJournalImmutableDiesel;
 use crate::models::id_types::{ModelJournalId, StorIdType};
 use crate::models::model_journal::{
-    ModelJournalDataImmutable, NewModelJournalDataImmutable, NewModelJournalDataImmutableDiesel,
+    ModelJournalImmutable, NewModelJournalImmutable, NewModelJournalImmutableDiesel,
 };
 use crate::schema;
 use diesel::dsl;
@@ -14,16 +14,16 @@ use xana_commons_rs::tracing_re::{debug, info, trace};
 
 pub fn storapi_journal_immutable_push_single(
     conn: &mut StorTransaction,
-    value_raw: NewModelJournalDataImmutable,
+    value_raw: NewModelJournalImmutable,
 ) -> StorDieselResult<ModelJournalId> {
-    let NewModelJournalDataImmutable {
+    let NewModelJournalImmutable {
         journal_type,
         data,
         metadata,
         cause_description,
         cause_xrn,
     } = value_raw;
-    let row = NewModelJournalDataImmutableDiesel {
+    let row = NewModelJournalImmutableDiesel {
         journal_type,
         metadata,
         committed: false,
@@ -51,7 +51,7 @@ pub fn storapi_journal_immutable_push_single(
 #[cfg(feature = "nope")]
 pub fn storapi_journal_immutable_push(
     conn: &mut StorTransaction,
-    values_raw: impl IntoIterator<Item = NewModelJournalDataImmutable>,
+    values_raw: impl IntoIterator<Item = NewModelJournalImmutable>,
 ) -> StorDieselResult<Vec<ModelJournalId>> {
     let max_id: Option<ModelSpaceId> = schema::journal_immutable::table
         .select(dsl::max(schema::journal_immutable::journal_id))
@@ -60,13 +60,13 @@ pub fn storapi_journal_immutable_push(
     let values = values_raw
         .into_iter()
         .map(
-            |NewModelJournalDataImmutable {
+            |NewModelJournalImmutable {
                  journal_type,
                  data,
                  metadata,
                  cause_xrn,
                  cause_description,
-             }| NewModelJournalDataImmutableDiesel {
+             }| NewModelJournalImmutableDiesel {
                 journal_type,
                 data,
                 metadata,
@@ -102,17 +102,17 @@ pub fn storapi_journal_immutable_push(
 
 pub fn storapi_journal_commit_remain_next(
     conn: &mut StorTransaction,
-) -> StorDieselResult<Option<ModelJournalDataImmutable>> {
+) -> StorDieselResult<Option<ModelJournalImmutable>> {
     let watch = BasicWatch::start();
 
-    let ModelJournalDataImmutableDiesel {
+    let ModelJournalImmutableDiesel {
         journal_id,
         journal_type,
         metadata,
         committed,
         cause_description,
         cause_xrn,
-    } = ModelJournalDataImmutableDiesel::query()
+    } = ModelJournalImmutableDiesel::query()
         .filter(schema::journal_immutable::committed.eq(false))
         .order_by(schema::journal_immutable::journal_id.asc())
         .first(conn.inner())?;
@@ -122,7 +122,7 @@ pub fn storapi_journal_commit_remain_next(
         .first(conn.inner())?;
 
     debug!("Fetch journal {journal_id} in {watch}");
-    Ok(Some(ModelJournalDataImmutable {
+    Ok(Some(ModelJournalImmutable {
         journal_id,
         journal_type,
         data,

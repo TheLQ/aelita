@@ -6,7 +6,7 @@ use crate::connection::{StorConnection, StorTransaction};
 use crate::err::StorDieselResult;
 use crate::models::date::StorDate;
 use crate::models::id_types::ModelJournalTypeName;
-use crate::models::model_journal::{ModelJournalDataImmutable, NewModelJournalDataImmutable};
+use crate::models::model_journal::{ModelJournalImmutable, NewModelJournalImmutable};
 use crate::models::model_space::{ModelSpaceOwned, NewModelSpaceNames};
 use crate::util_types::RawDieselBytes;
 use xana_commons_rs::tracing_re::info;
@@ -21,7 +21,7 @@ pub fn create_todo_list(conn: &mut StorConnection) -> StorDieselResult<()> {
 
 #[derive(Default)]
 struct Model {
-    projects: Vec<ModelJournalDataImmutable>,
+    projects: Vec<ModelJournalImmutable>,
     current_time: StorDate,
 }
 
@@ -60,7 +60,7 @@ impl Model {
             StorTransaction::new_transaction::<_, StorDieselError>("new-journal", conn, |conn| {
                 storapi_journal_immutable_push_single(
                     conn,
-                    NewModelJournalDataImmutable {
+                    NewModelJournalImmutable {
                         journal_type: ModelJournalTypeName::Space1,
                         data: RawDieselBytes::new("hello_world".as_bytes().to_vec()),
                         metadata: None,
