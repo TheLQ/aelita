@@ -1,9 +1,7 @@
 use crate::err::{StorImportError, StorImportResult};
 use crate::importers::qb_get_tor_json_v1::defs::ImportQbMetadata;
 use aelita_stor_diesel::StorTransaction;
-use aelita_stor_diesel::api_journal::{
-    storapi_journal_immutable_push, storapi_journal_immutable_push_single,
-};
+use aelita_stor_diesel::api_journal::storapi_journal_immutable_push_single;
 use aelita_stor_diesel::api_tor::storapi_tor_host_get;
 use aelita_stor_diesel::id_types::ModelJournalTypeName;
 use aelita_stor_diesel::model_journal::NewModelJournalDataImmutable;
@@ -30,21 +28,20 @@ pub fn storfetch_torrents(conn: &mut StorTransaction<'_>) -> StorImportResult<()
     let hosts_num = hosts.len();
 
     let fetch_results = fetch_async_start(hosts)?;
-    let fetch_diesel = fetch_results
-        .into_iter()
-        .map(|(model, v)| {
-            Ok::<_, StorImportError>(NewModelJournalDataImmutable {
+    for (model, data) in fetch_results {
+        storapi_journal_immutable_push_single(
+            conn,
+            NewModelJournalDataImmutable {
                 journal_type: ModelJournalTypeName::QbGetTorJson1,
-                data: RawDieselBytes::new(v.into()),
+                data: RawDieselBytes::new(data.into()),
                 metadata: Some(RawDieselBytes::serialize_json(ImportQbMetadata {
                     qb_host_id: model.qb_host_id,
                 })?),
                 cause_description: format!("stor {hosts_num} qb hosts"),
                 cause_xrn: None,
-            })
-        })
-        .try_collect::<Vec<_>>()?;
-    storapi_journal_immutable_push(conn, fetch_diesel)?;
+            },
+        )?;
+    }
 
     Ok(())
 }

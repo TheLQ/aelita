@@ -38,13 +38,19 @@ diesel::table! {
         journal_id -> Unsigned<Integer>,
         #[max_length = 13]
         journal_type -> JournalImmutableJournalTypeEnum,
-        data -> Longblob,
         metadata -> Nullable<Json>,
         committed -> Bool,
         at -> Timestamp,
         #[max_length = 100]
         cause_xrn -> Nullable<Varchar>,
         cause_description -> Text,
+    }
+}
+
+diesel::table! {
+    journal_immutable_data (journal_id) {
+        journal_id -> Unsigned<Integer>,
+        data -> Longblob,
     }
 }
 
@@ -96,6 +102,7 @@ diesel::table! {
 diesel::joinable!(hd1_galleries -> hd1_sites (hd_site_id));
 diesel::joinable!(hd1_galleries -> journal_immutable (journal_id));
 diesel::joinable!(hd1_sites -> journal_immutable (journal_id));
+diesel::joinable!(journal_immutable_data -> journal_immutable (journal_id));
 diesel::joinable!(space_names -> journal_immutable (journal_id));
 diesel::joinable!(space_owned -> journal_immutable (journal_id));
 diesel::joinable!(space_owned -> space_names (space_id));
@@ -105,6 +112,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     hd1_galleries,
     hd1_sites,
     journal_immutable,
+    journal_immutable_data,
     space_names,
     space_owned,
     tor1_qb_host,
