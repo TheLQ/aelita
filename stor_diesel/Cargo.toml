@@ -15,7 +15,8 @@ thiserror = { workspace = true }
 chrono = { workspace = true }
 strum = { workspace = true }
 #
-diesel = { version = "2.3", default-features = false, features = ["mysql", "chrono"] }
+#version = "2.3"
+diesel = { path = "../../diesel/diesel", default-features = false, features = ["mysql", "chrono"] }
 postcard = { version = "1.1", features = ["alloc"] }
 itertools = "0.14"
 fxhash = "0.2"

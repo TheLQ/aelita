@@ -5,7 +5,6 @@
 
 pub mod err;
 mod importers;
-mod path_const;
 mod util;
 
 pub use importers::{

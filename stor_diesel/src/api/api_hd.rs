@@ -2,16 +2,17 @@ use crate::api::common::{SQL_PLACEHOLDER_MAX, check_insert_num_rows};
 use crate::api_variables::{storapi_variables_get, storapi_variables_get_str};
 use crate::id_types::{ModelJournalId, ModelJournalTypeName};
 use crate::models::model_hd::{HD_PATH_DEPTH, HdPathDiesel, NewHdPathAssociation};
+use crate::path_const::PathConst;
 use crate::schema_temp::{
     FAST_HD_COMPONENTS_CREATE, FAST_HD_COMPONENTS_TRUNCATE, FAST_HD_PATHS_CREATE,
     FAST_HD_PATHS_TRUNCATE,
 };
 use crate::{StorDieselResult, StorTransaction, assert_test_database};
 use crate::{schema, schema_temp};
-use diesel::RunQueryDsl;
 use diesel::connection::SimpleConnection;
 use diesel::dsl::max;
 use diesel::prelude::*;
+use diesel::{RunQueryDsl, dsl};
 use fxhash::FxHashSet;
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
@@ -22,10 +23,13 @@ use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{info, trace};
 use xana_commons_rs::{BasicWatch, CommaJoiner, LOCALE, SimpleIoMap, SpaceJoiner};
 
+const IMPORT_COMPONENTS_PATH: PathConst = PathConst("import-data.temp.dat");
+
 pub fn storapi_hd_tree_push(
     conn: &mut StorTransaction,
     paths: &[impl AsRef<Path>],
 ) -> StorDieselResult<()> {
+    trace!("unique-ifying...");
     let watch = BasicWatch::start();
     let components_unique_os: FxHashSet<&OsStr> =
         paths.iter().flat_map(|v| v.as_ref().iter()).collect();
@@ -39,12 +43,22 @@ pub fn storapi_hd_tree_push(
     );
 
     // diesel::sql_query("SET autocommit=0").execute(conn.inner())?;
+    let autocommit = storapi_variables_get_str(conn.inner(), "autocommit")?;
+    info!("autocommit is {autocommit}");
 
     components_update(conn, components_unique.as_slice())?;
     let component_to_id = components_get(conn, components_unique.as_slice())?;
 
     // push_associations_simple(conn, paths, component_to_id)?;
-    push_associations_fancy(conn, paths, &component_to_id)?;
+    // push_associations_fancy(conn, paths, &component_to_id)?;
+
+    diesel::sql_query(FAST_HD_PATHS_CREATE).execute(conn.inner())?;
+    diesel::sql_query(FAST_HD_PATHS_TRUNCATE).execute(conn.inner())?;
+
+    // build_paths_mega_query(conn, paths, &component_to_id)?;
+    build_paths_infile(conn, paths, &component_to_id)?;
+
+    push_associations_fancy_insert(conn)?;
 
     Ok(())
 }
@@ -174,14 +188,11 @@ fn push_associations_simple(
 
 /// effectively insert by 10-batch chain
 /// with individual (id,parent_id) every value is duplicated twice
-fn push_associations_fancy(
+fn build_paths_mega_query(
     conn: &mut StorTransaction,
     paths: &[impl AsRef<Path>],
     component_to_id: &HashMap<String, u32>,
 ) -> StorDieselResult<()> {
-    diesel::sql_query(FAST_HD_PATHS_CREATE).execute(conn.inner())?;
-    diesel::sql_query(FAST_HD_PATHS_TRUNCATE).execute(conn.inner())?;
-
     let watch = BasicWatch::start();
 
     const MEBI_BYTE: usize = 1024 * 1024;
@@ -234,9 +245,65 @@ fn push_associations_fancy(
         "Inserted {} fast paths in {watch}",
         total_inserted.to_formatted_string(&LOCALE),
     );
-    // assert_eq!(total_inserted, paths.len());
+    assert_eq!(total_inserted, paths.len());
 
-    total_inserted = 0;
+    Ok(())
+}
+
+const ROW_SEP: u8 = 0x1e;
+const COL_SEP: u8 = 0x1f;
+fn build_paths_infile(
+    conn: &mut StorTransaction,
+    paths: &[impl AsRef<Path>],
+    component_to_id: &HashMap<String, u32>,
+) -> StorDieselResult<()> {
+    let watch = BasicWatch::start();
+    let mut content = Vec::new();
+    for path in paths.iter() {
+        let path = path.as_ref();
+        let diesel_path = HdPathDiesel::from_path(path, &component_to_id);
+        for field in diesel_path.into_array() {
+            if let Some(v) = field {
+                content.extend(v.to_string().as_bytes());
+            }
+            content.push(COL_SEP)
+        }
+        let content_len = content.len();
+        content[content_len - 1] = ROW_SEP;
+    }
+    let import_path = IMPORT_COMPONENTS_PATH.as_ref();
+    std::fs::write(import_path, &content).map_io_err(import_path)?;
+    info!("wrote to {} in {watch}", import_path.display());
+
+    let import_path = import_path.canonicalize().unwrap();
+
+    // let enabled = storapi_variables_get_str(conn.inner(), "local_infile")?;
+    // info!("local_infile enabled {enabled}");
+    //
+    // // "SET GLOBAL local_infile=1;
+    // dsl::sql_query("SET GLOBAL local_infile=ON").execute(conn.inner())?;
+    //
+    // let enabled = storapi_variables_get_str(conn.inner(), "local_infile")?;
+    // info!("local_infile enabled {enabled}");
+
+    let watch = BasicWatch::start();
+    diesel::sql_query(FAST_HD_PATHS_CREATE).execute(conn.inner())?;
+    diesel::sql_query(FAST_HD_PATHS_TRUNCATE).execute(conn.inner())?;
+    conn.inner().batch_execute(&format!(
+        "LOAD DATA LOCAL INFILE '{}' \
+        INTO TABLE `fast_hd_paths` \
+        FIELDS TERMINATED BY 0x{COL_SEP} \
+        LINES TERMINATED BY 0x{ROW_SEP}",
+        import_path.display()
+    ))?;
+    info!("wrote rows in {watch}");
+
+    Ok(())
+}
+
+fn push_associations_fancy_insert(conn: &mut StorTransaction) -> StorDieselResult<()> {
+    let watch = BasicWatch::start();
+    let mut total_inserted = 0;
     for i in 0..(HD_PATH_DEPTH - 1) {
         let next_i = i + 1;
         total_inserted += diesel::sql_query(format!(
@@ -265,7 +332,6 @@ fn push_associations_fancy(
     //     "Inserted {} fast paths in {watch}",
     //     rows.to_formatted_string(&LOCALE),
     // );
-
     Ok(())
 }
 
@@ -354,45 +420,3 @@ pub fn storapi_hd_revert_by_pop(conn: &mut StorTransaction) -> StorDieselResult<
 }
 
 // // "Back in my day..."
-// const ROW_SEP: u8 = 0x1e;
-// const COL_SEP: u8 = 0x1f;
-// fn test_infile(
-//     conn: &mut StorTransaction,
-//     paths: &[impl AsRef<Path>],
-//     component_to_id: &HashMap<String, u32>,
-// ) {
-//     let watch = BasicWatch::start();
-//     let mut content = Vec::new();
-//     for path in paths.iter().take(5) {
-//         let path = path.as_ref();
-//         let diesel_path = HdPathDiesel::from_path(path, &component_to_id);
-//         for field in diesel_path.into_array() {
-//             if let Some(v) = field {
-//                 content.extend(v.to_ne_bytes());
-//             }
-//             content.push(COL_SEP)
-//         }
-//         let content_len = content.len();
-//         content[content_len - 1] = ROW_SEP;
-//     }
-//     let import_path = &Path::new("import-data.temp.dat");
-//     std::fs::write(import_path, &content).map_io_err(import_path)?;
-//
-//     let import_path = import_path.canonicalize().unwrap();
-//
-//     // "SET GLOBAL local_infile=1;
-//     let enabled = storapi_variables_get_str(conn.inner(), "local_infile")?;
-//     info!("local_infile enabled {enabled}");
-//
-//     diesel::sql_query(FAST_HD_PATHS_CREATE).execute(conn.inner())?;
-//     diesel::sql_query(FAST_HD_PATHS_TRUNCATE).execute(conn.inner())?;
-//     conn.inner().batch_execute(&format!(
-//         "LOAD DATA LOCAL INFILE '{}' \
-//         INTO TABLE `fast_hd_paths` \
-//         FIELDS TERMINATED BY 0x{COL_SEP} \
-//         LINES TERMINATED BY 0x{ROW_SEP}",
-//         import_path.display()
-//     ))?;
-//
-//     Ok(())
-// }

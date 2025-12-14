@@ -4,8 +4,8 @@ resolver = "2"
 
 default-members = ["www"]
 
-[profile.release]
-lto = "fat"
+#[profile.release]
+#lto = "fat"
 
 #
 # Global Dependencies

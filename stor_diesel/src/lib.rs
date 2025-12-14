@@ -2,12 +2,14 @@
 #![feature(iterator_try_collect)]
 #![feature(slice_as_array)]
 #![feature(slice_pattern)]
+extern crate core;
 
 mod api;
 mod connection;
 mod err;
 mod example_structure;
 mod models;
+pub mod path_const;
 mod schema;
 mod schema_temp;
 pub mod tests;
