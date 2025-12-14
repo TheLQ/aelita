@@ -8,7 +8,22 @@ diesel::table! {
         tor_state -> Varchar,
     }
 }
-pub const SQL_FAST_TOR_CREATE: &str = "CREATE TEMPORARY TABLE `fast_tor_update` (tor_hash BINARY(20) NOT NULL PRIMARY KEY, tor_state VARCHAR(20))";
+pub const SQL_FAST_TOR_CREATE: &str = "CREATE TEMPORARY TABLE `fast_tor_update` \
+(tor_hash BINARY(20) NOT NULL PRIMARY KEY, \
+tor_state VARCHAR(20) \
+)";
 pub const SQL_FAST_TOR_DROP: &str = "DROP TEMPORARY TABLE `fast_tor_update`";
+
+diesel::table! {
+    fast_hd_data (component) {
+        #[max_length = 250]
+        component -> Binary,
+    }
+}
+pub const SQL_FAST_HD_CREATE: &str = "CREATE TEMPORARY TABLE `tmp_hd_data` (\
+`component` VARBINARY(250) NOT NULL PRIMARY KEY\
+)";
+pub const SQL_FAST_HD_DROP: &str = "DROP TEMPORARY TABLE `tmp_hd_data`";
+
 diesel::joinable!(fast_tor_update -> tor1_torrents (tor_hash));
 diesel::allow_tables_to_appear_in_same_query!(fast_tor_update, tor1_torrents);

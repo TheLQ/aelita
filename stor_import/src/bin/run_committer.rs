@@ -6,7 +6,7 @@ use aelita_stor_diesel::id_types::ModelJournalTypeName;
 use aelita_stor_diesel::model_journal::ModelJournalImmutable;
 use aelita_stor_diesel::{PermaStore, StorTransaction, establish_connection_or_panic};
 use aelita_stor_import::err::{StorImportError, StorImportResult};
-use aelita_stor_import::storcommit_torrents;
+use aelita_stor_import::{storcommit_hd, storcommit_torrents};
 use std::ops::ControlFlow;
 use std::process::ExitCode;
 use xana_commons_rs::tracing_re::info;
@@ -56,9 +56,13 @@ fn run() -> StorImportResult<()> {
 
 fn process_row(conn: &mut StorTransaction, row: ModelJournalImmutable) -> StorImportResult<()> {
     let journal_id = row.journal_id.clone();
-    info!("-- Commit journal {journal_id} --");
+    info!("-- Commit journal {journal_id} {} --", row.journal_type);
     match row.journal_type {
-        ModelJournalTypeName::QbGetTorJson1 => storcommit_torrents(conn, row),
+        ModelJournalTypeName::QbGetTorJson1 => {
+            // todo!()
+            storcommit_torrents(conn, row)
+        }
+        ModelJournalTypeName::NData1 => storcommit_hd(conn, row),
         ModelJournalTypeName::Space1 => todo!(),
     }?;
     storapi_journal_commit_new(conn, &journal_id)?;

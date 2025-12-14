@@ -181,6 +181,7 @@ macro_rules! enum_value {
     strum::EnumString,
     strum::IntoStaticStr,
     strum::VariantArray,
+    strum::Display,
 )]
 #[diesel(sql_type = JournalImmutableJournalTypeEnum)]
 pub enum ModelJournalTypeName {

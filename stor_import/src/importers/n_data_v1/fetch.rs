@@ -1,4 +1,6 @@
+use crate::err::StorImportResult;
 use crate::importers::n_data_v1::defs::CompressedPaths;
+use crate::path_const::PathConst;
 use aelita_stor_diesel::api_journal::storapi_journal_immutable_push_single;
 use aelita_stor_diesel::id_types::ModelJournalTypeName;
 use aelita_stor_diesel::model_journal::NewModelJournalImmutable;
@@ -17,6 +19,7 @@ static ROOTS: LazyLock<Vec<String>> = LazyLock::new(|| {
     let raw = std::fs::read_to_string(path).map_io_err(path).unwrap();
     raw.split('\n').map(|s| s.to_string()).collect()
 });
+pub const COMPRESSEDD_CACHE: PathConst = PathConst("compressed_paths.cache.json");
 
 pub fn paths_load() -> Vec<PathBuf> {
     let total_watch = BasicWatch::start();
@@ -62,29 +65,36 @@ pub fn paths_load() -> Vec<PathBuf> {
     res_ok
 }
 
-fn paths_compressed() -> StorDieselResult<(CompressedPaths, String)> {
+fn paths_compressed() -> StorImportResult<(CompressedPaths, Vec<u8>)> {
     let paths_raw = paths_load();
     let compressed =
         CompressedPaths::from_paths(&paths_raw).map_err(StorDieselError::query_fail)?;
-    let compressed_json = serde_json::to_string(&compressed)?;
+    let encoded_diesel = RawDieselBytes::serialize_postcard(&compressed)?;
+    let encoded = encoded_diesel.as_inner();
 
-    let paths_raw_size: usize = paths_raw.iter().map(|v| v.to_str().unwrap().len()).sum();
-    let compressed_json_size: usize = compressed_json.len();
+    let raw_size: usize = paths_raw.iter().map(|v| v.to_str().unwrap().len()).sum();
+    let encoded_size: usize = encoded.len();
 
-    let saved_bytes = paths_raw_size as isize - compressed_json_size as isize;
-    let saved_percent = (1.0 - (compressed_json_size as f64 / paths_raw_size as f64)) * 100.0;
+    let saved_bytes = raw_size as isize - encoded_size as isize;
+    let saved_percent = (encoded_size as f64 / raw_size as f64) * 100.0;
     info!(
-        "output {} compressed {} raw {} reduction {saved_percent:.1}%",
-        compressed_json_size.to_formatted_string(&LOCALE),
-        paths_raw_size.to_formatted_string(&LOCALE),
+        "encoded {} raw {} raw {} reduction {saved_percent:.1}%",
+        encoded_size.to_formatted_string(&LOCALE),
+        raw_size.to_formatted_string(&LOCALE),
         saved_bytes.to_formatted_string(&LOCALE)
     );
-    Ok((compressed, compressed_json))
+
+    let cache = Path::new("compressed_paths.cache.json");
+    std::fs::write(cache, &encoded).map_io_err(cache)?;
+    info!("wrote to {}", cache.display());
+
+    Ok((compressed, encoded_diesel.into_inner()))
 }
 
-pub fn storfetch_ndata(conn: &mut StorTransaction) -> StorDieselResult<()> {
-    let (_compressed, compressed_json) = paths_compressed()?;
-    let data = RawDieselBytes::new(compressed_json.into_bytes());
+pub fn storfetch_ndata(conn: &mut StorTransaction) -> StorImportResult<()> {
+    let (_compressed, compressed_encoded) = paths_compressed()?;
+    let compressed_encoded = std::fs::read(COMPRESSEDD_CACHE).map_io_err(COMPRESSEDD_CACHE)?;
+    let data = RawDieselBytes::new(compressed_encoded);
 
     let journal_id = storapi_journal_immutable_push_single(
         conn,

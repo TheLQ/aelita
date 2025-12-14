@@ -1,3 +1,4 @@
+pub mod api_hd;
 pub mod api_journal;
 pub mod api_space;
 pub mod api_tor;

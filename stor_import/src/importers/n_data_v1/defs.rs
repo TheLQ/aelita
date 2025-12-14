@@ -1,8 +1,8 @@
+use aelita_stor_diesel::util_types::RawDieselBytes;
 use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
 use std::path::{Component, Path, PathBuf};
 
-/// Compress millions of paths
 #[derive(Debug)]
 struct CompressedPathsBuilder {
     parts: IndexSet<String>,
@@ -61,7 +61,7 @@ impl CompressedPathsBuilder {
     }
 }
 
-/// Simpler lookup
+/// 30 million files saved
 #[derive(Serialize, Deserialize)]
 pub struct CompressedPaths {
     parts: Vec<String>,

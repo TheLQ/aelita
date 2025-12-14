@@ -11,6 +11,35 @@ pub mod sql_types {
 }
 
 diesel::table! {
+    hd1_files (path) {
+        #[max_length = 600]
+        path -> Varchar,
+    }
+}
+
+diesel::table! {
+    hd1_files_linear (path) {
+        #[max_length = 600]
+        path -> Varchar,
+    }
+}
+
+diesel::table! {
+    hd1_files_parents (id) {
+        id -> Unsigned<Integer>,
+        parentId -> Nullable<Unsigned<Integer>>,
+    }
+}
+
+diesel::table! {
+    hd1_files_tree (id) {
+        id -> Unsigned<Integer>,
+        #[max_length = 250]
+        component -> Binary,
+    }
+}
+
+diesel::table! {
     hd1_galleries (hd_id) {
         journal_id -> Unsigned<Integer>,
         hd_site_id -> Unsigned<Integer>,
@@ -109,6 +138,10 @@ diesel::joinable!(space_owned -> space_names (space_id));
 diesel::joinable!(tor1_torrents -> journal_immutable (journal_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    hd1_files,
+    hd1_files_linear,
+    hd1_files_parents,
+    hd1_files_tree,
     hd1_galleries,
     hd1_sites,
     journal_immutable,

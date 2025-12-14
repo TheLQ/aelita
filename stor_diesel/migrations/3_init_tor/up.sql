@@ -17,6 +17,24 @@ CREATE TABLE `hd1_galleries`
     FOREIGN KEY (`hd_site_id`) REFERENCES `hd1_sites` (`hd_site_id`)
 );
 
+CREATE TABLE `hd1_files_linear`
+(
+    `path` VARCHAR(600) NOT NULL PRIMARY KEY
+);
+
+CREATE TABLE `hd1_files_tree`
+(
+    `id`        INTEGER UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `component` VARBINARY(250)   NOT NULL UNIQUE
+);
+
+CREATE TABLE `hd1_files_parents`
+(
+    `id`       INTEGER UNSIGNED NOT NULL PRIMARY KEY,
+    `parentId` INTEGER UNSIGNED,
+    INDEX (`parentId`)
+);
+
 --
 
 CREATE TABLE `tor1_qb_host`
