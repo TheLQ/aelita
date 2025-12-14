@@ -1,6 +1,5 @@
 use aelita_stor_diesel::StorDieselError;
 use std::backtrace::Backtrace;
-use xana_commons_rs::error_re::ReqwestError;
 use xana_commons_rs::qbittorrent_re::QbitError;
 use xana_commons_rs::scraper_re::{PIoReqwestError, PReqwestError};
 use xana_commons_rs::{MyBacktrace, SimpleIoError};

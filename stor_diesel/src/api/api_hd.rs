@@ -1,5 +1,5 @@
-use crate::api::common::{SQL_PLACEHOLDER_MAX, check_insert_num_rows};
-use crate::api_variables::{storapi_variables_get, storapi_variables_get_str};
+use crate::api::common::SQL_PLACEHOLDER_MAX;
+use crate::api_variables::{storapi_row_count, storapi_variables_get_str};
 use crate::id_types::{ModelJournalId, ModelJournalTypeName};
 use crate::models::model_hd::{HD_PATH_DEPTH, HdPathDiesel, NewHdPathAssociation};
 use crate::path_const::PathConst;
@@ -9,19 +9,17 @@ use crate::schema_temp::{
 };
 use crate::{StorDieselResult, StorTransaction, assert_test_database};
 use crate::{schema, schema_temp};
+use diesel::RunQueryDsl;
 use diesel::connection::SimpleConnection;
-use diesel::dsl::max;
 use diesel::prelude::*;
-use diesel::{RunQueryDsl, dsl};
 use fxhash::FxHashSet;
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
-use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{info, trace};
-use xana_commons_rs::{BasicWatch, CommaJoiner, LOCALE, SimpleIoMap, SpaceJoiner};
+use xana_commons_rs::{BasicWatch, LOCALE, SimpleIoMap};
 
 const IMPORT_COMPONENTS_PATH: PathConst = PathConst("import-data.temp.dat");
 
@@ -203,10 +201,11 @@ fn build_paths_mega_query(
     let mut path_iter = paths.iter().peekable();
     let mut i = 0;
     while path_iter.peek().is_some() {
+        let max = 990 * MEBI_BYTE;
         let mut total_values = 0;
-        let mut query_values = String::new();
+        let mut query_values = String::with_capacity(max + (5 * MEBI_BYTE));
         loop {
-            if query_values.len() > 990 * MEBI_BYTE {
+            if query_values.len() > max {
                 break;
             }
             let path = match path_iter.next() {
@@ -238,6 +237,8 @@ fn build_paths_mega_query(
             "INSERT INTO `fast_hd_paths` (`p0`, `p1`, `p2`, `p3`, `p4`, `p5`, `p6`, `p7`, `p8`, `p9`, `p10`) \
             VALUES {query_values}"
         ))?;
+        total_inserted += storapi_row_count(conn)? as usize;
+
         i += 1;
     }
 
@@ -296,7 +297,11 @@ fn build_paths_infile(
         LINES TERMINATED BY 0x{ROW_SEP}",
         import_path.display()
     ))?;
-    info!("wrote rows in {watch}");
+    let rows = storapi_row_count(conn)?;
+    info!(
+        "wrote {} rows in {watch}",
+        rows.to_formatted_string(&LOCALE)
+    );
 
     Ok(())
 }

@@ -1,5 +1,4 @@
 use aelita_stor_diesel::model_tor::ModelTorrents;
-use aelita_stor_diesel::util_types::TorHashV1Diesel;
 use std::collections::HashMap;
 use xana_commons_rs::bencode_torrent_re::TorHashV1;
 

@@ -1,14 +1,14 @@
 use crate::err::StorImportResult;
 use crate::importers::qb_get_tor_json_v1::defs::{ImportQbMetadata, ImportQbTorrent};
 use crate::util::HashExtractor;
+use aelita_stor_diesel::StorTransaction;
 use aelita_stor_diesel::api_tor::{
-    storapi_tor_torrents_get_by_hash, storapi_tor_torrents_new, storapi_tor_torrents_update_status,
+    storapi_tor_torrents_get_by_hash, storapi_tor_torrents_new,
     storapi_tor_torrents_update_status_batch,
 };
 use aelita_stor_diesel::id_types::ModelJournalTypeName;
 use aelita_stor_diesel::model_journal::ModelJournalImmutable;
 use aelita_stor_diesel::model_tor::NewModelTorrents;
-use aelita_stor_diesel::{StorTransaction, with_quiet_sql_log_spam};
 use xana_commons_rs::tracing_re::info;
 
 pub fn storcommit_torrents(

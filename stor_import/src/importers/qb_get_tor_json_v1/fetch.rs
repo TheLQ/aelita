@@ -1,4 +1,4 @@
-use crate::err::{StorImportError, StorImportResult};
+use crate::err::StorImportResult;
 use crate::importers::qb_get_tor_json_v1::defs::ImportQbMetadata;
 use aelita_stor_diesel::StorTransaction;
 use aelita_stor_diesel::api_journal::storapi_journal_immutable_push_single;

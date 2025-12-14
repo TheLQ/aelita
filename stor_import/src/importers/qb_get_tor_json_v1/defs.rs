@@ -1,6 +1,5 @@
 use crate::util::HashExtractor;
 use aelita_stor_diesel::id_types::ModelQbHostId;
-use aelita_stor_diesel::model_tor::ModelTorrents;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use xana_commons_rs::bencode_torrent_re::TorHashV1;

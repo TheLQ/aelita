@@ -1,6 +1,6 @@
-use crate::StorDieselResult;
 use crate::connection::StorConnection;
-use diesel::sql_types::{Integer, Text};
+use crate::{StorDieselResult, StorTransaction};
+use diesel::sql_types::{Integer, Text, Unsigned};
 use diesel::{RunQueryDsl, dsl};
 
 // todo: diesel::sql_query expects everything to be untyped?
@@ -30,5 +30,11 @@ pub fn storapi_variables_get_str(
     let name = name.as_ref();
     diesel::select(dsl::sql::<Text>(&format!("@@GLOBAL.{name}")))
         .get_result(conn)
+        .map_err(Into::into)
+}
+
+pub fn storapi_row_count(conn: &mut StorTransaction) -> StorDieselResult<u32> {
+    diesel::select(dsl::sql::<Unsigned<Integer>>("ROW_COUNT()"))
+        .get_result(conn.inner())
         .map_err(Into::into)
 }

@@ -1,5 +1,5 @@
 use aelita_commons::log_init;
-use aelita_stor_diesel::api_hd::{storapi_hd_revert_by_pop, storapi_hd_tree_push};
+use aelita_stor_diesel::api_hd::storapi_hd_revert_by_pop;
 use aelita_stor_diesel::api_journal::{
     storapi_journal_commit_new, storapi_journal_commit_remain_next,
 };
