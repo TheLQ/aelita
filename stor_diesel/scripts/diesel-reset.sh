@@ -7,4 +7,4 @@ for i in $(seq 10); do
       break;
     fi
 done
-diesel migration run
+exec diesel migration run
