@@ -84,14 +84,26 @@ impl Instrumentation for StorInstrument {
                 if QUIET_LOG_SPAM.load(Ordering::Relaxed) {
                     return;
                 }
-                let mut query_str = query.to_string();
-                let limit = 1000;
-                if query_str.len() > limit {
-                    let suffix = &format!("...truncate {} chars ...", query_str.len() - limit);
-                    query_str.truncate(limit);
-                    query_str.push_str(suffix);
+
+                let query_str = query.to_string();
+                let prefix = 1000;
+                let suffix = 500;
+                if query_str.len() > prefix + suffix {
+                    // :-( no extraction possible yet
+                    let binds = query_str.find("-- binds: ").unwrap();
+                    let query_str = &query_str[..binds];
+
+                    if query_str.len() < prefix + suffix {
+                        info!("{query_str} -- ...binds truncate...");
+                    } else {
+                        let small_prefix = &query_str[0..prefix];
+                        let small_suffix = &query_str[(query_str.len() - suffix)..];
+                        let removed = query_str.len() - prefix - suffix;
+                        info!("{small_prefix}...truncate {removed} chars...{small_suffix}");
+                    }
+                } else {
+                    info!("{}", query_str);
                 }
-                info!("{}", query_str);
             }
             _ => (),
         }
