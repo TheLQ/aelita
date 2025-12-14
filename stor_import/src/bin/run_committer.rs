@@ -1,4 +1,5 @@
 use aelita_commons::log_init;
+use aelita_stor_diesel::api_hd::{storapi_hd_revert_by_pop, storapi_hd_tree_push};
 use aelita_stor_diesel::api_journal::{
     storapi_journal_commit_new, storapi_journal_commit_remain_next,
 };
@@ -22,6 +23,8 @@ const MEGA_TRANSACTION: bool = false;
 
 fn run() -> StorImportResult<()> {
     let mut conn = establish_connection_or_panic(PermaStore::AelitaNull);
+
+    StorTransaction::new_transaction("revert", &mut conn, |conn| storapi_hd_revert_by_pop(conn))?;
 
     let total_watch = BasicWatch::start();
     let mut total_commit = 0;

@@ -26,10 +26,10 @@ diesel::table! {
     }
 }
 
-pub const FAST_HD_COMPONENTS_CREATE: &str = "CREATE TEMPORARY TABLE `fast_hd_components` (\
-`component` VARBINARY(250) NOT NULL PRIMARY KEY
-)";
-pub const FAST_HD_COMPONENTS_DROP: &str = "DROP TEMPORARY TABLE `fast_hd_components`";
+pub const FAST_HD_COMPONENTS_CREATE: &str = "CREATE TEMPORARY TABLE IF NOT EXISTS `fast_hd_components` (\
+    `component` VARBINARY(250) NOT NULL PRIMARY KEY \
+    )";
+pub const FAST_HD_COMPONENTS_TRUNCATE: &str = "TRUNCATE TABLE `fast_hd_components`";
 
 diesel::allow_tables_to_appear_in_same_query!(fast_hd_components, hd1_files_tree);
 // todo: primary keys don't match, can't override
@@ -38,45 +38,33 @@ diesel::allow_tables_to_appear_in_same_query!(fast_hd_components, hd1_files_tree
 //
 
 diesel::table! {
-    fast_hd_paths (id) {
-        id -> Integer,
-        #[max_length = 250]
-        p0 -> Nullable<Binary>,
-        #[max_length = 250]
-        p1 -> Nullable<Binary>,
-        #[max_length = 250]
-        p2 -> Nullable<Binary>,
-        #[max_length = 250]
-        p3 -> Nullable<Binary>,
-        #[max_length = 250]
-        p4 -> Nullable<Binary>,
-        #[max_length = 250]
-        p5 -> Nullable<Binary>,
-        #[max_length = 250]
-        p6 -> Nullable<Binary>,
-        #[max_length = 250]
-        p7 -> Nullable<Binary>,
-        #[max_length = 250]
-        p8 -> Nullable<Binary>,
-        #[max_length = 250]
-        p9 -> Nullable<Binary>,
-        #[max_length = 250]
-        p10 -> Nullable<Binary>,
+    fast_hd_paths (p0) {
+        p0 -> Nullable<Unsigned<Integer>>,
+        p1 -> Nullable<Unsigned<Integer>>,
+        p2 -> Nullable<Unsigned<Integer>>,
+        p3 -> Nullable<Unsigned<Integer>>,
+        p4 -> Nullable<Unsigned<Integer>>,
+        p5 -> Nullable<Unsigned<Integer>>,
+        p6 -> Nullable<Unsigned<Integer>>,
+        p7 -> Nullable<Unsigned<Integer>>,
+        p8 -> Nullable<Unsigned<Integer>>,
+        p9 -> Nullable<Unsigned<Integer>>,
+        p10 -> Nullable<Unsigned<Integer>>,
     }
 }
 
-pub const FAST_HD_PATHS_CREATE: &str = "CREATE TEMPORARY TABLE `fast_hd_paths` (\
-`id` INT AUTO_INCREMENT PRIMARY KEY,\
-`p0` VARBINARY(250),\
-`p1` VARBINARY(250),\
-`p2` VARBINARY(250),\
-`p3` VARBINARY(250),\
-`p4` VARBINARY(250),\
-`p5` VARBINARY(250),\
-`p6` VARBINARY(250),\
-`p7` VARBINARY(250),\
-`p8` VARBINARY(250),\
-`p9` VARBINARY(250),\
-`p10` VARBINARY(250)\
+// `id` INT AUTO_INCREMENT PRIMARY KEY,\
+pub const FAST_HD_PATHS_CREATE: &str = "CREATE TEMPORARY TABLE IF NOT EXISTS `fast_hd_paths` (\
+`p0` INTEGER UNSIGNED,\
+`p1` INTEGER UNSIGNED,\
+`p2` INTEGER UNSIGNED,\
+`p3` INTEGER UNSIGNED,\
+`p4` INTEGER UNSIGNED,\
+`p5` INTEGER UNSIGNED,\
+`p6` INTEGER UNSIGNED,\
+`p7` INTEGER UNSIGNED,\
+`p8` INTEGER UNSIGNED,\
+`p9` INTEGER UNSIGNED,\
+`p10` INTEGER UNSIGNED\
 )";
-pub const FAST_HD_PATHS_DROP: &str = "DROP TEMPORARY TABLE `fast_hd_paths`";
+pub const FAST_HD_PATHS_TRUNCATE: &str = "TRUNCATE TABLE `fast_hd_paths`";

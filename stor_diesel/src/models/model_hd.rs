@@ -1,6 +1,7 @@
 use crate::{StorDieselError, StorDieselResult};
-use diesel::sql_types::{Nullable, Text};
+use diesel::sql_types::{Integer, Nullable, Text, Unsigned};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
 use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
@@ -34,38 +35,47 @@ pub struct NewHdPathAssociation {
 #[diesel(table_name = crate::schema_temp::fast_hd_paths)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct HdPathDiesel {
-    p0: Option<Vec<u8>>,
-    p1: Option<Vec<u8>>,
-    p2: Option<Vec<u8>>,
-    p3: Option<Vec<u8>>,
-    p4: Option<Vec<u8>>,
-    p5: Option<Vec<u8>>,
-    p6: Option<Vec<u8>>,
-    p7: Option<Vec<u8>>,
-    p8: Option<Vec<u8>>,
-    p9: Option<Vec<u8>>,
-    p10: Option<Vec<u8>>,
+    p0: Option<u32>,
+    p1: Option<u32>,
+    p2: Option<u32>,
+    p3: Option<u32>,
+    p4: Option<u32>,
+    p5: Option<u32>,
+    p6: Option<u32>,
+    p7: Option<u32>,
+    p8: Option<u32>,
+    p9: Option<u32>,
+    p10: Option<u32>,
 }
 
 impl HdPathDiesel {
-    pub fn from_path(path: &Path) -> Self {
-        fn next_os_str<'s>(iter: &mut impl Iterator<Item = &'s OsStr>) -> Option<Vec<u8>> {
-            iter.next().map(|v| v.as_bytes().to_vec())
-        }
-
+    pub fn from_path(path: &Path, component_to_id: &HashMap<String, u32>) -> Self {
         let mut components = path.iter();
+        let mut next_os_str = || {
+            components
+                .next()
+                .map(|v| *component_to_id.get(v.to_str().unwrap()).unwrap())
+        };
+
+        // fn next_os_str<'s>(
+        //     iter: &mut impl Iterator<Item = &'s OsStr>,
+        //     component_to_id: &HashMap<String, u32>,
+        // ) -> Option<Vec<u8>> {
+        //     iter.next().map(|v| v.as_bytes().to_vec())
+        // }
+
         let new = Self {
-            p0: next_os_str(&mut components),
-            p1: next_os_str(&mut components),
-            p2: next_os_str(&mut components),
-            p3: next_os_str(&mut components),
-            p4: next_os_str(&mut components),
-            p5: next_os_str(&mut components),
-            p6: next_os_str(&mut components),
-            p7: next_os_str(&mut components),
-            p8: next_os_str(&mut components),
-            p9: next_os_str(&mut components),
-            p10: next_os_str(&mut components),
+            p0: next_os_str(),
+            p1: next_os_str(),
+            p2: next_os_str(),
+            p3: next_os_str(),
+            p4: next_os_str(),
+            p5: next_os_str(),
+            p6: next_os_str(),
+            p7: next_os_str(),
+            p8: next_os_str(),
+            p9: next_os_str(),
+            p10: next_os_str(),
         };
         assert_eq!(components.next(), None, "path too long");
         new
@@ -98,7 +108,7 @@ impl HdPathDiesel {
     //         .collect())
     // }
 
-    pub fn into_array(self) -> [Option<Vec<u8>>; HD_PATH_DEPTH] {
+    pub fn into_array(self) -> [Option<u32>; HD_PATH_DEPTH] {
         let Self {
             p0,
             p1,
