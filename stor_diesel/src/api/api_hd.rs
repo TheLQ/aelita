@@ -1,49 +1,46 @@
 use crate::api::common::{SQL_PLACEHOLDER_MAX, check_insert_num_rows};
-use crate::models::model_hd::{HD_PATH_DEPTH, HdPathDiesel};
-use crate::schema_temp::{SQL_FAST_HD_CREATE, SQL_FAST_HD_DROP};
-use crate::{StorDieselError, schema, schema_temp};
+use crate::models::model_hd::{HD_PATH_DEPTH, HdPathDiesel, NewHdPathAssociation};
+use crate::schema_temp::{
+    FAST_HD_COMPONENTS_CREATE, FAST_HD_COMPONENTS_DROP, FAST_HD_PATHS_CREATE,
+};
 use crate::{StorDieselResult, StorTransaction};
+use crate::{schema, schema_temp};
 use diesel::RunQueryDsl;
-use diesel::dsl::max;
 use diesel::prelude::*;
-use diesel::query_builder::Query;
-use diesel::sql_types::Text;
 use fxhash::FxHashSet;
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
+use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{info, trace};
-use xana_commons_rs::{BasicWatch, CommaJoiner, LOCALE, SpaceJoiner};
+use xana_commons_rs::{BasicWatch, LOCALE};
 
 pub fn storapi_hd_tree_push(
     conn: &mut StorTransaction,
     paths: &[impl AsRef<Path>],
 ) -> StorDieselResult<()> {
     let watch = BasicWatch::start();
-    let mut components_unique: FxHashSet<&[u8]> = paths
-        .iter()
-        .flat_map(|v| v.as_ref().iter())
-        .map(|v| v.to_str().unwrap().as_bytes())
-        .collect::<FxHashSet<_>>();
+    let components_unique_os: FxHashSet<&OsStr> =
+        paths.iter().flat_map(|v| v.as_ref().iter()).collect();
     trace!(
         "Build {} components_unique in {watch}",
-        components_unique.len()
+        components_unique_os.len()
     );
+    let components_unique = components_unique_os
+        .into_iter()
+        .map(|v| v.to_str().unwrap())
+        .collect::<Vec<_>>();
 
-    /*
-    // build_temp_lookup(conn, &components_unique)?;
-    // diesel::insert_into(schema::hd1_files_tree::table)
-    //     .values(diesel::select(schema_temp::fast_hd_data::table))
-    //     .execute(conn.inner())?;
-    let rows = diesel::sql_query("INSERT INTO `hd1_files_tree` SELECT * from `fast_hd_data`")
-        .execute(conn.inner())?;
-    info!("Inserted new rows {}", rows.to_formatted_string(&LOCALE));
-     */
-    push_missing_components(conn, &components_unique)?;
+    // diesel::sql_query("SET autocommit=0").execute(conn.inner())?;
 
-    push_missing_associations_simple(conn, paths, &components_unique)?;
+    components_update(conn, components_unique.as_slice())?;
+    let component_to_id = components_get(conn, components_unique.as_slice())?;
+
+    diesel::sql_query(FAST_HD_COMPONENTS_DROP).execute(conn.inner())?;
+
+    push_associations_simple(conn, paths, component_to_id)?;
 
     // let rows = diesel::sql_query(SQL_FAST_HD_DROP).execute(conn.inner());
     // check_insert_num_rows(rows, 0)?;
@@ -51,133 +48,147 @@ pub fn storapi_hd_tree_push(
     Ok(())
 }
 
-fn build_temp_lookup(
+fn build_fast_paths_table(
     conn: &mut StorTransaction,
-    components_unique: &HashSet<&[u8]>,
+    paths: &[impl AsRef<Path>],
 ) -> StorDieselResult<()> {
-    let rows = diesel::sql_query(SQL_FAST_HD_CREATE).execute(conn.inner());
+    let rows = diesel::sql_query(FAST_HD_PATHS_CREATE).execute(conn.inner());
     check_insert_num_rows(rows, 0)?;
 
     let watch = BasicWatch::start();
     let mut total_inserted = 0;
-    for chunk in &components_unique.iter().chunks(SQL_PLACEHOLDER_MAX / 2) {
-        let values = chunk
-            .map(|v| schema_temp::fast_hd_data::component.eq(v))
+    for chunk in paths.chunks(SQL_PLACEHOLDER_MAX / HD_PATH_DEPTH) {
+        let fast_values = chunk
+            .iter()
+            .map(|v| HdPathDiesel::from_path(v.as_ref()))
             .collect::<Vec<_>>();
-        total_inserted += diesel::insert_into(schema_temp::fast_hd_data::table)
-            .values(values)
+        total_inserted += diesel::insert_into(schema_temp::fast_hd_paths::table)
+            .values(fast_values)
             .execute(conn.inner())?;
     }
-    assert_eq!(total_inserted, components_unique.len());
+    assert_eq!(total_inserted, paths.len());
     trace!(
-        "Inserted {} temp components in {watch}",
+        "Inserted {} fast paths in {watch}",
         total_inserted.to_formatted_string(&LOCALE),
     );
 
     Ok(())
 }
 
-fn push_missing_components(
+fn components_update(
     conn: &mut StorTransaction,
-    components_unique_input: &FxHashSet<&[u8]>,
+    components_unique_input: &[&str],
 ) -> StorDieselResult<()> {
-    // let components_existing = schema::hd1_files_tree::table
-    //     .select(schema::hd1_files_tree::component)
-    //     .filter(schema::hd1_files_tree::component.eq_any(components_unique_input))
-    //     .get_results::<String>(conn.inner())?;
-    // if components_existing.len() == components_unique_input.len() {
-    //     // every component exists wow
-    //     return Ok(());
-    // }
-    //
-    // let mut components_unique = components_unique_input.clone();
-    // for component in &components_existing {
-    //     components_unique.remove(component.as_str());
-    // }
-    //
-    ////////////////////////////////////
+    // SQL cache of our millions of components
+    diesel::sql_query(FAST_HD_COMPONENTS_CREATE).execute(conn.inner())?;
+
     let watch = BasicWatch::start();
-    let new_components = components_unique_input
-        .into_iter()
-        .map(|v| schema::hd1_files_tree::component.eq(v))
+    let expected_length = components_unique_input.len();
+    let components_unique = components_unique_input
+        .iter()
+        .map(|v| schema_temp::fast_hd_components::component.eq(v.as_bytes()))
         .collect::<Vec<_>>();
-    let chunks = new_components.chunks(SQL_PLACEHOLDER_MAX / 2);
-    let mut total_inserted = 0;
-    for chunk in chunks {
-        total_inserted += diesel::insert_into(schema::hd1_files_tree::table)
+    let mut total_rows = 0;
+    let chunks = components_unique.chunks(SQL_PLACEHOLDER_MAX);
+    let total_chunks = chunks.len();
+    for (i, chunk) in chunks.enumerate() {
+        trace!("Insert chunk {i} of {total_chunks}");
+        total_rows += diesel::insert_into(schema_temp::fast_hd_components::table)
             .values(chunk)
-            .on_conflict_do_nothing()
             .execute(conn.inner())?;
     }
-    trace!(
-        "Inserted {} of {} ({:.1}%) components in {watch}",
-        total_inserted,
-        components_unique_input.len(),
-        total_inserted / components_unique_input.len() * 100
+    info!(
+        "buffered {} fast components in {watch}",
+        total_rows.to_formatted_string(&LOCALE)
+    );
+    assert_eq!(total_rows, expected_length);
+
+    let watch = BasicWatch::start();
+    let rows = diesel::sql_query(
+        "INSERT INTO `hd1_files_tree` (component) \
+        SELECT component FROM `fast_hd_components`\
+        ON DUPLICATE KEY UPDATE `hd1_files_tree`.component = `fast_hd_components`.component",
+    )
+    .execute(conn.inner())?;
+    // :-(
+    // let rows = diesel::insert_into(schema::hd1_files_tree::table)
+    //     .values(schema::hd1_files_tree::table.as_sql())
+    //     .execute(conn.inner())?;
+    info!(
+        "added {} ({:.1}?) components in {watch}",
+        rows.to_formatted_string(&LOCALE),
+        rows / components_unique_input.len() * 100
     );
 
     Ok(())
 }
 
-// fn get_existing_ids(
-//     conn: &mut StorTransaction,
-//     components_unique_input: &HashSet<&str>,
-// ) -> StorDieselResult<Vec<String>> {
-//     schema::hd1_files_tree::table
-//         .select(schema::hd1_files_tree::component)
-//         .filter(schema::hd1_files_tree::component.eq_any(components_unique_input))
-//         .get_results::<String>(conn.inner())
-//         .map_err(Into::into)
-// }
-
-/// Build parents tree locally without weird SQL shenanigans
-fn push_missing_associations_simple(
+fn components_get(
     conn: &mut StorTransaction,
-    paths: &[impl AsRef<Path>],
-    components_unique_input: &FxHashSet<&[u8]>,
-) -> StorDieselResult<()> {
-    let mut components_ids: HashMap<Vec<u8>, u32> = HashMap::new();
-    for chunk in &components_unique_input
-        .iter()
-        .chunks(SQL_PLACEHOLDER_MAX / 2)
-    {
-        let rows = schema::hd1_files_tree::table
+    components_unique_input: &[&str],
+) -> StorDieselResult<HashMap<String, u32>> {
+    let watch = BasicWatch::start();
+    let lookup_vec: Vec<(Vec<u8>, u32)> =
+        schema_temp::fast_hd_components::table
+            .inner_join(schema::hd1_files_tree::table.on(
+                schema::hd1_files_tree::component.eq(schema_temp::fast_hd_components::component),
+            ))
             .select((
                 schema::hd1_files_tree::component,
                 schema::hd1_files_tree::id,
             ))
-            .filter(schema::hd1_files_tree::component.eq_any(chunk))
             .get_results(conn.inner())?;
-        components_ids.extend(rows);
-    }
-    assert_eq!(components_ids.len(), components_unique_input.len());
-    trace!("Fetched {} components for comparison", components_ids.len());
+    let lookup_map = lookup_vec
+        .into_iter()
+        .map(|(key, i)| (String::from_utf8(key).unwrap(), i))
+        .collect::<HashMap<_, _>>();
+    info!(
+        "fetched {} rows in {watch}",
+        lookup_map.len().to_formatted_string(&LOCALE)
+    );
+    assert_eq!(lookup_map.len(), components_unique_input.len());
 
-    let mut associations = Vec::new();
+    Ok(lookup_map)
+}
+
+/// Build parents tree locally without weird SQL shenanigans
+fn push_associations_simple(
+    conn: &mut StorTransaction,
+    paths: &[impl AsRef<Path>],
+    component_to_id: HashMap<String, u32>,
+) -> StorDieselResult<()> {
+    let mut associations = HashSet::new();
     for path in paths {
         let path = path.as_ref();
         let mut path_iter = path.iter();
 
-        let mut prev: &[u8] = path_iter.next().unwrap().as_bytes();
+        let mut prev = path_iter.next().unwrap().to_str().unwrap();
         while let Some(next_os) = path_iter.next() {
-            let next: &[u8] = next_os.as_bytes();
-            associations.push((
-                schema::hd1_files_parents::id.eq(components_ids.get(next).unwrap()),
-                schema::hd1_files_parents::parentId.eq(components_ids.get(prev).unwrap()),
-            ));
+            let next = next_os.to_str().unwrap();
+            associations.insert(NewHdPathAssociation {
+                id: *component_to_id.get(next).unwrap(),
+                parent_id: *component_to_id.get(prev).unwrap(),
+            });
             prev = next;
         }
     }
 
+    let watch = BasicWatch::start();
     let total_associations = associations.len();
     let mut total_inserted = 0;
     trace!("Inserting {total_associations} associations");
-    for chunk in associations.chunks(SQL_PLACEHOLDER_MAX / 2) {
+    let chunks = associations.iter().chunks(SQL_PLACEHOLDER_MAX / 2);
+    let total_chunks = chunks.clone().into_iter().count() - 1;
+    for (i, chunk) in chunks.into_iter().enumerate() {
+        trace!("Insert chunk {i} of {total_chunks}");
+        let chunk = chunk.collect::<Vec<_>>();
+
         total_inserted += diesel::insert_into(schema::hd1_files_parents::table)
             .values(chunk)
             .on_conflict_do_nothing()
             .execute(conn.inner())?;
     }
+    info!("inserted {total_inserted} associations in {watch}");
     assert_eq!(total_inserted, total_associations);
 
     Ok(())

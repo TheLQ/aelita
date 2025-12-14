@@ -6,9 +6,9 @@ pub struct XrnAddr {
 }
 
 use crate::err::LibxrnError;
-use aelita_commons::err_utils::xbt;
 use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer};
+use std::backtrace::Backtrace;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use strum::{AsRefStr, EnumString};
@@ -58,11 +58,14 @@ impl FromStr for XrnAddr {
         }
 
         let Some(next_sep) = remain.find(":") else {
-            return Err(LibxrnError::MissingSeparator(remain.into(), xbt()));
+            return Err(LibxrnError::MissingSeparator(
+                remain.into(),
+                Backtrace::capture(),
+            ));
         };
         let (atype_raw, remain) = remain.split_at(next_sep);
         let atype = XrnAddrType::from_str(atype_raw)
-            .map_err(|_| LibxrnError::InvalidType(atype_raw.into(), xbt()))?;
+            .map_err(|_| LibxrnError::InvalidType(atype_raw.into(), Backtrace::capture()))?;
 
         let (_ignore_comma, value) = remain.split_at(1);
 

@@ -18,5 +18,5 @@ pub use connection::{
     with_quiet_sql_log_spam,
 };
 pub use err::{StorDieselError, StorDieselResult};
-pub use models::{id_types, model_journal, model_space, model_tor, util_types};
+pub use models::{compressed_paths, id_types, model_journal, model_space, model_tor, util_types};
 // pub use diesel as diesel_re;

@@ -11,7 +11,6 @@ mod util;
 pub use importers::{
     n_data_v1::{
         commit::storcommit_hd,
-        defs::CompressedPaths,
         fetch::{COMPRESSEDD_CACHE, storfetch_ndata},
     },
     qb_get_tor_json_v1::{commit::storcommit_torrents, fetch::storfetch_torrents},

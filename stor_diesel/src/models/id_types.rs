@@ -176,6 +176,7 @@ macro_rules! enum_value {
     Hash,
     Eq,
     PartialEq,
+    Clone,
     diesel::expression::AsExpression,
     diesel::deserialize::FromSqlRow,
     strum::EnumString,

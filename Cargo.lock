@@ -17,6 +17,7 @@ dependencies = [
  "chrono",
  "diesel",
  "fxhash",
+ "indexmap",
  "itertools",
  "postcard",
  "serde",

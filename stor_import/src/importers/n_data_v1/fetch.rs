@@ -1,7 +1,7 @@
 use crate::err::StorImportResult;
-use crate::importers::n_data_v1::defs::CompressedPaths;
 use crate::path_const::PathConst;
 use aelita_stor_diesel::api_journal::storapi_journal_immutable_push_single;
+use aelita_stor_diesel::compressed_paths::CompressedPaths;
 use aelita_stor_diesel::id_types::ModelJournalTypeName;
 use aelita_stor_diesel::model_journal::NewModelJournalImmutable;
 use aelita_stor_diesel::util_types::RawDieselBytes;

@@ -1,3 +1,4 @@
+pub mod compressed_paths;
 pub mod date;
 pub mod id_types;
 pub mod model_hd;

@@ -10,6 +10,7 @@ use aelita_stor_diesel::api::common::with_counter;
 use aelita_stor_diesel::connection::{StorConnection, establish_connection};
 use aelita_stor_diesel::err::{StorDieselError, StorDieselResult};
 use aelita_stor_diesel::models::model_journal::ModelJournalIdKey;
+use aelita_stor_import::common::log_init_trace;
 use diesel::MysqlConnection;
 use serde::{Deserialize, Serialize};
 use std::path::Path;

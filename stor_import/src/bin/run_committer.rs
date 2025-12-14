@@ -57,6 +57,7 @@ fn run() -> StorImportResult<()> {
 fn process_row(conn: &mut StorTransaction, row: ModelJournalImmutable) -> StorImportResult<()> {
     let journal_id = row.journal_id.clone();
     info!("-- Commit journal {journal_id} {} --", row.journal_type);
+    let journal_type = row.journal_type.clone();
     match row.journal_type {
         ModelJournalTypeName::QbGetTorJson1 => {
             // todo!()
@@ -65,6 +66,10 @@ fn process_row(conn: &mut StorTransaction, row: ModelJournalImmutable) -> StorIm
         ModelJournalTypeName::NData1 => storcommit_hd(conn, row),
         ModelJournalTypeName::Space1 => todo!(),
     }?;
+    // if 1 + 1 == 2 {
+    // if journal_type == ModelJournalTypeName::NData1 {
+    //     panic!("no commit for you");
+    // }
     storapi_journal_commit_new(conn, &journal_id)?;
     Ok(())
 }

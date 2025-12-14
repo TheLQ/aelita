@@ -27,7 +27,7 @@ diesel::table! {
 diesel::table! {
     hd1_files_parents (id) {
         id -> Unsigned<Integer>,
-        parentId -> Nullable<Unsigned<Integer>>,
+        parent_id -> Nullable<Unsigned<Integer>>,
     }
 }
 
@@ -35,7 +35,7 @@ diesel::table! {
     hd1_files_tree (id) {
         id -> Unsigned<Integer>,
         #[max_length = 250]
-        component -> Binary,
+        component -> Varbinary,
     }
 }
 
