@@ -1,4 +1,4 @@
-use crate::schema::{hd1_files_tree, tor1_torrents};
+use crate::schema::{hd1_files_components, tor1_torrents};
 
 diesel::table! {
     fast_tor_update (tor_hash) {
@@ -31,40 +31,6 @@ pub const FAST_HD_COMPONENTS_CREATE: &str = "CREATE TEMPORARY TABLE IF NOT EXIST
     )";
 pub const FAST_HD_COMPONENTS_TRUNCATE: &str = "TRUNCATE TABLE `fast_hd_components`";
 
-diesel::allow_tables_to_appear_in_same_query!(fast_hd_components, hd1_files_tree);
+diesel::allow_tables_to_appear_in_same_query!(fast_hd_components, hd1_files_components);
 // todo: primary keys don't match, can't override
 // diesel::joinable!(fast_hd_components -> hd1_files_tree (component));
-
-//
-
-diesel::table! {
-    fast_hd_paths (p0) {
-        p0 -> Nullable<Unsigned<Integer>>,
-        p1 -> Nullable<Unsigned<Integer>>,
-        p2 -> Nullable<Unsigned<Integer>>,
-        p3 -> Nullable<Unsigned<Integer>>,
-        p4 -> Nullable<Unsigned<Integer>>,
-        p5 -> Nullable<Unsigned<Integer>>,
-        p6 -> Nullable<Unsigned<Integer>>,
-        p7 -> Nullable<Unsigned<Integer>>,
-        p8 -> Nullable<Unsigned<Integer>>,
-        p9 -> Nullable<Unsigned<Integer>>,
-        p10 -> Nullable<Unsigned<Integer>>,
-    }
-}
-
-// `id` INT AUTO_INCREMENT PRIMARY KEY,\
-pub const FAST_HD_PATHS_CREATE: &str = "CREATE TEMPORARY TABLE IF NOT EXISTS `fast_hd_paths` (\
-`p0` INTEGER UNSIGNED,\
-`p1` INTEGER UNSIGNED,\
-`p2` INTEGER UNSIGNED,\
-`p3` INTEGER UNSIGNED,\
-`p4` INTEGER UNSIGNED,\
-`p5` INTEGER UNSIGNED,\
-`p6` INTEGER UNSIGNED,\
-`p7` INTEGER UNSIGNED,\
-`p8` INTEGER UNSIGNED,\
-`p9` INTEGER UNSIGNED,\
-`p10` INTEGER UNSIGNED\
-)";
-pub const FAST_HD_PATHS_TRUNCATE: &str = "TRUNCATE TABLE `fast_hd_paths`";

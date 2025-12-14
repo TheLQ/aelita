@@ -3,10 +3,7 @@ use crate::api_variables::{storapi_row_count, storapi_variables_get_str};
 use crate::id_types::{ModelJournalId, ModelJournalTypeName};
 use crate::models::model_hd::{HD_PATH_DEPTH, HdPathDiesel, NewHdPathAssociation};
 use crate::path_const::PathConst;
-use crate::schema_temp::{
-    FAST_HD_COMPONENTS_CREATE, FAST_HD_COMPONENTS_TRUNCATE, FAST_HD_PATHS_CREATE,
-    FAST_HD_PATHS_TRUNCATE,
-};
+use crate::schema_temp::{FAST_HD_COMPONENTS_CREATE, FAST_HD_COMPONENTS_TRUNCATE};
 use crate::{StorDieselResult, StorTransaction, assert_test_database};
 use crate::{schema, schema_temp};
 use diesel::RunQueryDsl;
@@ -50,8 +47,7 @@ pub fn storapi_hd_tree_push(
     // push_associations_simple(conn, paths, component_to_id)?;
     // push_associations_fancy(conn, paths, &component_to_id)?;
 
-    diesel::sql_query(FAST_HD_PATHS_CREATE).execute(conn.inner())?;
-    diesel::sql_query(FAST_HD_PATHS_TRUNCATE).execute(conn.inner())?;
+    diesel::sql_query("TRUNCATE TABLE `hd1_files_paths`").execute(conn.inner())?;
 
     // build_paths_mega_query(conn, paths, &component_to_id)?;
     build_paths_infile(conn, paths, &component_to_id)?;
@@ -95,7 +91,7 @@ fn components_update(
 
     let watch = BasicWatch::start();
     let rows = diesel::sql_query(
-        "INSERT IGNORE INTO `hd1_files_tree` (component) \
+        "INSERT IGNORE INTO `hd1_files_components` (component) \
         SELECT component FROM `fast_hd_components`",
     )
     // ON DUPLICATE KEY UPDATE `hd1_files_tree`.component = `hd1_files_tree`.component
@@ -118,16 +114,15 @@ fn components_get(
     components_unique_input: &[&str],
 ) -> StorDieselResult<HashMap<String, u32>> {
     let watch = BasicWatch::start();
-    let lookup_vec: Vec<(Vec<u8>, u32)> =
-        schema_temp::fast_hd_components::table
-            .inner_join(schema::hd1_files_tree::table.on(
-                schema::hd1_files_tree::component.eq(schema_temp::fast_hd_components::component),
-            ))
-            .select((
-                schema::hd1_files_tree::component,
-                schema::hd1_files_tree::id,
-            ))
-            .get_results(conn.inner())?;
+    let lookup_vec: Vec<(Vec<u8>, u32)> = schema_temp::fast_hd_components::table
+        .inner_join(schema::hd1_files_components::table.on(
+            schema::hd1_files_components::component.eq(schema_temp::fast_hd_components::component),
+        ))
+        .select((
+            schema::hd1_files_components::component,
+            schema::hd1_files_components::id,
+        ))
+        .get_results(conn.inner())?;
     let lookup_map = lookup_vec
         .into_iter()
         .map(|(key, i)| (String::from_utf8(key).unwrap(), i))
@@ -234,7 +229,7 @@ fn build_paths_mega_query(
 
         // total_inserted  +=
         conn.inner().batch_execute(&format!(
-            "INSERT INTO `fast_hd_paths` (`p0`, `p1`, `p2`, `p3`, `p4`, `p5`, `p6`, `p7`, `p8`, `p9`, `p10`) \
+            "INSERT INTO `hd1_files_paths` (`p0`, `p1`, `p2`, `p3`, `p4`, `p5`, `p6`, `p7`, `p8`, `p9`, `p10`) \
             VALUES {query_values}"
         ))?;
         total_inserted += storapi_row_count(conn)? as usize;
@@ -288,11 +283,10 @@ fn build_paths_infile(
     // info!("local_infile enabled {enabled}");
 
     let watch = BasicWatch::start();
-    diesel::sql_query(FAST_HD_PATHS_CREATE).execute(conn.inner())?;
-    diesel::sql_query(FAST_HD_PATHS_TRUNCATE).execute(conn.inner())?;
+
     conn.inner().batch_execute(&format!(
         "LOAD DATA LOCAL INFILE '{}' \
-        INTO TABLE `fast_hd_paths` \
+        INTO TABLE `hd1_files_paths` \
         FIELDS TERMINATED BY 0x{COL_SEP} \
         LINES TERMINATED BY 0x{ROW_SEP}",
         import_path.display()
@@ -313,8 +307,8 @@ fn push_associations_fancy_insert(conn: &mut StorTransaction) -> StorDieselResul
         let next_i = i + 1;
         total_inserted += diesel::sql_query(format!(
             "INSERT IGNORE INTO `hd1_files_parents` (id, parent_id) \
-            ( SELECT p{i} as parent_id, p{next_i} as id FROM `fast_hd_paths` \
-            WHERE `fast_hd_paths`.p{next_i} IS NOT NULL )"
+            ( SELECT p{i} as parent_id, p{next_i} as id FROM `hd1_files_paths` \
+            WHERE `hd1_files_paths`.p{next_i} IS NOT NULL )"
         ))
         // ON DUPLICATE KEY UPDATE `hd1_files_parents`.id = `hd1_files_parents`.id"
         .execute(conn.inner())?;

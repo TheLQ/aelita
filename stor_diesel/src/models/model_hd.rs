@@ -21,7 +21,7 @@ pub struct NewHdPathAssociation {
 }
 
 #[derive(diesel::HasQuery, diesel::Insertable, Serialize, Deserialize)]
-#[diesel(table_name = crate::schema_temp::fast_hd_paths)]
+#[diesel(table_name = crate::schema::hd1_files_paths)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct HdPathDiesel {
     p0: Option<u32>,

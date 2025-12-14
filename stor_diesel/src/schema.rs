@@ -18,9 +18,10 @@ diesel::table! {
 }
 
 diesel::table! {
-    hd1_files_linear (path) {
-        #[max_length = 600]
-        path -> Varchar,
+    hd1_files_components (id) {
+        id -> Unsigned<Integer>,
+        #[max_length = 250]
+        component -> Varbinary,
     }
 }
 
@@ -32,10 +33,19 @@ diesel::table! {
 }
 
 diesel::table! {
-    hd1_files_tree (id) {
-        id -> Unsigned<Integer>,
-        #[max_length = 250]
-        component -> Varbinary,
+    hd1_files_paths (path_id) {
+        path_id -> Unsigned<Integer>,
+        p0 -> Nullable<Unsigned<Integer>>,
+        p1 -> Nullable<Unsigned<Integer>>,
+        p2 -> Nullable<Unsigned<Integer>>,
+        p3 -> Nullable<Unsigned<Integer>>,
+        p4 -> Nullable<Unsigned<Integer>>,
+        p5 -> Nullable<Unsigned<Integer>>,
+        p6 -> Nullable<Unsigned<Integer>>,
+        p7 -> Nullable<Unsigned<Integer>>,
+        p8 -> Nullable<Unsigned<Integer>>,
+        p9 -> Nullable<Unsigned<Integer>>,
+        p10 -> Nullable<Unsigned<Integer>>,
     }
 }
 
@@ -139,9 +149,9 @@ diesel::joinable!(tor1_torrents -> journal_immutable (journal_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     hd1_files,
-    hd1_files_linear,
+    hd1_files_components,
     hd1_files_parents,
-    hd1_files_tree,
+    hd1_files_paths,
     hd1_galleries,
     hd1_sites,
     journal_immutable,

@@ -17,12 +17,7 @@ CREATE TABLE `hd1_galleries`
     FOREIGN KEY (`hd_site_id`) REFERENCES `hd1_sites` (`hd_site_id`)
 );
 
-CREATE TABLE `hd1_files_linear`
-(
-    `path` VARCHAR(600) NOT NULL PRIMARY KEY
-);
-
-CREATE TABLE `hd1_files_tree`
+CREATE TABLE `hd1_files_components`
 (
     `id`        INTEGER UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `component` VARBINARY(250)   NOT NULL,
@@ -34,4 +29,20 @@ CREATE TABLE `hd1_files_parents`
     `id`        INTEGER UNSIGNED NOT NULL PRIMARY KEY,
     `parent_id` INTEGER UNSIGNED,
     INDEX (`parent_id`)
+);
+
+CREATE TABLE `hd1_files_paths`
+(
+    `path_id` INTEGER UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `p0`      INTEGER UNSIGNED,
+    `p1`      INTEGER UNSIGNED,
+    `p2`      INTEGER UNSIGNED,
+    `p3`      INTEGER UNSIGNED,
+    `p4`      INTEGER UNSIGNED,
+    `p5`      INTEGER UNSIGNED,
+    `p6`      INTEGER UNSIGNED,
+    `p7`      INTEGER UNSIGNED,
+    `p8`      INTEGER UNSIGNED,
+    `p9`      INTEGER UNSIGNED,
+    `p10`     INTEGER UNSIGNED
 );
