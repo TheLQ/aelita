@@ -1,4 +1,5 @@
 use aelita_commons::log_init;
+use aelita_stor_diesel::util_types::RawDieselBytes;
 use aelita_stor_import::err::StorImportResult;
 use aelita_stor_import::{COMPRESSEDD_CACHE, CompressedPaths};
 use std::path::PathBuf;
@@ -14,7 +15,7 @@ fn main() -> ExitCode {
 
 fn run() -> StorImportResult<()> {
     let compressed_raw = std::fs::read(COMPRESSEDD_CACHE).map_io_err(COMPRESSEDD_CACHE)?;
-    let compressed: CompressedPaths = postcard::from_bytes(&compressed_raw)?;
+    let compressed: CompressedPaths = RawDieselBytes(compressed_raw).deserialize_postcard()?;
 
     let mut longest_path = PathBuf::new();
     let mut longest_path_len = 0;

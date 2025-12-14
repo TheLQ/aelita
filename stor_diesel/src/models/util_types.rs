@@ -58,13 +58,9 @@ where
 #[derive(Debug, diesel::expression::AsExpression, diesel::deserialize::FromSqlRow)]
 #[diesel(sql_type = diesel::sql_types::Binary)]
 #[diesel(sql_type = Json)]
-pub struct RawDieselBytes(Vec<u8>);
+pub struct RawDieselBytes(pub Vec<u8>);
 
 impl RawDieselBytes {
-    pub fn new(bytes: Vec<u8>) -> Self {
-        Self(bytes)
-    }
-
     pub fn serialize_json<V: Serialize>(value: V) -> StorDieselResult<Self> {
         Ok(Self(serde_json::to_vec(&value)?))
     }

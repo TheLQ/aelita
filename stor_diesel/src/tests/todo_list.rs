@@ -62,7 +62,7 @@ impl Model {
                     conn,
                     NewModelJournalImmutable {
                         journal_type: ModelJournalTypeName::Space1,
-                        data: RawDieselBytes::new("hello_world".as_bytes().to_vec()),
+                        data: RawDieselBytes("hello_world".as_bytes().to_vec()),
                         metadata: None,
                         cause_description: "space 1 create".into(),
                         cause_xrn: None,
