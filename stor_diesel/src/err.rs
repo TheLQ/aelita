@@ -13,6 +13,9 @@ pub enum StorDieselError {
     #[error("StorDieselError_Serde {0}")]
     Serde(#[from] serde_json::Error, Backtrace),
 
+    #[error("StorDieselError_Postcard {0}")]
+    Postcard(#[from] postcard::Error, Backtrace),
+
     #[error("StorDieselError_ChronoParse {0}")]
     ChronoParse(#[from] chrono::ParseError, Backtrace),
 
@@ -44,6 +47,7 @@ impl MyBacktrace for StorDieselError {
         match self {
             StorDieselError::IO(e) => e.my_backtrace(),
             StorDieselError::Serde(_, bt) => bt,
+            StorDieselError::Postcard(_, bt) => bt,
             StorDieselError::ChronoParse(_, bt) => bt,
             StorDieselError::ResultLen { backtrace, .. } => backtrace,
             StorDieselError::TryFromNumber(_, bt) => bt,

@@ -6,7 +6,9 @@ use diesel::serialize::{IsNull, Output, ToSql};
 use diesel::sql_types::{Binary, Json};
 use serde::Serialize;
 use std::io::Write;
+use xana_commons_rs::BasicWatch;
 use xana_commons_rs::bencode_torrent_re::TorHashV1;
+use xana_commons_rs::tracing_re::trace;
 
 #[derive(Debug, diesel::expression::AsExpression, diesel::deserialize::FromSqlRow)]
 #[diesel(sql_type = diesel::sql_types::Binary)]
@@ -71,8 +73,23 @@ impl RawDieselBytes {
         serde_json::from_slice(&self.0).map_err(Into::into)
     }
 
+    pub fn serialize_postcard<V: Serialize>(value: &V) -> StorDieselResult<Self> {
+        Ok(Self(postcard::to_allocvec(value)?))
+    }
+
+    pub fn deserialize_postcard<'d, D: serde::Deserialize<'d>>(&'d self) -> StorDieselResult<D> {
+        let watch = BasicWatch::start();
+        let res = postcard::from_bytes(&self.0).map_err(Into::into);
+        trace!("Deserialized in {watch}");
+        res
+    }
+
     pub fn into_inner(self) -> Vec<u8> {
         self.0
+    }
+
+    pub fn as_inner(&self) -> &[u8] {
+        self.0.as_slice()
     }
 }
 

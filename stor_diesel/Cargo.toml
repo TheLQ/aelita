@@ -16,3 +16,4 @@ chrono = { workspace = true }
 strum = { workspace = true }
 #
 diesel = { version = "2.3.4", default-features = false, features = ["mysql", "chrono"] }
+postcard = { version = "1.1", features = ["alloc"] }
