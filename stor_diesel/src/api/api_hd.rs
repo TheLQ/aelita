@@ -83,10 +83,10 @@ fn components_update(
 
     let watch = BasicWatch::start();
     let rows = diesel::sql_query(
-        "INSERT INTO `hd1_files_tree` (component) \
-        SELECT component FROM `fast_hd_components`\
-        ON DUPLICATE KEY UPDATE `hd1_files_tree`.component = `fast_hd_components`.component",
+        "INSERT IGNORE INTO `hd1_files_tree` (component) \
+        SELECT component FROM `fast_hd_components`",
     )
+    // ON DUPLICATE KEY UPDATE `hd1_files_tree`.component = `hd1_files_tree`.component
     .execute(conn.inner())?;
     // :-(
     // let rows = diesel::insert_into(schema::hd1_files_tree::table)
@@ -172,7 +172,8 @@ fn push_associations_simple(
     Ok(())
 }
 
-// todo: inserting so many
+/// effectively insert by 10-batch chain
+/// with individual (id,parent_id) every value is duplicated twice
 fn push_associations_fancy(
     conn: &mut StorTransaction,
     paths: &[impl AsRef<Path>],
@@ -182,31 +183,69 @@ fn push_associations_fancy(
     diesel::sql_query(FAST_HD_PATHS_TRUNCATE).execute(conn.inner())?;
 
     let watch = BasicWatch::start();
+
+    const MEBI_BYTE: usize = 1024 * 1024;
+
+    // so slow due to volume of placeholders for all 11 columns
+    // instead safe to build query directly
     let mut total_inserted = 0;
-    let chunks = paths.chunks(SQL_PLACEHOLDER_MAX / HD_PATH_DEPTH);
-    let total_chunks = chunks.len() - 1;
-    for (i, chunk) in chunks.into_iter().enumerate() {
-        trace!("Insert chunk {i} of {total_chunks}");
-        let fast_values = chunk
-            .iter()
-            .map(|v| HdPathDiesel::from_path(v.as_ref(), component_to_id))
-            .collect::<Vec<_>>();
-        total_inserted += diesel::insert_into(schema_temp::fast_hd_paths::table)
-            .values(fast_values)
-            .execute(conn.inner())?;
+    let mut path_iter = paths.iter().peekable();
+    let mut i = 0;
+    while path_iter.peek().is_some() {
+        let mut total_values = 0;
+        let mut query_values = String::new();
+        loop {
+            if query_values.len() > 990 * MEBI_BYTE {
+                break;
+            }
+            let path = match path_iter.next() {
+                Some(path) => path.as_ref(),
+                None => break,
+            };
+            let comp = HdPathDiesel::from_path(path, component_to_id);
+            let [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10] = comp.into_array().map(|v| {
+                if let Some(v) = v {
+                    v.to_string()
+                } else {
+                    "NULL".into()
+                }
+            });
+            let row = format!("({p0},{p1},{p2},{p3},{p4},{p5},{p6},{p7},{p8},{p9},{p10}),");
+            query_values.push_str(&row);
+            total_values += 1;
+        }
+        query_values.remove(query_values.len() - 1);
+
+        trace!(
+            "Insert chunk {i} - {} len {} MiB",
+            total_values.to_formatted_string(&LOCALE),
+            (query_values.len() / MEBI_BYTE).to_formatted_string(&LOCALE)
+        );
+
+        // total_inserted  +=
+        conn.inner().batch_execute(&format!(
+            "INSERT INTO `fast_hd_paths` (`p0`, `p1`, `p2`, `p3`, `p4`, `p5`, `p6`, `p7`, `p8`, `p9`, `p10`) \
+            VALUES {query_values}"
+        ))?;
+        i += 1;
     }
-    assert_eq!(total_inserted, paths.len());
+
     trace!(
         "Inserted {} fast paths in {watch}",
         total_inserted.to_formatted_string(&LOCALE),
     );
+    // assert_eq!(total_inserted, paths.len());
 
     total_inserted = 0;
     for i in 0..(HD_PATH_DEPTH - 1) {
         let next_i = i + 1;
         total_inserted += diesel::sql_query(format!(
-            "INSERT INTO `hd1_files_parents` (id, parent_id) SELECT p{i} as parent_id, p{next_i} as id FROM `fast_hd_paths`"
-        )).execute(conn.inner())?;
+            "INSERT IGNORE INTO `hd1_files_parents` (id, parent_id) \
+            ( SELECT p{i} as parent_id, p{next_i} as id FROM `fast_hd_paths` \
+            WHERE `fast_hd_paths`.p{next_i} IS NOT NULL )"
+        ))
+        // ON DUPLICATE KEY UPDATE `hd1_files_parents`.id = `hd1_files_parents`.id"
+        .execute(conn.inner())?;
     }
     trace!(
         "Inserted {} fast paths in {watch}",

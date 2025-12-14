@@ -1,19 +1,8 @@
-use crate::{StorDieselError, StorDieselResult};
-use diesel::sql_types::{Integer, Nullable, Text, Unsigned};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::ffi::{OsStr, OsString};
-use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 
 pub const HD_PATH_DEPTH: usize = 11;
-
-// #[derive(diesel::Insertable, Serialize, Deserialize)]
-// #[diesel(table_name = crate::schema_temp::fast_hd_components)]
-// #[diesel(check_for_backend(diesel::mysql::Mysql))]
-// pub struct FastHdComponent {
-//     pub(crate) value: Vec<u8>,
-// }
 
 #[derive(diesel::HasQuery, Serialize, Deserialize)]
 #[diesel(table_name = crate::schema::hd1_files_parents)]

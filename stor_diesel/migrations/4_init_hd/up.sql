@@ -25,7 +25,8 @@ CREATE TABLE `hd1_files_linear`
 CREATE TABLE `hd1_files_tree`
 (
     `id`        INTEGER UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `component` VARBINARY(250)   NOT NULL UNIQUE
+    `component` VARBINARY(250)   NOT NULL,
+    UNIQUE KEY `comp` (`component`)
 );
 
 CREATE TABLE `hd1_files_parents`
