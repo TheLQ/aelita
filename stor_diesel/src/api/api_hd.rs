@@ -314,7 +314,6 @@ pub fn storapi_hd_revert_by_pop(conn: &mut StorTransaction) -> StorDieselResult<
     Ok(())
 }
 
-
 // // "Back in my day..."
 // const ROW_SEP: u8 = 0x1e;
 // const COL_SEP: u8 = 0x1f;
