@@ -22,6 +22,3 @@ itertools = "0.14"
 fxhash = "0.2"
 indexmap = "2.12.1"
 
-
-[patch.crates-io]
-diesel = { path = "../../diesel/diesel" }
