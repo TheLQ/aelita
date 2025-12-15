@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Aelita Projects</title>
+    <title>Aelita Browse Spaces</title>
 </head>
 <body>
 
-<h1>Dashboard {{dash_name}}</h1>
+<h1>Browse Spaces</h1>
 <div>
     {{#each projects}}
         <p><a href="/{{xrn}}">{{xrn}}</a></p>
         <p>{{published}}</p>
-        <p>title {{title}}</p>
+        <p>description {{description}}</p>
     {{/each}}
 </div>
 <form method="post">

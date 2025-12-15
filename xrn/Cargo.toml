@@ -6,6 +6,7 @@ publish = false
 
 [dependencies]
 aelita_commons = { path = "../commons" }
+xana-commons-rs = { workspace = true }
 #
 serde = { workspace = true }
 thiserror = { workspace = true }

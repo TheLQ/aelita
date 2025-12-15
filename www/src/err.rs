@@ -1,5 +1,4 @@
-use aelita_commons::err_utils::pretty_error;
-use aelita_stor_diesel::err::StorDieselError;
+use aelita_stor_diesel::StorDieselError;
 use aelita_xrn::err::LibxrnError;
 use axum::body::Body;
 use axum::http::{StatusCode, header};
@@ -9,6 +8,7 @@ use std::backtrace::Backtrace;
 use std::num::ParseIntError;
 use thiserror::Error;
 use xana_commons_rs::tracing_re::error;
+use xana_commons_rs::{MyBacktrace, pretty_format_error};
 
 pub type WebResult<R> = Result<R, WebError>;
 
@@ -43,18 +43,21 @@ pub enum WebError {
     ),
 
     #[error("WebError_ParseInt {0:?}")]
-    ParseInt(#[from] ParseIntError),
+    ParseInt(#[from] ParseIntError, Backtrace),
 
     #[error("UnsupportedXrnRoute {0}")]
-    UnsupportedXrnRoute(String),
+    UnsupportedXrnRoute(String, Backtrace),
+}
 
-    #[error("UnsupportedDashboard {0}")]
-    UnsupportedDashboard(u32),
+impl WebError {
+    pub fn unsupported_xrn_route(value: impl Into<String>) -> Self {
+        Self::UnsupportedXrnRoute(value.into(), Backtrace::capture())
+    }
 }
 
 impl IntoResponse for WebError {
     fn into_response(self) -> Response {
-        let pretty = pretty_error(self);
+        let pretty = pretty_format_error(&self);
         error!("Status 500 {}", pretty);
         let body = format!("<h1>500</h1><pre>{}</pre>", html_escape(&pretty));
         Response::builder()
@@ -62,5 +65,20 @@ impl IntoResponse for WebError {
             .header(header::CONTENT_TYPE, "text/html")
             .body(Body::from(body))
             .unwrap()
+    }
+}
+
+impl MyBacktrace for WebError {
+    fn my_backtrace(&self) -> &Backtrace {
+        match self {
+            WebError::Handlebars(_, bt) => bt,
+            WebError::DeadpoolInteract(_, bt) => bt,
+            WebError::Deadpool(_, bt) => bt,
+            WebError::Strum(_, bt) => bt,
+            WebError::StorDiesel(e) => e.my_backtrace(),
+            WebError::Libxrn(e) => e.my_backtrace(),
+            WebError::ParseInt(_, bt) => bt,
+            WebError::UnsupportedXrnRoute(_, bt) => bt,
+        }
     }
 }

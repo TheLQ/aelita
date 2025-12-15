@@ -7,7 +7,7 @@ use crate::err::StorDieselResult;
 use crate::models::date::StorDate;
 use crate::models::id_types::ModelJournalTypeName;
 use crate::models::model_journal::{ModelJournalImmutable, NewModelJournalImmutable};
-use crate::models::model_space::{ModelSpaceOwned, NewModelSpaceNames};
+use crate::models::model_space::{ModelSpaceOwned, NewModelSpaceName};
 use crate::util_types::RawDieselBytes;
 use xana_commons_rs::tracing_re::info;
 
@@ -75,7 +75,7 @@ impl Model {
         StorTransaction::new_transaction("new-space", conn, |conn| {
             let space_id = storapi_space_new(
                 conn,
-                NewModelSpaceNames {
+                NewModelSpaceName {
                     journal_id,
                     space_name: "space1".into(),
                     description: "some space".into(),

@@ -1,6 +1,7 @@
 use crate::err::StorDieselError;
 use crate::schema::sql_types::JournalImmutableJournalTypeEnum;
 use crate::schema::sql_types::Tor1TorrentsTorStatusEnum;
+use aelita_xrn::defs::space_xrn::SpaceXrn;
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
 use diesel::mysql::{Mysql, MysqlValue};
@@ -94,6 +95,12 @@ macro_rules! id_type {
 id_type!(ModelJournalId);
 id_type!(ModelSpaceId);
 id_type!(ModelQbHostId);
+
+impl ModelSpaceId {
+    pub fn from_project_xrn(xrn: &SpaceXrn) -> Self {
+        Self(xrn.id())
+    }
+}
 
 // #[derive(Debug, AsExpression, diesel::FromSqlRow)]
 // #[diesel(sql_type = Unsigned<Integer>)]

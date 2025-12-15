@@ -1,2 +1,2 @@
 pub mod address;
-pub mod project_xrn;
+pub mod space_xrn;

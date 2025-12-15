@@ -7,6 +7,7 @@ use crate::models::model_journal::{
     ModelJournalImmutable, NewModelJournalImmutable, NewModelJournalImmutableDiesel,
 };
 use crate::schema;
+use chrono::NaiveDateTime;
 use diesel::dsl;
 use diesel::prelude::*;
 use xana_commons_rs::BasicWatch;
@@ -100,6 +101,35 @@ pub fn storapi_journal_immutable_push(
     }
 }
 
+pub fn storapi_journal_list(
+    conn: &mut StorTransaction,
+) -> StorDieselResult<Vec<ModelJournalImmutableDiesel>> {
+    ModelJournalImmutableDiesel::query()
+        .get_results(conn.inner())
+        .map_err(Into::into)
+}
+
+pub fn storapi_journal_get(
+    conn: &mut StorTransaction,
+    journal_id: ModelJournalId,
+) -> StorDieselResult<ModelJournalImmutableDiesel> {
+    ModelJournalImmutableDiesel::query()
+        .filter(schema::journal_immutable::journal_id.eq(journal_id))
+        .first(conn.inner())
+        .map_err(Into::into)
+}
+
+pub fn storapi_journal_get_created(
+    conn: &mut StorTransaction,
+    journal_id: ModelJournalId,
+) -> StorDieselResult<NaiveDateTime> {
+    schema::journal_immutable::table
+        .select(schema::journal_immutable::at)
+        .filter(schema::journal_immutable::journal_id.eq(journal_id))
+        .first(conn.inner())
+        .map_err(Into::into)
+}
+
 pub fn storapi_journal_commit_remain_next(
     conn: &mut StorTransaction,
 ) -> StorDieselResult<Option<ModelJournalImmutable>> {
@@ -108,6 +138,7 @@ pub fn storapi_journal_commit_remain_next(
     let ModelJournalImmutableDiesel {
         journal_id,
         journal_type,
+        at,
         metadata,
         committed,
         cause_description,
@@ -130,6 +161,7 @@ pub fn storapi_journal_commit_remain_next(
     Ok(Some(ModelJournalImmutable {
         journal_id,
         journal_type,
+        at,
         data,
         metadata,
         committed,

@@ -13,7 +13,7 @@ pub enum PermaStore {
     Edition1,
 }
 
-fn load_db_url_from_env(perma: PermaStore) -> String {
+pub fn load_db_url_from_env(perma: PermaStore) -> String {
     let perma_name = match perma {
         PermaStore::AelitaNull => "aelita_null",
         PermaStore::Edition1 => "edition1",

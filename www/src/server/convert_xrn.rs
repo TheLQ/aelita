@@ -1,4 +1,3 @@
-use aelita_commons::err_utils::pretty_error;
 use aelita_xrn::defs::address::XrnAddr;
 use axum::extract::FromRequestParts;
 use axum::http::StatusCode;
@@ -6,6 +5,7 @@ use axum::http::request::Parts;
 use serde::de::StdError;
 use std::fmt::Debug;
 use std::str::FromStr;
+use xana_commons_rs::pretty_format_error;
 use xana_commons_rs::tracing_re::{error, trace, warn};
 
 /// Axum extractor to parse xrn directly from the path
@@ -41,11 +41,10 @@ where
         }
 
         trace!("building addr with {}", addr_raw);
-        let addr = XrnAddr::from_str(addr_raw)
-            .map_err(|e| fail_response(format!("invalid xrn {}", pretty_error(e))))?;
+        let addr =
+            XrnAddr::from_str(addr_raw).map_err(|e| fail_response(format!("invalid xrn {e}")))?;
 
-        let mepls = T::try_from(addr)
-            .map_err(|e| fail_response(format!("parse fail {}", pretty_error(e))))?;
+        let mepls = T::try_from(addr).map_err(|e| fail_response(format!("parse fail {e}")))?;
         Ok(XrnFromUrl(mepls))
     }
 }

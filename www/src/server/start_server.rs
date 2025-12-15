@@ -1,11 +1,11 @@
 use crate::controllers::sqlcontroller::SqlState;
 use crate::log::www_log_init;
+use crate::pages::browse_journal::handle_browse_journal;
 use crate::pages::fallback::handle_fallback;
-use crate::pages::handle_project::{handle_project, handle_project_post};
-use crate::pages::handle_registry::{
-    handle_registry_html, handle_registry_html_post, handle_registry_root,
-};
 use crate::pages::handle_root::handle_root;
+use crate::pages::xrn_journal::handle_registry_html;
+use crate::pages::xrn_space::handle_xrn_space;
+use aelita_stor_diesel::PermaStore;
 use axum::Router;
 use axum::http::Request;
 use axum::routing::{get, post};
@@ -17,19 +17,15 @@ use xana_commons_rs::tracing_re::Level;
 pub async fn start_server() {
     www_log_init();
 
-    let sqlstate = SqlState::new();
+    let sqlstate = SqlState::new(PermaStore::AelitaNull);
 
     let app = Router::new()
         .route("/", get(handle_root))
-        .route("/registry", get(handle_registry_root))
-        .route("/registry/html", get(handle_registry_html))
-        .route("/registry/html/{xrn}", get(handle_registry_html))
-        .route("/registry/html", post(handle_registry_html_post))
+        .route("/browse/journal", get(handle_browse_journal))
         // xrn handling
         // route by prefix for performance
         // XrnFromUrl extractor parses this
-        .route("/xrn:project:{*xrn_value}", get(handle_project))
-        .route("/xrn:project:{*xrn_value}", post(handle_project_post))
+        .route("/xrn:project:{*xrn_value}", get(handle_xrn_space))
         .fallback(handle_fallback)
         .with_state(sqlstate)
         .layer(TraceLayer::new_for_http().make_span_with(SpanFactory {}));

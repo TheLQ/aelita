@@ -6,7 +6,7 @@ publish = false
 
 [dependencies]
 aelita_commons = { path = "../commons" }
-#aelita_xrn = { path = "../xrn" }
+aelita_xrn = { path = "../xrn" }
 #
 xana-commons-rs = { workspace = true }
 serde = { workspace = true }
@@ -16,8 +16,12 @@ chrono = { workspace = true }
 strum = { workspace = true }
 #
 #version = "2.3"
-diesel = { path = "../../diesel/diesel", default-features = false, features = ["mysql", "chrono"] }
+diesel = { version = "2.3", default-features = false, features = ["mysql", "chrono"] }
 postcard = { version = "1.1", features = ["alloc"] }
 itertools = "0.14"
 fxhash = "0.2"
 indexmap = "2.12.1"
+
+
+[patch.crates-io]
+diesel = { path = "../../diesel/diesel" }

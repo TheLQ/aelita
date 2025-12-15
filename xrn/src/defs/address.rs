@@ -1,10 +1,3 @@
-/// xrn:project:1000000
-#[derive(Debug)]
-pub struct XrnAddr {
-    atype: XrnAddrType,
-    value: String,
-}
-
 use crate::err::LibxrnError;
 use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer};
@@ -13,25 +6,28 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use strum::{AsRefStr, EnumString};
 
+/// xrn:project:1000000
+#[derive(Debug)]
+pub struct XrnAddr {
+    atype: XrnType,
+    value: String,
+}
+
 #[derive(Debug, AsRefStr, EnumString, PartialEq)]
 #[strum(serialize_all = "lowercase")]
-pub enum XrnAddrType {
-    /// A working project
+pub enum XrnType {
     Project,
-    /// A physically stored file
-    A3,
-    /// For displaying entities, this is a rating
-    PlanningLabel,
-    /// Syncs data from other sources to here
-    SyncJob,
 }
 
 impl XrnAddr {
-    pub fn new(atype: XrnAddrType, value: String) -> Self {
-        Self { atype, value }
+    pub fn new(atype: XrnType, value: impl Into<String>) -> Self {
+        Self {
+            atype,
+            value: value.into(),
+        }
     }
 
-    pub fn atype(&self) -> &XrnAddrType {
+    pub fn atype(&self) -> &XrnType {
         &self.atype
     }
 
@@ -50,11 +46,11 @@ impl FromStr for XrnAddr {
     type Err = LibxrnError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.len() < 5 {
-            return Err(LibxrnError::ParseShort(s.into()));
+            return Err(LibxrnError::ParseShort(s.into(), Backtrace::capture()));
         }
         let (prefix, remain) = s.split_at(4);
         if prefix != "xrn:" {
-            return Err(LibxrnError::ParsePrefix(s.into()));
+            return Err(LibxrnError::ParsePrefix(s.into(), Backtrace::capture()));
         }
 
         let Some(next_sep) = remain.find(":") else {
@@ -64,7 +60,7 @@ impl FromStr for XrnAddr {
             ));
         };
         let (atype_raw, remain) = remain.split_at(next_sep);
-        let atype = XrnAddrType::from_str(atype_raw)
+        let atype = XrnType::from_str(atype_raw)
             .map_err(|_| LibxrnError::InvalidType(atype_raw.into(), Backtrace::capture()))?;
 
         let (_ignore_comma, value) = remain.split_at(1);
@@ -104,13 +100,13 @@ impl<'de> Deserialize<'de> for XrnAddr {
 
 #[cfg(test)]
 mod test {
-    use crate::defs::address::{XrnAddr, XrnAddrType};
+    use crate::defs::address::{XrnAddr, XrnType};
 
     #[test]
     fn enum_test() {
-        assert_eq!(XrnAddrType::Project.as_ref(), "project");
+        assert_eq!(XrnType::Project.as_ref(), "project");
 
-        let addr = XrnAddr::new(XrnAddrType::Project, "page/123".into());
+        let addr = XrnAddr::new(XrnType::Project, "page/123");
         assert_eq!(addr.to_string(), "xrn:project:page/123")
     }
 }

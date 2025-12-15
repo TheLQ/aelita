@@ -1,10 +1,12 @@
 use crate::models::id_types::{ModelJournalId, ModelJournalTypeName};
 use crate::models::util_types::RawDieselBytes;
+use chrono::NaiveDateTime;
 use diesel::{HasQuery, Insertable};
 
 pub struct ModelJournalImmutable {
     pub journal_id: ModelJournalId,
     pub journal_type: ModelJournalTypeName,
+    pub at: NaiveDateTime,
     pub data: RawDieselBytes,
     pub metadata: Option<RawDieselBytes>,
     pub committed: bool,
@@ -18,6 +20,7 @@ pub struct ModelJournalImmutable {
 pub struct ModelJournalImmutableDiesel {
     pub journal_id: ModelJournalId,
     pub journal_type: ModelJournalTypeName,
+    pub at: NaiveDateTime,
     pub metadata: Option<RawDieselBytes>,
     pub committed: bool,
     pub cause_description: String,

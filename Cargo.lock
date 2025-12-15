@@ -14,8 +14,9 @@ name = "aelita_stor_diesel"
 version = "0.1.0"
 dependencies = [
  "aelita_commons",
+ "aelita_xrn",
  "chrono",
- "diesel 2.3.1",
+ "diesel",
  "fxhash",
  "indexmap",
  "itertools",
@@ -71,6 +72,7 @@ dependencies = [
  "serde",
  "strum",
  "thiserror",
+ "xana-commons-rs",
 ]
 
 [[package]]
@@ -477,7 +479,7 @@ checksum = "590573e9e29c5190a5ff782136f871e6e652e35d598a349888e028693601adf1"
 dependencies = [
  "deadpool",
  "deadpool-sync",
- "diesel 2.3.4",
+ "diesel",
 ]
 
 [[package]]
@@ -540,42 +542,18 @@ dependencies = [
 
 [[package]]
 name = "diesel"
-version = "2.3.1"
-dependencies = [
- "bitflags",
- "byteorder",
- "chrono",
- "diesel_derives 2.3.2",
- "downcast-rs",
- "mysqlclient-sys",
- "percent-encoding",
- "url",
-]
-
-[[package]]
-name = "diesel"
 version = "2.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c415189028b232660655e4893e8bc25ca7aee8e96888db66d9edb400535456a"
 dependencies = [
  "bitflags",
  "byteorder",
- "diesel_derives 2.3.5",
+ "chrono",
+ "diesel_derives",
  "downcast-rs",
  "mysqlclient-sys",
  "percent-encoding",
  "url",
-]
-
-[[package]]
-name = "diesel_derives"
-version = "2.3.2"
-dependencies = [
- "diesel_table_macro_syntax 0.3.0",
- "dsl_auto_type 0.2.0",
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -584,17 +562,10 @@ version = "2.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8587cbca3c929fb198e7950d761d31ca72b80aa6e07c1b7bec5879d187720436"
 dependencies = [
- "diesel_table_macro_syntax 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "dsl_auto_type 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "diesel_table_macro_syntax",
+ "dsl_auto_type",
  "proc-macro2",
  "quote",
- "syn",
-]
-
-[[package]]
-name = "diesel_table_macro_syntax"
-version = "0.3.0"
-dependencies = [
  "syn",
 ]
 
@@ -642,18 +613,6 @@ name = "downcast-rs"
 version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "117240f60069e65410b3ae1bb213295bd828f707b5bec6596a1afc8793ce0cbc"
-
-[[package]]
-name = "dsl_auto_type"
-version = "0.2.0"
-dependencies = [
- "darling 0.21.3",
- "either",
- "heck",
- "proc-macro2",
- "quote",
- "syn",
-]
 
 [[package]]
 name = "dsl_auto_type"
