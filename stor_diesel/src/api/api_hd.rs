@@ -13,6 +13,7 @@ use fxhash::FxHashSet;
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
+use std::fmt::Write;
 use std::path::Path;
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{info, trace};
@@ -188,17 +189,24 @@ fn build_paths_mega_query(
 ) -> StorDieselResult<()> {
     let watch = BasicWatch::start();
 
-    const MEBI_BYTE: usize = 1024 * 1024;
+    const MIBI_BYTE: usize = 1024 * 1024;
+    let max = 990 * MIBI_BYTE;
+    let capacity = max + (5 * MIBI_BYTE);
 
     // so slow due to volume of placeholders for all 11 columns
     // instead safe to build query directly
     let mut total_inserted = 0;
     let mut path_iter = paths.iter().peekable();
     let mut i = 0;
+    let mut query_values = String::with_capacity(capacity);
     while path_iter.peek().is_some() {
-        let max = 990 * MEBI_BYTE;
         let mut total_values = 0;
-        let mut query_values = String::with_capacity(max + (5 * MEBI_BYTE));
+        query_values.truncate(0);
+        query_values.push_str(
+            "INSERT INTO `hd1_files_paths` \
+             (`p0`, `p1`, `p2`, `p3`, `p4`, `p5`, `p6`, `p7`, `p8`, `p9`, `p10`) \
+             VALUES ",
+        );
         loop {
             if query_values.len() > max {
                 break;
@@ -215,8 +223,11 @@ fn build_paths_mega_query(
                     "NULL".into()
                 }
             });
-            let row = format!("({p0},{p1},{p2},{p3},{p4},{p5},{p6},{p7},{p8},{p9},{p10}),");
-            query_values.push_str(&row);
+            write!(
+                query_values,
+                "({p0},{p1},{p2},{p3},{p4},{p5},{p6},{p7},{p8},{p9},{p10}),"
+            )
+            .unwrap();
             total_values += 1;
         }
         query_values.remove(query_values.len() - 1);
@@ -224,15 +235,13 @@ fn build_paths_mega_query(
         trace!(
             "Insert chunk {i} - {} len {} MiB",
             total_values.to_formatted_string(&LOCALE),
-            (query_values.len() / MEBI_BYTE).to_formatted_string(&LOCALE)
+            (query_values.len() / MIBI_BYTE).to_formatted_string(&LOCALE)
         );
+        assert_eq!(query_values.capacity(), capacity);
 
         // total_inserted  +=
-        conn.inner().batch_execute(&format!(
-            "INSERT INTO `hd1_files_paths` (`p0`, `p1`, `p2`, `p3`, `p4`, `p5`, `p6`, `p7`, `p8`, `p9`, `p10`) \
-            VALUES {query_values}"
-        ))?;
-        total_inserted += usize::try_from(storapi_row_count(conn)?).unwrap();
+        conn.inner().batch_execute(&query_values)?;
+        total_inserted += usize::try_from(storapi_row_count(conn)?)?;
 
         i += 1;
     }
