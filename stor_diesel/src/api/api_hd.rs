@@ -232,7 +232,7 @@ fn build_paths_mega_query(
             "INSERT INTO `hd1_files_paths` (`p0`, `p1`, `p2`, `p3`, `p4`, `p5`, `p6`, `p7`, `p8`, `p9`, `p10`) \
             VALUES {query_values}"
         ))?;
-        total_inserted += storapi_row_count(conn)? as usize;
+        total_inserted += usize::try_from(storapi_row_count(conn)?).unwrap();
 
         i += 1;
     }

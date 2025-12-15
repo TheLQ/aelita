@@ -112,10 +112,15 @@ pub fn storapi_journal_commit_remain_next(
         committed,
         cause_description,
         cause_xrn,
-    } = ModelJournalImmutableDiesel::query()
+    } = match ModelJournalImmutableDiesel::query()
         .filter(schema::journal_immutable::committed.eq(false))
         .order_by(schema::journal_immutable::journal_id.asc())
-        .first(conn.inner())?;
+        .first(conn.inner())
+    {
+        Ok(v) => v,
+        Err(diesel::result::Error::NotFound) => return Ok(None),
+        Err(e) => return Err(e.into()),
+    };
     let data = schema::journal_immutable_data::table
         .select(schema::journal_immutable_data::data)
         .filter(schema::journal_immutable_data::journal_id.eq(journal_id))

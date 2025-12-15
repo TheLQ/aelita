@@ -11,13 +11,6 @@ pub mod sql_types {
 }
 
 diesel::table! {
-    hd1_files (path) {
-        #[max_length = 600]
-        path -> Varchar,
-    }
-}
-
-diesel::table! {
     hd1_files_components (id) {
         id -> Unsigned<Integer>,
         #[max_length = 250]
@@ -148,7 +141,6 @@ diesel::joinable!(space_owned -> space_names (space_id));
 diesel::joinable!(tor1_torrents -> journal_immutable (journal_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
-    hd1_files,
     hd1_files_components,
     hd1_files_parents,
     hd1_files_paths,

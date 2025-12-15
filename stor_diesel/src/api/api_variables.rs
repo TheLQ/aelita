@@ -33,8 +33,8 @@ pub fn storapi_variables_get_str(
         .map_err(Into::into)
 }
 
-pub fn storapi_row_count(conn: &mut StorTransaction) -> StorDieselResult<u32> {
-    diesel::select(dsl::sql::<Unsigned<Integer>>("ROW_COUNT()"))
+pub fn storapi_row_count(conn: &mut StorTransaction) -> StorDieselResult<i32> {
+    diesel::select(dsl::sql::<Integer>("ROW_COUNT()"))
         .get_result(conn.inner())
         .map_err(Into::into)
 }
