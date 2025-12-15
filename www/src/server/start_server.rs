@@ -3,14 +3,13 @@ use crate::log::www_log_init;
 use crate::pages::browse_journal::handle_browse_journal;
 use crate::pages::fallback::handle_fallback;
 use crate::pages::handle_root::handle_root;
-use crate::pages::xrn_journal::handle_registry_html;
 use crate::pages::xrn_space::handle_xrn_space;
 use aelita_stor_diesel::PermaStore;
 use axum::Router;
 use axum::http::Request;
 use axum::routing::{get, post};
 use tower_http::trace::{MakeSpan, TraceLayer};
-use xana_commons_rs::tracing_re::Level;
+use xana_commons_rs::tracing_re::{Level, info};
 
 /// Begin magic
 #[tokio::main]
@@ -31,7 +30,9 @@ pub async fn start_server() {
         .layer(TraceLayer::new_for_http().make_span_with(SpanFactory {}));
 
     // run our app with hyper, listening globally on port 3000
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let addr = "0.0.0.0:4000";
+    info!("Starting server on {addr}");
+    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
 

@@ -6,4 +6,3 @@ mod err;
 mod log;
 mod pages;
 pub mod server;
-mod template_util;

@@ -11,29 +11,10 @@
         <div>
             <p><a href="/{{xrn}}">{{xrn}}</a></p>
             <p>At {{at}}</p>
-            <p>description {{description}}</p>
+            <p>description {{cause_description}}</p>
         </div>
     {{/each}}
 </div>
-<form method="post">
-    <div>
-        <!-- ........ todo if err print it .......... -->
-        <label>
-            Project Type
-            <input name="project_type" type="text"/>
-        </label>
-        <label>
-            title
-            <input name="title" type="text"/>
-        </label>
-        <br/>
-        <label>
-            description
-            <textarea name="description"></textarea>
-        </label>
-        <input type="submit" value="Push">
-    </div>
-</form>
 
 </body>
 </html>
