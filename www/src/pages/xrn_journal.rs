@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::sync::LazyLock;
 
-pub async fn handle_registry_html(
+pub async fn handle_xrn_journal(
     State(state): State<SqlState>,
     xrn_raw: Option<Path<String>>,
 ) -> WebResult<Body> {

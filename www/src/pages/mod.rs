@@ -1,5 +1,5 @@
 pub mod browse_journal;
-pub mod browse_space;
+pub mod browse_paths;
 pub mod fallback;
 pub mod handle_root;
 pub mod xrn_journal;

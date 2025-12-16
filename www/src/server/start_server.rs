@@ -1,6 +1,7 @@
 use crate::controllers::sqlcontroller::SqlState;
 use crate::log::www_log_init;
 use crate::pages::browse_journal::handle_browse_journal;
+use crate::pages::browse_paths::{handle_browse_paths, handle_browse_paths_root};
 use crate::pages::fallback::handle_fallback;
 use crate::pages::handle_root::handle_root;
 use crate::pages::xrn_space::handle_xrn_space;
@@ -21,6 +22,8 @@ pub async fn start_server() {
     let app = Router::new()
         .route("/", get(handle_root))
         .route("/browse/journal", get(handle_browse_journal))
+        .route("/browse/paths", get(handle_browse_paths_root))
+        .route("/browse/paths{*path_raw}", get(handle_browse_paths))
         // xrn handling
         // route by prefix for performance
         // XrnFromUrl extractor parses this
