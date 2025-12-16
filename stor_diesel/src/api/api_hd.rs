@@ -408,14 +408,25 @@ fn build_paths_infile(
     Ok(())
 }
 
+pub fn storapi_rebuild_parents(conn: &mut StorTransaction) -> StorDieselResult<()> {
+    diesel::sql_query("TRUNCATE TABLE `hd1_files_parents`").execute(conn.inner())?;
+    push_associations_fancy_insert(conn)?;
+    Ok(())
+}
+
 fn push_associations_fancy_insert(conn: &mut StorTransaction) -> StorDieselResult<()> {
     let watch = BasicWatch::start();
     let mut total_inserted = 0;
+    total_inserted += diesel::sql_query(
+        "INSERT IGNORE INTO `hd1_files_parents` (id) \
+        ( SELECT DISTINCT p0 as id FROM `hd1_files_paths` )",
+    )
+    .execute(conn.inner())?;
     for i in 0..(HD_PATH_DEPTH - 1) {
         let next_i = i + 1;
         total_inserted += diesel::sql_query(format!(
             "INSERT IGNORE INTO `hd1_files_parents` (id, parent_id) \
-            ( SELECT p{i} as parent_id, p{next_i} as id FROM `hd1_files_paths` \
+            ( SELECT DISTINCT p{i} as parent_id, p{next_i} as id FROM `hd1_files_paths` \
             WHERE `hd1_files_paths`.p{next_i} IS NOT NULL )"
         ))
         // ON DUPLICATE KEY UPDATE `hd1_files_parents`.id = `hd1_files_parents`.id"
