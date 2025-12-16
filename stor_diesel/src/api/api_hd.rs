@@ -7,11 +7,12 @@ use crate::path_const::PathConst;
 use crate::schema_temp::{FAST_HD_COMPONENTS_CREATE, FAST_HD_COMPONENTS_TRUNCATE};
 use crate::{StorDieselError, StorDieselResult, StorTransaction, assert_test_database};
 use crate::{schema, schema_temp};
-use diesel::RunQueryDsl;
 use diesel::connection::SimpleConnection;
 use diesel::dsl::sql;
 use diesel::prelude::*;
-use diesel::sql_types::{Integer, Unsigned};
+use diesel::query_dsl::InternalJoinDsl;
+use diesel::sql_types::{Binary, Integer, Unsigned};
+use diesel::{RunQueryDsl, dsl};
 use fxhash::FxHashSet;
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
@@ -32,48 +33,89 @@ pub fn storapi_hd_list_children(
     let path = path.as_ref();
     let path_components = path_components(path, |c| c.as_bytes())?;
 
-    let mut query = schema::hd1_files_paths::table
-        .select(sql::<Unsigned<Integer>>(&format!(
-            "DISTINCT(p{})",
-            path_components.len()
-        )))
-        .into_boxed();
-    for (i, part) in path_components.iter().enumerate() {
-        let content = part; //.to_vec();
-        let query_component_to_id = schema::hd1_files_components::table
-            .select(schema::hd1_files_components::id)
-            .filter(schema::hd1_files_components::component.eq(content))
-            .single_value();
-        match i {
-            0 => query = query.filter(schema::hd1_files_paths::p0.eq(query_component_to_id)),
-            1 => query = query.filter(schema::hd1_files_paths::p1.eq(query_component_to_id)),
-            2 => query = query.filter(schema::hd1_files_paths::p2.eq(query_component_to_id)),
-            3 => query = query.filter(schema::hd1_files_paths::p3.eq(query_component_to_id)),
-            4 => query = query.filter(schema::hd1_files_paths::p4.eq(query_component_to_id)),
-            5 => query = query.filter(schema::hd1_files_paths::p5.eq(query_component_to_id)),
-            6 => query = query.filter(schema::hd1_files_paths::p6.eq(query_component_to_id)),
-            7 => query = query.filter(schema::hd1_files_paths::p7.eq(query_component_to_id)),
-            8 => query = query.filter(schema::hd1_files_paths::p8.eq(query_component_to_id)),
-            9 => query = query.filter(schema::hd1_files_paths::p9.eq(query_component_to_id)),
-            10 => query = query.filter(schema::hd1_files_paths::p10.eq(query_component_to_id)),
-            _ => return Err(StorDieselError::query_fail("path too big")),
-        }
+    let selected_column = path_components.len();
+    let mut query_builder = format!(
+        "SELECT `hd1_files_components`.component FROM ( \
+            SELECT DISTINCT(p{selected_column}) as child \
+            FROM `hd1_files_paths` \
+            WHERE "
+    );
+
+    for i in 0..path_components.len() {
+        query_builder.push_str(&format!(
+            "p{i} = ( \
+            SELECT `hd1_files_components`.`id` \
+            FROM `hd1_files_components` \
+            WHERE `hd1_files_components`.`component` = ? \
+            LIMIT 1 \
+            ) AND "
+        ));
     }
-    let children_ids = query.get_results::<u32>(conn.inner())?;
+    query_builder.truncate(query_builder.len() - 4);
 
-    // todo: because small we can requery but if too big then building this becomes enormous
-    let component_to_id_vec = schema::hd1_files_components::table
-        .filter(schema::hd1_files_components::id.eq_any(&children_ids))
-        .get_results::<(u32, Vec<u8>)>(conn.inner())?;
-    let component_to_id = component_to_id_vec.into_iter().collect::<HashMap<_, _>>();
+    query_builder.push_str(
+        ") AS path_ids \
+        INNER JOIN `hd1_files_components`\
+        ON `hd1_files_components`.id = `path_ids`.child",
+    );
 
-    let res = children_ids
-        .iter()
-        .map(|v| {
-            let raw = component_to_id.get(v).unwrap();
-            str::from_utf8(&raw).unwrap().to_string()
-        })
-        .collect();
+    #[derive(QueryableByName)]
+    struct PathResult {
+        #[diesel(sql_type = diesel::sql_types::Text)]
+        component: String,
+    }
+
+    let mut query = diesel::sql_query(query_builder).into_boxed();
+    for component in path_components {
+        query = query.bind::<Binary, _>(component.to_vec());
+    }
+    let rows = query.get_results::<PathResult>(conn.inner())?;
+    let res = rows.into_iter().map(|v| v.component).collect();
+
+    // todo Diesel doesn't support SELECT component FROM (SELECT distinct(field)))
+    // let mut query = schema::hd1_files_paths::table
+    //     .select(sql::<Unsigned<Integer>>(&format!(
+    //         "DISTINCT(p{})",
+    //         path_components.len()
+    //     )))
+    //     .into_boxed();
+    // for (i, part) in path_components.iter().enumerate() {
+    //     let content = part; //.to_vec();
+    //     let query_component_to_id = schema::hd1_files_components::table
+    //         .select(schema::hd1_files_components::id)
+    //         .filter(schema::hd1_files_components::component.eq(content))
+    //         .single_value();
+    //     match i {
+    //         0 => query = query.filter(schema::hd1_files_paths::p0.eq(query_component_to_id)),
+    //         1 => query = query.filter(schema::hd1_files_paths::p1.eq(query_component_to_id)),
+    //         2 => query = query.filter(schema::hd1_files_paths::p2.eq(query_component_to_id)),
+    //         3 => query = query.filter(schema::hd1_files_paths::p3.eq(query_component_to_id)),
+    //         4 => query = query.filter(schema::hd1_files_paths::p4.eq(query_component_to_id)),
+    //         5 => query = query.filter(schema::hd1_files_paths::p5.eq(query_component_to_id)),
+    //         6 => query = query.filter(schema::hd1_files_paths::p6.eq(query_component_to_id)),
+    //         7 => query = query.filter(schema::hd1_files_paths::p7.eq(query_component_to_id)),
+    //         8 => query = query.filter(schema::hd1_files_paths::p8.eq(query_component_to_id)),
+    //         9 => query = query.filter(schema::hd1_files_paths::p9.eq(query_component_to_id)),
+    //         10 => query = query.filter(schema::hd1_files_paths::p10.eq(query_component_to_id)),
+    //         _ => return Err(StorDieselError::query_fail("path too big")),
+    //     }
+    // }
+    // let query_as_component = schema::hd1_files_components::table.inner_join(query);
+    // let children_ids = query.get_results::<u32>(conn.inner())?;
+
+    // // todo: because small we can requery but if too big then building this becomes enormous
+    // let component_to_id_vec = schema::hd1_files_components::table
+    //     .filter(schema::hd1_files_components::id.eq_any(&children_ids))
+    //     .get_results::<(u32, Vec<u8>)>(conn.inner())?;
+    // let component_to_id = component_to_id_vec.into_iter().collect::<HashMap<_, _>>();
+    //
+    // let res = children_ids
+    //     .iter()
+    //     .map(|v| {
+    //         let raw = component_to_id.get(v).unwrap();
+    //         str::from_utf8(&raw).unwrap().to_string()
+    //     })
+    //     .collect();
     Ok(res)
 }
 

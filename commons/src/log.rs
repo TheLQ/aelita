@@ -1,7 +1,10 @@
 use xana_commons_rs::{MapHugeCrateName, XanaCommonsLogConfig};
 
 pub fn log_init() {
-    XanaCommonsLogConfig::<AelitaLog>::new_map_huge().log_init_trace()
+    XanaCommonsLogConfig::<AelitaLog>::new_map_huge()
+        .with_extra_filter_env("tower_http=trace")
+        .with_hide_tokio_thread_name(true)
+        .log_init_trace()
 }
 
 struct AelitaLog;

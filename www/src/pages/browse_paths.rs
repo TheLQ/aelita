@@ -36,7 +36,7 @@ pub async fn handle_browse_paths(
 fn render_html(root: PathBuf, children: Vec<String>) -> WebResult<Body> {
     #[derive(Serialize)]
     struct PathEntry {
-        safe_name: String,
+        href: String,
         name: String,
     }
     #[derive(Serialize)]
@@ -48,9 +48,9 @@ fn render_html(root: PathBuf, children: Vec<String>) -> WebResult<Body> {
         root_path: root.to_str().unwrap().to_string(),
         children: children
             .into_iter()
-            .map(|v| PathEntry {
-                safe_name: html_escape(&v),
-                name: v,
+            .map(|name| PathEntry {
+                href: root.join(&name).to_str().unwrap().to_string(),
+                name,
             })
             .collect(),
     };
