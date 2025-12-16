@@ -1,8 +1,8 @@
 use crate::api::common::SQL_PLACEHOLDER_MAX;
 use crate::api_variables::{storapi_row_count, storapi_variables_get_str};
 use crate::id_types::{ModelJournalId, ModelJournalTypeName};
-use crate::model_hd::path_components;
-use crate::models::model_hd::{HD_PATH_DEPTH, HdPathDiesel, NewHdPathAssociation};
+use crate::model_hd::{HdPathAssociation, NewHdPathAssociation, path_components};
+use crate::models::model_hd::{HD_PATH_DEPTH, HdPathDiesel};
 use crate::path_const::PathConst;
 use crate::schema_temp::{FAST_HD_COMPONENTS_CREATE, FAST_HD_COMPONENTS_TRUNCATE};
 use crate::{StorDieselError, StorDieselResult, StorTransaction, assert_test_database};
@@ -22,7 +22,7 @@ use std::os::unix::prelude::OsStrExt;
 use std::path::Path;
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{info, trace};
-use xana_commons_rs::{BasicWatch, LOCALE, SimpleIoMap};
+use xana_commons_rs::{BasicWatch, CommaJoiner, LOCALE, SimpleIoMap, SpaceJoiner};
 
 const IMPORT_COMPONENTS_PATH: PathConst = PathConst("import-data.temp.dat");
 
@@ -241,21 +241,21 @@ fn push_associations_simple(
     paths: &[impl AsRef<Path>],
     component_to_id: HashMap<String, u32>,
 ) -> StorDieselResult<()> {
-    let mut associations = HashSet::new();
-    for path in paths {
-        let path = path.as_ref();
-        let mut path_iter = path.iter();
-
-        let mut prev = path_iter.next().unwrap().to_str().unwrap();
-        while let Some(next_os) = path_iter.next() {
-            let next = next_os.to_str().unwrap();
-            associations.insert(NewHdPathAssociation {
-                id: *component_to_id.get(next).unwrap(),
-                parent_id: *component_to_id.get(prev).unwrap(),
-            });
-            prev = next;
-        }
-    }
+    let mut associations: HashSet<NewHdPathAssociation> = HashSet::new();
+    // for path in paths {
+    //     let path = path.as_ref();
+    //     let mut path_iter = path.iter();
+    //
+    //     let mut prev = path_iter.next().unwrap().to_str().unwrap();
+    //     while let Some(next_os) = path_iter.next() {
+    //         let next = next_os.to_str().unwrap();
+    //         associations.insert(NewHdPathAssociation {
+    //             component_id: *component_to_id.get(next).unwrap(),
+    //             parent_id: Some(*component_to_id.get(prev).unwrap()),
+    //         });
+    //         prev = next;
+    //     }
+    // }
 
     let watch = BasicWatch::start();
     let total_associations = associations.len();
@@ -418,19 +418,47 @@ fn push_associations_fancy_insert(conn: &mut StorTransaction) -> StorDieselResul
     let watch = BasicWatch::start();
     let mut total_inserted = 0;
     total_inserted += diesel::sql_query(
-        "INSERT IGNORE INTO `hd1_files_parents` (id) \
-        ( SELECT DISTINCT p0 as id FROM `hd1_files_paths` )",
+        "INSERT IGNORE INTO `hd1_files_parents` (component_id) \
+        ( SELECT DISTINCT p0 as component_id FROM `hd1_files_paths` )",
     )
     .execute(conn.inner())?;
-    for i in 0..(HD_PATH_DEPTH - 1) {
-        let next_i = i + 1;
-        total_inserted += diesel::sql_query(format!(
-            "INSERT IGNORE INTO `hd1_files_parents` (id, parent_id) \
-            ( SELECT DISTINCT p{i} as parent_id, p{next_i} as id FROM `hd1_files_paths` \
-            WHERE `hd1_files_paths`.p{next_i} IS NOT NULL )"
+    trace!("inital inserted {total_inserted}");
+
+    for comp_i in 1..(HD_PATH_DEPTH - 1) {
+        let next_comp_i = comp_i + 1;
+        let prev_comp_i = comp_i - 1;
+        let p_cols = (0..=comp_i)
+            .map(|i| format!("p{i}"))
+            .collect::<CommaJoiner>();
+        let joins = (1..comp_i)
+            .map(|i| {
+                format!(
+                    "INNER JOIN hd1_files_parents parents{i} ON \
+                    parents{i}.component_id = paths.p{i} AND \
+                    parents{i}.parent_id = parents{prev_i}.tree_id",
+                    prev_i = i - 1
+                )
+            })
+            .collect::<SpaceJoiner>();
+        let cur_inserted = diesel::sql_query(format!(
+            "INSERT IGNORE INTO `hd1_files_parents` (component_id, parent_id) (\
+            SELECT DISTINCT wrap.p{comp_i}, wrap.tree_id  \
+            FROM ( \
+                SELECT DISTINCT {p_cols}, parents{prev_comp_i}.tree_id \
+                FROM `hd1_files_paths` paths \
+                INNER JOIN hd1_files_parents parents0 ON \
+                    parents0.component_id = paths.p0 AND \
+                    parents0.parent_id IS NULL \
+                {joins} \
+                WHERE \
+                p{comp_i} IS NOT NULL\
+            ) AS wrap \
+            )"
         ))
         // ON DUPLICATE KEY UPDATE `hd1_files_parents`.id = `hd1_files_parents`.id"
         .execute(conn.inner())?;
+        trace!("inserted {cur_inserted} rows");
+        total_inserted += cur_inserted;
     }
     trace!(
         "Inserted {} fast paths in {watch}",
