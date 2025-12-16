@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Aelita Browse Paths</title>
+</head>
+<body>
+
+<h1>Browse Path {{root_path}} with {{len children}}</h1>
+<div>
+    {{#each children}}
+        <p><a href="{{safe_name}}">{{name}}</a></p>
+    {{/each}}
+</div>
+
+</body>
+</html>

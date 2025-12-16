@@ -1,10 +1,10 @@
 use crate::controllers::sqlcontroller::SqlState;
-use crate::log::www_log_init;
 use crate::pages::browse_journal::handle_browse_journal;
 use crate::pages::browse_paths::{handle_browse_paths, handle_browse_paths_root};
 use crate::pages::fallback::handle_fallback;
 use crate::pages::handle_root::handle_root;
 use crate::pages::xrn_space::handle_xrn_space;
+use aelita_commons::log_init;
 use aelita_stor_diesel::PermaStore;
 use axum::Router;
 use axum::http::Request;
@@ -15,7 +15,7 @@ use xana_commons_rs::tracing_re::{Level, info};
 /// Begin magic
 #[tokio::main]
 pub async fn start_server() {
-    www_log_init();
+    log_init();
 
     let sqlstate = SqlState::new(PermaStore::AelitaNull);
 

@@ -1,25 +1,81 @@
 use crate::api::common::SQL_PLACEHOLDER_MAX;
 use crate::api_variables::{storapi_row_count, storapi_variables_get_str};
 use crate::id_types::{ModelJournalId, ModelJournalTypeName};
+use crate::model_hd::path_components;
 use crate::models::model_hd::{HD_PATH_DEPTH, HdPathDiesel, NewHdPathAssociation};
 use crate::path_const::PathConst;
 use crate::schema_temp::{FAST_HD_COMPONENTS_CREATE, FAST_HD_COMPONENTS_TRUNCATE};
-use crate::{StorDieselResult, StorTransaction, assert_test_database};
+use crate::{StorDieselError, StorDieselResult, StorTransaction, assert_test_database};
 use crate::{schema, schema_temp};
 use diesel::RunQueryDsl;
 use diesel::connection::SimpleConnection;
+use diesel::dsl::sql;
 use diesel::prelude::*;
+use diesel::sql_types::{Integer, Unsigned};
 use fxhash::FxHashSet;
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::fmt::Write;
+use std::os::unix::prelude::OsStrExt;
 use std::path::Path;
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{info, trace};
 use xana_commons_rs::{BasicWatch, LOCALE, SimpleIoMap};
 
 const IMPORT_COMPONENTS_PATH: PathConst = PathConst("import-data.temp.dat");
+
+pub fn storapi_hd_list_children(
+    conn: &mut StorTransaction,
+    path: impl AsRef<Path>,
+) -> StorDieselResult<Vec<String>> {
+    let path = path.as_ref();
+    let path_components = path_components(path, |c| c.as_bytes())?;
+
+    let mut query = schema::hd1_files_paths::table
+        .select(sql::<Unsigned<Integer>>(&format!(
+            "DISTINCT(p{})",
+            path_components.len()
+        )))
+        .into_boxed();
+    for (i, part) in path_components.iter().enumerate() {
+        let content = part; //.to_vec();
+        let query_component_to_id = schema::hd1_files_components::table
+            .select(schema::hd1_files_components::id)
+            .filter(schema::hd1_files_components::component.eq(content))
+            .single_value();
+        match i {
+            0 => query = query.filter(schema::hd1_files_paths::p0.eq(query_component_to_id)),
+            1 => query = query.filter(schema::hd1_files_paths::p1.eq(query_component_to_id)),
+            2 => query = query.filter(schema::hd1_files_paths::p2.eq(query_component_to_id)),
+            3 => query = query.filter(schema::hd1_files_paths::p3.eq(query_component_to_id)),
+            4 => query = query.filter(schema::hd1_files_paths::p4.eq(query_component_to_id)),
+            5 => query = query.filter(schema::hd1_files_paths::p5.eq(query_component_to_id)),
+            6 => query = query.filter(schema::hd1_files_paths::p6.eq(query_component_to_id)),
+            7 => query = query.filter(schema::hd1_files_paths::p7.eq(query_component_to_id)),
+            8 => query = query.filter(schema::hd1_files_paths::p8.eq(query_component_to_id)),
+            9 => query = query.filter(schema::hd1_files_paths::p9.eq(query_component_to_id)),
+            10 => query = query.filter(schema::hd1_files_paths::p10.eq(query_component_to_id)),
+            _ => return Err(StorDieselError::query_fail("path too big")),
+        }
+    }
+    let children_ids = query.get_results::<u32>(conn.inner())?;
+
+    // todo: because small we can requery but if too big then building this becomes enormous
+    let component_to_id_vec = schema::hd1_files_components::table
+        .filter(schema::hd1_files_components::id.eq_any(&children_ids))
+        .get_results::<(u32, Vec<u8>)>(conn.inner())?;
+    let component_to_id = component_to_id_vec.into_iter().collect::<HashMap<_, _>>();
+
+    let res = children_ids
+        .iter()
+        .map(|v| {
+            let raw = component_to_id.get(v).unwrap();
+            str::from_utf8(&raw).unwrap().to_string()
+        })
+        .collect();
+    Ok(res)
+}
 
 pub fn storapi_hd_tree_push(
     conn: &mut StorTransaction,
@@ -215,7 +271,7 @@ fn build_paths_mega_query(
                 Some(path) => path.as_ref(),
                 None => break,
             };
-            let comp = HdPathDiesel::from_path(path, component_to_id);
+            let comp = HdPathDiesel::from_path(path, component_to_id)?;
             let [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10] = comp.into_array().map(|v| {
                 if let Some(v) = v {
                     v.to_string()
@@ -266,7 +322,7 @@ fn build_paths_infile(
     let mut content = Vec::new();
     for path in paths.iter() {
         let path = path.as_ref();
-        let diesel_path = HdPathDiesel::from_path(path, &component_to_id);
+        let diesel_path = HdPathDiesel::from_path(path, &component_to_id)?;
         for field in diesel_path.into_array() {
             if let Some(v) = field {
                 content.extend(v.to_string().as_bytes());
@@ -296,8 +352,9 @@ fn build_paths_infile(
     conn.inner().batch_execute(&format!(
         "LOAD DATA LOCAL INFILE '{}' \
         INTO TABLE `hd1_files_paths` \
-        FIELDS TERMINATED BY 0x{COL_SEP} \
-        LINES TERMINATED BY 0x{ROW_SEP}",
+        FIELDS TERMINATED BY {COL_SEP:#x} \
+        LINES TERMINATED BY {ROW_SEP:#x} \
+        (`p0`, `p1`, `p2`, `p3`, `p4`, `p5`, `p6`, `p7`, `p8`, `p9`, `p10`)",
         import_path.display()
     ))?;
     let rows = storapi_row_count(conn)?;

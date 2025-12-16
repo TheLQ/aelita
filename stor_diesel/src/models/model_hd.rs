@@ -1,6 +1,8 @@
+use crate::{StorDieselError, StorDieselResult};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::Path;
+use std::ffi::OsStr;
+use std::path::{Component, Path};
 
 pub const HD_PATH_DEPTH: usize = 11;
 
@@ -38,36 +40,31 @@ pub struct HdPathDiesel {
 }
 
 impl HdPathDiesel {
-    pub fn from_path(path: &Path, component_to_id: &HashMap<String, u32>) -> Self {
-        let mut components = path.iter();
-        let mut next_os_str = || {
-            components
-                .next()
-                .map(|v| *component_to_id.get(v.to_str().unwrap()).unwrap())
-        };
-
-        // fn next_os_str<'s>(
-        //     iter: &mut impl Iterator<Item = &'s OsStr>,
-        //     component_to_id: &HashMap<String, u32>,
-        // ) -> Option<Vec<u8>> {
-        //     iter.next().map(|v| v.as_bytes().to_vec())
-        // }
+    pub fn from_path(
+        path: &Path,
+        component_to_id: &HashMap<String, u32>,
+    ) -> StorDieselResult<Self> {
+        let component_ids = path_components(path, |c| {
+            let key = c.to_str().unwrap();
+            *component_to_id.get(key).unwrap()
+        })?;
+        let mut iter = component_ids.into_iter();
 
         let new = Self {
-            p0: next_os_str(),
-            p1: next_os_str(),
-            p2: next_os_str(),
-            p3: next_os_str(),
-            p4: next_os_str(),
-            p5: next_os_str(),
-            p6: next_os_str(),
-            p7: next_os_str(),
-            p8: next_os_str(),
-            p9: next_os_str(),
-            p10: next_os_str(),
+            p0: iter.next(),
+            p1: iter.next(),
+            p2: iter.next(),
+            p3: iter.next(),
+            p4: iter.next(),
+            p5: iter.next(),
+            p6: iter.next(),
+            p7: iter.next(),
+            p8: iter.next(),
+            p9: iter.next(),
+            p10: iter.next(),
         };
-        assert_eq!(components.next(), None, "path too long");
-        new
+        assert_eq!(iter.next(), None, "path too long");
+        Ok(new)
     }
 
     // pub fn unroll_path(self) -> StorDieselResult<Vec<String>> {
@@ -113,4 +110,31 @@ impl HdPathDiesel {
         } = self;
         [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10]
     }
+}
+
+pub fn path_components<'p, R>(
+    path: &'p Path,
+    map: impl Fn(&'p OsStr) -> R,
+) -> StorDieselResult<Vec<R>> {
+    let mut component_strs = Vec::new();
+    let mut components = path.components();
+    let Some(root) = components.next() else {
+        return Err(StorDieselError::query_fail("empty path"));
+    };
+    if root != Component::RootDir {
+        return Err(StorDieselError::query_fail("path does not start with root"));
+    }
+    for component in components {
+        let os_str = match component {
+            Component::Normal(v) => v,
+            unknown => {
+                return Err(StorDieselError::query_fail(format!(
+                    "unknown component {unknown:?}"
+                )));
+            }
+        };
+        component_strs.push(map(os_str));
+    }
+
+    Ok(component_strs)
 }

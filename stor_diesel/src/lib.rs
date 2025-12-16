@@ -2,7 +2,6 @@
 #![feature(iterator_try_collect)]
 #![feature(slice_as_array)]
 #![feature(slice_pattern)]
-extern crate core;
 
 mod api;
 mod connection;
@@ -16,8 +15,8 @@ pub mod tests;
 
 pub use api::*;
 pub use connection::{
-    PermaStore, StorTransaction, establish_connection, establish_connection_or_panic,
-    load_db_url_from_env, with_quiet_sql_log_spam,
+    PermaStore, StorTransaction, apply_stor_instrument, establish_connection,
+    establish_connection_or_panic, load_db_url_from_env, with_quiet_sql_log_spam,
 };
 pub use err::{StorDieselError, StorDieselResult};
 pub use models::{

@@ -64,7 +64,7 @@ pub fn establish_connection(
     info!("Connecting to {database_url}");
     // InstrumentedMysqlConnection::establish(&database_url)
     let mut conn = MysqlConnection::establish(&database_url).map_err(|e| (database_url, e))?;
-    conn.set_instrumentation(StorInstrument::default());
+    apply_stor_instrument(&mut conn);
     Ok(conn)
 }
 
@@ -73,6 +73,10 @@ pub fn establish_connection_or_panic(perma: PermaStore) -> StorConnection {
         Ok(conn) => conn,
         Err((url, e)) => panic!("Failed to connect to {url}: {e}"),
     }
+}
+
+pub fn apply_stor_instrument(conn: &mut StorConnection) {
+    conn.set_instrumentation(StorInstrument::default());
 }
 
 #[derive(Default)]

@@ -1,8 +1,8 @@
 use crate::err::WebResult;
-use aelita_stor_diesel::StorDieselResult;
 use aelita_stor_diesel::load_db_url_from_env;
 use aelita_stor_diesel::{PermaStore, StorTransaction, establish_connection};
-use deadpool_diesel::mysql::{Manager, Pool};
+use aelita_stor_diesel::{StorDieselResult, apply_stor_instrument};
+use deadpool_diesel::mysql::{Hook, Manager, Pool};
 use std::sync::Arc;
 use std::time::SystemTime;
 use xana_commons_rs::tracing_re::info;
@@ -30,7 +30,14 @@ impl SqlController {
 
         let db_url = load_db_url_from_env(store);
         let manager = Manager::new(db_url, deadpool_diesel::Runtime::Tokio1);
-        let pool = Pool::builder(manager).build().unwrap();
+        let pool = Pool::builder(manager)
+            .post_create(Hook::sync_fn(|conn, _metrics| {
+                let mut conn = conn.lock().unwrap();
+                apply_stor_instrument(&mut conn);
+                Ok(())
+            }))
+            .build()
+            .unwrap();
 
         Self { pool }
     }
