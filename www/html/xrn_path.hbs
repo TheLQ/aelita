@@ -9,10 +9,15 @@
 
 
 <div class="section">
-    <h1 class="title">Browse Path {{root_path}} with {{len children}}</h1>
+    <h1 class="title">Browse Path {{root_title}} with {{len children}}</h1>
+    {{#if parent_xrn}}
+        <div class="">
+            <a href="/{{parent_xrn}}">Up</a>
+        </div>
+    {{/if}}
     {{#each children}}
         <div class="">
-            <p><a href="/{{xrn}}">{{name}}</a></p>
+            <a href="/{{xrn}}">{{name}}</a>
         </div>
     {{/each}}
 </div>

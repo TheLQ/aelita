@@ -41,10 +41,17 @@ fn render_html(root: PathBuf, children: Vec<String>) -> WebResult<Body> {
     #[derive(Serialize)]
     struct HtmlProps {
         children: Vec<PathEntry>,
-        root_path: String,
+        root_title: String,
+        parent_xrn: Option<PathXrn>,
     }
+    let is_root_xrn = root.to_str().unwrap() == "/";
     let props = HtmlProps {
-        root_path: root.to_str().unwrap().to_string(),
+        root_title: root.to_str().unwrap().to_string(),
+        parent_xrn: if is_root_xrn {
+            None
+        } else {
+            Some(PathXrn::from_path(root.parent().unwrap()))
+        },
         children: children
             .into_iter()
             .map(|name| PathEntry {
