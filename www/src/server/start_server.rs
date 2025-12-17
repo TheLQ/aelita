@@ -13,6 +13,9 @@ use axum::routing::{get, post};
 use tower_http::trace::{MakeSpan, TraceLayer};
 use xana_commons_rs::tracing_re::{Level, info};
 
+pub const CSS_HTML: &str =
+    "<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css'>";
+
 /// Begin magic
 #[tokio::main]
 pub async fn start_server() {

@@ -1,4 +1,5 @@
 use crate::defs::address::{XrnAddr, XrnType};
+use crate::defs::common::SubXrn;
 use crate::err::LibxrnError;
 use serde::{Serialize, Serializer};
 use std::backtrace::Backtrace;
@@ -36,6 +37,12 @@ impl PathXrn {
 
     pub fn tree_id(&self) -> &Option<u32> {
         &self.tree_id
+    }
+}
+
+impl SubXrn for PathXrn {
+    fn atype() -> XrnType {
+        XrnType::Path
     }
 }
 

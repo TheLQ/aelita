@@ -1,3 +1,4 @@
+use crate::server::start_server::CSS_HTML;
 use aelita_stor_diesel::StorDieselError;
 use aelita_xrn::err::LibxrnError;
 use axum::body::Body;
@@ -45,6 +46,9 @@ pub enum WebError {
     #[error("WebError_ParseInt {0:?}")]
     ParseInt(#[from] ParseIntError, Backtrace),
 
+    #[error("Assert {0}")]
+    Assert(String, Backtrace),
+
     #[error("UnsupportedXrnRoute {0}")]
     UnsupportedXrnRoute(String, Backtrace),
 }
@@ -53,13 +57,20 @@ impl WebError {
     pub fn unsupported_xrn_route(value: impl Into<String>) -> Self {
         Self::UnsupportedXrnRoute(value.into(), Backtrace::capture())
     }
+
+    pub fn assert(value: impl Into<String>) -> Self {
+        Self::Assert(value.into(), Backtrace::capture())
+    }
 }
 
 impl IntoResponse for WebError {
     fn into_response(self) -> Response {
         let pretty = pretty_format_error(&self);
         error!("Status 500 {}", pretty);
-        let body = format!("<h1>500</h1><pre>{}</pre>", html_escape(&pretty));
+        let body = format!(
+            "{CSS_HTML}<div class='section'><h1 class='title'>500</h1><pre>{}</pre></div>",
+            html_escape(&pretty)
+        );
         Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)
             .header(header::CONTENT_TYPE, "text/html")
@@ -78,6 +89,7 @@ impl MyBacktrace for WebError {
             WebError::StorDiesel(e) => e.my_backtrace(),
             WebError::Libxrn(e) => e.my_backtrace(),
             WebError::ParseInt(_, bt) => bt,
+            WebError::Assert(_, bt) => bt,
             WebError::UnsupportedXrnRoute(_, bt) => bt,
         }
     }

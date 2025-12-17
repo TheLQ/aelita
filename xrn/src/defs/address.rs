@@ -4,7 +4,7 @@ use serde::{Deserialize, Deserializer};
 use std::backtrace::Backtrace;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use strum::{AsRefStr, EnumString, IntoStaticStr, VariantArray};
+use strum::{AsRefStr, Display, EnumString, IntoStaticStr, VariantArray};
 
 /// xrn:project:1000000
 #[derive(Debug)]
@@ -13,7 +13,7 @@ pub struct XrnAddr {
     value: String,
 }
 
-#[derive(Clone, Debug, AsRefStr, EnumString, PartialEq, VariantArray, IntoStaticStr)]
+#[derive(Clone, Debug, AsRefStr, EnumString, PartialEq, VariantArray, IntoStaticStr, Display)]
 #[strum(serialize_all = "lowercase")]
 pub enum XrnType {
     Project,

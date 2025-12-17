@@ -1,4 +1,5 @@
 use crate::defs::address::{XrnAddr, XrnType};
+use crate::defs::common::SubXrn;
 use crate::err::LibxrnError;
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
@@ -38,6 +39,12 @@ impl SpaceXrn {
 
     pub fn into_addr(self) -> XrnAddr {
         self.into()
+    }
+}
+
+impl SubXrn for SpaceXrn {
+    fn atype() -> XrnType {
+        XrnType::Project
     }
 }
 
