@@ -27,12 +27,14 @@ CREATE TABLE IF NOT EXISTS `hd1_files_components`
 CREATE TABLE IF NOT EXISTS `hd1_files_parents`
 (
     `tree_id`      INTEGER UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `tree_depth`   INTEGER UNSIGNED NOT NULL,
     `component_id` INTEGER UNSIGNED NOT NULL,
     `parent_id`    INTEGER UNSIGNED
 );
-create unique index `glob_unique` on `hd1_files_parents` (`tree_id`, `parent_id`, `component_id`);
-create index `parents` on `hd1_files_parents` (`parent_id`);
-create index `lookup` on `hd1_files_parents` (`tree_id`, `parent_id`);
+create unique index `glob_unique` on `hd1_files_parents` (`tree_depth`, `parent_id`, `component_id`);
+# create index `parents` on `hd1_files_parents` (`parent_id`);
+# create index `lookup` on `hd1_files_parents` (`tree_id`, `parent_id`);
+show create table `hd1_files_parents`;
 
 CREATE TABLE IF NOT EXISTS `hd1_files_paths`
 (
@@ -49,7 +51,12 @@ CREATE TABLE IF NOT EXISTS `hd1_files_paths`
     `p9`      INTEGER UNSIGNED,
     `p10`     INTEGER UNSIGNED
 );
-DROP INDEX p0 on `hd1_files_paths`;
-DROP INDEX p0_2 on `hd1_files_paths`;
-DROP INDEX p0_3 on `hd1_files_paths`;
-DROP INDEX p0_4 on `hd1_files_paths`;
+create index `i0` on `hd1_files_paths` (`p0`);
+create index `i1` on `hd1_files_paths` (`p1`);
+create index `i2` on `hd1_files_paths` (`p2`);
+create index `i3` on `hd1_files_paths` (`p3`);
+create index `i4` on `hd1_files_paths` (`p4`);
+create index `i5` on `hd1_files_paths` (`p5`);
+create index `i6` on `hd1_files_paths` (`p6`);
+create index `i7` on `hd1_files_paths` (`p7`);
+show create table `hd1_files_paths`;

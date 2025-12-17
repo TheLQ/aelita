@@ -21,6 +21,7 @@ diesel::table! {
 diesel::table! {
     hd1_files_parents (tree_id) {
         tree_id -> Unsigned<Integer>,
+        tree_depth -> Unsigned<Integer>,
         component_id -> Unsigned<Integer>,
         parent_id -> Nullable<Unsigned<Integer>>,
     }

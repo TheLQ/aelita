@@ -10,9 +10,10 @@ pub const HD_PATH_DEPTH: usize = 11;
 #[diesel(table_name = crate::schema::hd1_files_parents)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct HdPathAssociation {
-    tree_id: u32,
-    component_id: u32,
-    parent_id: Option<u32>,
+    pub tree_id: u32,
+    pub component_id: u32,
+    pub parent_id: Option<u32>,
+    pub tree_depth: u32,
 }
 
 #[derive(diesel::Insertable, Serialize, Deserialize, Eq, PartialEq, Hash)]
@@ -21,6 +22,15 @@ pub struct HdPathAssociation {
 pub struct NewHdPathAssociation {
     pub component_id: u32,
     pub parent_id: u32,
+    pub tree_depth: u32,
+}
+
+#[derive(diesel::Insertable, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[diesel(table_name = crate::schema::hd1_files_parents)]
+#[diesel(check_for_backend(diesel::mysql::Mysql))]
+pub struct NewHdPathAssociationRoot {
+    pub component_id: u32,
+    pub tree_depth: u32,
 }
 
 #[derive(diesel::HasQuery, diesel::Insertable, Serialize, Deserialize)]

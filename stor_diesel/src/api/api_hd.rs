@@ -1,7 +1,9 @@
 use crate::api::common::SQL_PLACEHOLDER_MAX;
 use crate::api_variables::{storapi_row_count, storapi_variables_get_str};
 use crate::id_types::{ModelJournalId, ModelJournalTypeName};
-use crate::model_hd::{HdPathAssociation, NewHdPathAssociation, path_components};
+use crate::model_hd::{
+    HdPathAssociation, NewHdPathAssociation, NewHdPathAssociationRoot, path_components,
+};
 use crate::models::model_hd::{HD_PATH_DEPTH, HdPathDiesel};
 use crate::path_const::PathConst;
 use crate::schema_temp::{FAST_HD_COMPONENTS_CREATE, FAST_HD_COMPONENTS_TRUNCATE};
@@ -241,6 +243,59 @@ fn push_associations_simple(
     paths: &[impl AsRef<Path>],
     component_to_id: HashMap<String, u32>,
 ) -> StorDieselResult<()> {
+    let mut associations = {
+        let root_components = paths
+            .iter()
+            .map(|p| {
+                let mut iter = p.as_ref().iter();
+                let next = iter.next();
+                assert_eq!(next.unwrap().to_str().unwrap(), "/");
+                *component_to_id
+                    .get(iter.next().unwrap().to_str().unwrap())
+                    .unwrap()
+            })
+            .collect::<Vec<_>>();
+        let rows = diesel::insert_or_ignore_into(schema::hd1_files_parents::table)
+            .values(
+                root_components
+                    .iter()
+                    .map(|component_id| NewHdPathAssociationRoot {
+                        component_id: *component_id,
+                        tree_depth: 0,
+                    })
+                    .collect::<Vec<_>>(),
+            )
+            .execute(conn.inner())?;
+        trace!("inserted {rows} root rows");
+
+        HdPathAssociation::query()
+            .filter(schema::hd1_files_parents::tree_depth.eq(0))
+            .filter(schema::hd1_files_parents::component_id.eq_any(root_components))
+            .get_results(conn.inner())?
+    };
+    let tree_id_to_associations = associations
+        .into_iter()
+        .map(|v| (v.tree_id, v))
+        .collect::<HashMap<_, _>>();
+
+    for comp_i in 0..HD_PATH_DEPTH {
+        let parent_to_child_components = paths
+            .iter()
+            .filter_map(|v| {
+                let path = v.as_ref();
+                let mut iter = path.iter();
+                let next = iter.next();
+                assert_eq!(next.unwrap().to_str().unwrap(), "/");
+                let mut iter = iter.skip(comp_i);
+                match (iter.next(), iter.next()) {
+                    (None, _) => None,
+                    (Some(_), None) => None,
+                    (Some(parent), Some(child)) => Some((parent, child)),
+                }
+            })
+            .collect::<HashSet<_>>();
+    }
+
     let mut associations: HashSet<NewHdPathAssociation> = HashSet::new();
     // for path in paths {
     //     let path = path.as_ref();
@@ -418,8 +473,8 @@ fn push_associations_fancy_insert(conn: &mut StorTransaction) -> StorDieselResul
     let watch = BasicWatch::start();
     let mut total_inserted = 0;
     total_inserted += diesel::sql_query(
-        "INSERT IGNORE INTO `hd1_files_parents` (component_id) \
-        ( SELECT DISTINCT p0 as component_id FROM `hd1_files_paths` )",
+        "INSERT IGNORE INTO `hd1_files_parents` (component_id, tree_depth) \
+        ( SELECT DISTINCT p0 as component_id, 0 FROM `hd1_files_paths` )",
     )
     .execute(conn.inner())?;
     trace!("inital inserted {total_inserted}");
@@ -434,6 +489,7 @@ fn push_associations_fancy_insert(conn: &mut StorTransaction) -> StorDieselResul
             .map(|i| {
                 format!(
                     "INNER JOIN hd1_files_parents parents{i} ON \
+                    parents{i}.tree_depth = {i} AND \
                     parents{i}.component_id = paths.p{i} AND \
                     parents{i}.parent_id = parents{prev_i}.tree_id",
                     prev_i = i - 1
@@ -441,10 +497,11 @@ fn push_associations_fancy_insert(conn: &mut StorTransaction) -> StorDieselResul
             })
             .collect::<SpaceJoiner>();
         let cur_inserted = diesel::sql_query(format!(
-            "INSERT IGNORE INTO `hd1_files_parents` (component_id, parent_id) (\
-            SELECT DISTINCT paths.p{comp_i}, parents{prev_comp_i}.tree_id  \
+            "INSERT IGNORE INTO `hd1_files_parents` (component_id, parent_id, tree_depth) (\
+            SELECT DISTINCT paths.p{comp_i}, parents{prev_comp_i}.tree_id, {comp_i}  \
             FROM `hd1_files_paths` paths \
             INNER JOIN hd1_files_parents parents0 ON \
+                parents0.tree_depth = 0 AND \
                 parents0.component_id = paths.p0 AND \
                 parents0.parent_id IS NULL \
             {joins} \
