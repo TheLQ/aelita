@@ -443,16 +443,13 @@ fn push_associations_fancy_insert(conn: &mut StorTransaction) -> StorDieselResul
         let cur_inserted = diesel::sql_query(format!(
             "INSERT IGNORE INTO `hd1_files_parents` (component_id, parent_id) (\
             SELECT DISTINCT paths.p{comp_i}, parents{prev_comp_i}.tree_id  \
-            FROM ( \
-                SELECT DISTINCT {p_cols} \
-                FROM `hd1_files_paths`\
-                WHERE \
-                p{comp_i} IS NOT NULL\
-            ) AS paths \
+            FROM `hd1_files_paths` paths \
             INNER JOIN hd1_files_parents parents0 ON \
                 parents0.component_id = paths.p0 AND \
                 parents0.parent_id IS NULL \
             {joins} \
+            WHERE \
+            p{comp_i} IS NOT NULL\
             )"
         ))
         // ON DUPLICATE KEY UPDATE `hd1_files_parents`.id = `hd1_files_parents`.id"
