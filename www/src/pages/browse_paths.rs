@@ -1,14 +1,10 @@
 use crate::controllers::handlebars::HandlebarsPage;
 use crate::controllers::sqlcontroller::SqlState;
-use crate::err::{WebError, WebResult};
+use crate::err::WebResult;
 use aelita_stor_diesel::api_hd::storapi_hd_list_children;
-use aelita_stor_diesel::api_journal::storapi_journal_list;
-use aelita_stor_diesel::model_hd::HdPathDiesel;
-use aelita_stor_diesel::model_journal::ModelJournalImmutableDiesel;
 use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::response::{IntoResponse, Redirect};
-use handlebars::html_escape;
 use serde::Serialize;
 use std::path::PathBuf;
 use std::sync::LazyLock;

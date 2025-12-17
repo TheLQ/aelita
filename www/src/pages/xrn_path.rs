@@ -1,12 +1,16 @@
 use crate::controllers::handlebars::HandlebarsPage;
 use crate::controllers::sqlcontroller::SqlState;
-use crate::err::WebResult;
+use crate::err::{WebError, WebResult};
 use crate::server::convert_xrn::XrnFromUrl;
+use crate::server::util::pretty_basic_page;
+use aelita_stor_diesel::StorDieselError;
 use aelita_stor_diesel::api_hd::storapi_hd_list_children;
 use aelita_xrn::defs::path_xrn::PathXrn;
-use aelita_xrn::defs::space_xrn::SpaceXrn;
 use axum::body::Body;
 use axum::extract::State;
+use axum::http::{StatusCode, header};
+use axum::response::Response;
+use mime::TEXT_HTML;
 use serde::Serialize;
 use std::path::PathBuf;
 use std::sync::LazyLock;
@@ -14,11 +18,11 @@ use std::sync::LazyLock;
 pub async fn handle_xrn_path(
     State(state): State<SqlState>,
     XrnFromUrl(xrn): XrnFromUrl<PathXrn>,
-) -> WebResult<Body> {
+) -> WebResult<Response> {
     _handle_xrn_path(state, xrn).await
 }
 
-async fn _handle_xrn_path(state: SqlState, xrn: PathXrn) -> WebResult<Body> {
+async fn _handle_xrn_path(state: SqlState, xrn: PathXrn) -> WebResult<Response> {
     let children = state
         .sqlfs
         .transact({
@@ -28,8 +32,25 @@ async fn _handle_xrn_path(state: SqlState, xrn: PathXrn) -> WebResult<Body> {
                 storapi_hd_list_children(conn, xrn.path())
             }
         })
-        .await?;
-    render_html(xrn.path().to_path_buf(), children)
+        .await;
+    match children {
+        Err(WebError::StorDiesel(StorDieselError::UnknownComponent(values, _))) => {
+            Response::builder()
+                .header(header::CONTENT_TYPE, TEXT_HTML.to_string())
+                .status(StatusCode::NOT_FOUND)
+                .body(Body::from(pretty_basic_page(
+                    "404 Path component(s) not found",
+                    values,
+                )))
+                .map_err(Into::into)
+        }
+        Err(e) => Err(e)?,
+        Ok(children) => Response::builder()
+            .header(header::CONTENT_TYPE, TEXT_HTML.to_string())
+            .status(StatusCode::OK)
+            .body(render_html(xrn.path().to_path_buf(), children)?)
+            .map_err(Into::into),
+    }
 }
 
 fn render_html(root: PathBuf, children: Vec<String>) -> WebResult<Body> {

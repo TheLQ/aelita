@@ -9,14 +9,13 @@ use crate::path_const::PathConst;
 use crate::schema_temp::{FAST_HD_COMPONENTS_CREATE, FAST_HD_COMPONENTS_TRUNCATE};
 use crate::{StorDieselError, StorDieselResult, StorTransaction, assert_test_database};
 use crate::{schema, schema_temp};
+use diesel::RunQueryDsl;
 use diesel::connection::SimpleConnection;
-use diesel::dsl::sql;
 use diesel::prelude::*;
-use diesel::query_dsl::InternalJoinDsl;
-use diesel::sql_types::{Binary, Integer, Unsigned};
-use diesel::{RunQueryDsl, dsl};
+use diesel::sql_types::{Binary, Unsigned};
 use fxhash::FxHashSet;
 use itertools::Itertools;
+use std::backtrace::Backtrace;
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::fmt::Write;
@@ -60,6 +59,14 @@ fn hd_list_children_parents(
         .into_iter()
         .map(|(k, v)| (String::from_utf8(k).unwrap(), v))
         .collect::<HashMap<_, _>>();
+    if components_to_id.len() != path_components_str.len() {
+        let mut missing = path_components_str.clone();
+        missing.retain(|v| !components_to_id.contains_key(*v));
+        return Err(StorDieselError::UnknownComponent(
+            format!("{} total {}", missing.join(","), missing.len()),
+            Backtrace::capture(),
+        ));
+    }
 
     #[derive(QueryableByName)]
     struct PathResult {
@@ -109,7 +116,8 @@ fn hd_list_children_parents(
         WHERE \
             parents0.tree_depth = 0 AND \
             parents0.component_id = {comp_id} AND \
-            parents0.parent_id IS NULL",
+            parents0.parent_id IS NULL \
+        LIMIT 500",
             comp_id = components_to_id[path_components_str[0]]
         );
         rows = diesel::sql_query(query_builder).load::<PathResult>(conn.inner())?;
@@ -334,7 +342,7 @@ fn push_associations_simple(
     paths: &[impl AsRef<Path>],
     component_to_id: HashMap<String, u32>,
 ) -> StorDieselResult<()> {
-    let mut associations = {
+    let associations = {
         let root_components = paths
             .iter()
             .map(|p| {
@@ -384,7 +392,7 @@ fn push_associations_simple(
             .try_collect::<_, HashSet<_>, _>()?;
     }
 
-    let mut associations: HashSet<NewHdPathAssociation> = HashSet::new();
+    let associations: HashSet<NewHdPathAssociation> = HashSet::new();
     // for path in paths {
     //     let path = path.as_ref();
     //     let mut path_iter = path.iter();

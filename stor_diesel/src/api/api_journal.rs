@@ -11,7 +11,7 @@ use chrono::NaiveDateTime;
 use diesel::dsl;
 use diesel::prelude::*;
 use xana_commons_rs::BasicWatch;
-use xana_commons_rs::tracing_re::{debug, info, trace};
+use xana_commons_rs::tracing_re::{debug, info};
 
 pub fn storapi_journal_immutable_push_single(
     conn: &mut StorTransaction,

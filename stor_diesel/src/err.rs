@@ -34,6 +34,9 @@ pub enum StorDieselError {
 
     #[error("QueryFail {0:?}")]
     QueryFail(String, Backtrace),
+
+    #[error("Unknown component(s) {0}")]
+    UnknownComponent(String, Backtrace),
 }
 
 impl StorDieselError {
@@ -53,6 +56,7 @@ impl MyBacktrace for StorDieselError {
             StorDieselError::TryFromNumber(_, bt) => bt,
             StorDieselError::Diesel(_, bt) => bt,
             StorDieselError::QueryFail(_, bt) => bt,
+            StorDieselError::UnknownComponent(_, bt) => bt,
         }
     }
 }

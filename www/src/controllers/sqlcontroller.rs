@@ -1,6 +1,6 @@
 use crate::err::WebResult;
 use aelita_stor_diesel::load_db_url_from_env;
-use aelita_stor_diesel::{PermaStore, StorTransaction, establish_connection};
+use aelita_stor_diesel::{PermaStore, StorTransaction};
 use aelita_stor_diesel::{StorDieselResult, apply_stor_instrument};
 use deadpool_diesel::mysql::{Hook, Manager, Pool};
 use std::sync::Arc;

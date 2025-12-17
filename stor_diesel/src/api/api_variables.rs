@@ -1,6 +1,6 @@
 use crate::connection::StorConnection;
 use crate::{StorDieselResult, StorTransaction};
-use diesel::sql_types::{Integer, Text, Unsigned};
+use diesel::sql_types::{Integer, Text};
 use diesel::{RunQueryDsl, dsl};
 
 // todo: diesel::sql_query expects everything to be untyped?

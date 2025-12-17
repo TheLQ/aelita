@@ -1,4 +1,4 @@
-use crate::server::start_server::CSS_HTML;
+use crate::server::util::pretty_basic_page;
 use aelita_stor_diesel::StorDieselError;
 use aelita_xrn::err::LibxrnError;
 use axum::body::Body;
@@ -16,6 +16,9 @@ pub type WebResult<R> = Result<R, WebError>;
 #[derive(Error, Debug)]
 #[allow(non_camel_case_types)]
 pub enum WebError {
+    #[error("WebError_Axum {0:?}")]
+    Axum(#[from] axum::http::Error, Backtrace),
+
     #[error("WebError_Handlebars {0:?}")]
     Handlebars(#[from] handlebars::RenderError, Backtrace),
 
@@ -67,10 +70,7 @@ impl IntoResponse for WebError {
     fn into_response(self) -> Response {
         let pretty = pretty_format_error(&self);
         error!("Status 500 {}", pretty);
-        let body = format!(
-            "{CSS_HTML}<div class='section'><h1 class='title'>500</h1><pre>{}</pre></div>",
-            html_escape(&pretty)
-        );
+        let body = pretty_basic_page("500", format!("<pre>{}</pre>", html_escape(&pretty)));
         Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)
             .header(header::CONTENT_TYPE, "text/html")
@@ -82,6 +82,7 @@ impl IntoResponse for WebError {
 impl MyBacktrace for WebError {
     fn my_backtrace(&self) -> &Backtrace {
         match self {
+            WebError::Axum(_, bt) => bt,
             WebError::Handlebars(_, bt) => bt,
             WebError::DeadpoolInteract(_, bt) => bt,
             WebError::Deadpool(_, bt) => bt,

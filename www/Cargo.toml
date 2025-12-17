@@ -21,4 +21,4 @@ itertools = "0.14.0"
 handlebars = "6.3.0"
 zstd = "0.13.2"
 tower-http = { version = "0.6.7", features = ["trace"] }
-
+mime = "0.3"

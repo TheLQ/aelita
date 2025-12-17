@@ -2,13 +2,11 @@ use crate::err::WebError;
 use aelita_xrn::defs::address::XrnAddr;
 use aelita_xrn::defs::common::SubXrn;
 use axum::extract::{FromRequestParts, Path};
-use axum::http::StatusCode;
 use axum::http::request::Parts;
 use serde::de::StdError;
 use std::fmt::Debug;
 use std::str::FromStr;
-use xana_commons_rs::pretty_format_error;
-use xana_commons_rs::tracing_re::{error, info, trace, warn};
+use xana_commons_rs::tracing_re::{trace, warn};
 
 /// Axum extractor to parse xrn directly from the path
 pub struct XrnFromUrl<T>(pub T)

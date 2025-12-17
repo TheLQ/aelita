@@ -4,7 +4,7 @@ use crate::err::WebResult;
 use aelita_stor_diesel::api_journal::storapi_journal_list;
 use aelita_stor_diesel::model_journal::ModelJournalImmutableDiesel;
 use axum::body::Body;
-use axum::extract::{Path, State};
+use axum::extract::State;
 use serde::Serialize;
 use std::sync::LazyLock;
 

@@ -55,6 +55,7 @@ dependencies = [
  "deadpool-diesel",
  "handlebars",
  "itertools",
+ "mime",
  "serde",
  "strum",
  "thiserror",
