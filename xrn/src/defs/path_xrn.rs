@@ -1,5 +1,6 @@
 use crate::defs::address::{XrnAddr, XrnType};
 use crate::err::LibxrnError;
+use serde::{Serialize, Serializer};
 use std::backtrace::Backtrace;
 use std::os::unix::prelude::OsStrExt;
 use std::path::{Path, PathBuf};
@@ -11,12 +12,42 @@ pub struct PathXrn {
 }
 
 impl PathXrn {
+    pub fn from_components(comp: &[String]) -> Self {
+        let mut path = PathBuf::from("/");
+        path.extend(comp);
+        Self {
+            path,
+            tree_id: None,
+        }
+    }
+
+    pub fn from_path(path: impl Into<PathBuf>) -> Self {
+        let path = path.into();
+        assert!(path.is_absolute());
+        Self {
+            path,
+            tree_id: None,
+        }
+    }
+
     pub fn path(&self) -> &Path {
         self.path.as_path()
     }
 
     pub fn tree_id(&self) -> &Option<u32> {
         &self.tree_id
+    }
+}
+
+impl From<PathXrn> for XrnAddr {
+    fn from(value: PathXrn) -> Self {
+        XrnAddr::from(&value)
+    }
+}
+
+impl From<&PathXrn> for XrnAddr {
+    fn from(value: &PathXrn) -> Self {
+        XrnAddr::new(XrnType::Path, value.path().to_str().unwrap())
     }
 }
 
@@ -57,5 +88,14 @@ impl TryFrom<XrnAddr> for PathXrn {
         }
 
         Ok(Self { path, tree_id })
+    }
+}
+
+impl Serialize for PathXrn {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(XrnAddr::from(self).to_string().as_str())
     }
 }

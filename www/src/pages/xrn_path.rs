@@ -35,7 +35,7 @@ async fn _handle_xrn_path(state: SqlState, xrn: PathXrn) -> WebResult<Body> {
 fn render_html(root: PathBuf, children: Vec<String>) -> WebResult<Body> {
     #[derive(Serialize)]
     struct PathEntry {
-        href: String,
+        xrn: PathXrn,
         name: String,
     }
     #[derive(Serialize)]
@@ -48,7 +48,7 @@ fn render_html(root: PathBuf, children: Vec<String>) -> WebResult<Body> {
         children: children
             .into_iter()
             .map(|name| PathEntry {
-                href: root.join(&name).to_str().unwrap().to_string(),
+                xrn: PathXrn::from_path(root.join(&name)),
                 name,
             })
             .collect(),
@@ -58,7 +58,7 @@ fn render_html(root: PathBuf, children: Vec<String>) -> WebResult<Body> {
 }
 
 fn get_template() -> &'static HandlebarsPage {
-    const TEMPLATE: &str = include_str!("../../html/xrn_paths.hbs");
+    const TEMPLATE: &str = include_str!("../../html/xrn_path.hbs");
     static INSTANCE: LazyLock<HandlebarsPage> =
         LazyLock::new(|| HandlebarsPage::from_template(TEMPLATE));
     &INSTANCE
