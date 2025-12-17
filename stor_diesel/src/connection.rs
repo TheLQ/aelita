@@ -19,7 +19,19 @@ pub fn load_db_url_from_env(perma: PermaStore) -> String {
         PermaStore::Edition1 => "edition1",
     };
 
-    let env_path = Path::new(".env");
+    let mut env_path = Path::new(".env");
+    if !env_path.exists() {
+        env_path = Path::new("../.env");
+    }
+    if !env_path.exists() {
+        panic!(
+            "unable to load path {} workdir {}",
+            env_path.display(),
+            std::env::current_dir()
+                .map(|p| p.to_str().unwrap().to_string())
+                .unwrap_or("BAD_CWD??".into())
+        )
+    }
     info!(
         "Loading environment {}",
         env_path.canonicalize().unwrap().display()

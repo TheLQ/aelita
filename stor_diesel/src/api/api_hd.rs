@@ -44,15 +44,17 @@ fn hd_list_children_parents(
     path: impl AsRef<Path>,
 ) -> StorDieselResult<Vec<String>> {
     let path = path.as_ref();
-    let path_components = path_components(path, |c| c.as_bytes())?;
-    let selected_column = path_components.len();
+
+    let path_components_bytes = path_components(path, |c| c.as_bytes())?;
+    let path_components_str = path_components(path, |c| c.to_str().unwrap())?;
+    let selected_column = path_components_bytes.len();
 
     let components_to_id_vec: Vec<(Vec<u8>, u32)> = schema::hd1_files_components::table
         .select((
             schema::hd1_files_components::component,
             schema::hd1_files_components::id,
         ))
-        .filter(schema::hd1_files_components::component.eq_any(&path_components))
+        .filter(schema::hd1_files_components::component.eq_any(&path_components_bytes))
         .get_results(conn.inner())?;
     let components_to_id = components_to_id_vec
         .into_iter()
@@ -66,7 +68,7 @@ fn hd_list_children_parents(
     }
 
     let rows: Vec<PathResult>;
-    if path_components.is_empty() {
+    if path_components_bytes.is_empty() {
         trace!("listing root");
         let query_builder = format!(
             //
@@ -80,16 +82,16 @@ fn hd_list_children_parents(
         );
         rows = diesel::sql_query(query_builder).load::<PathResult>(conn.inner())?;
     } else {
-        trace!("listing {} components", path_components.len());
-        let query_component = "SELECT id FROM hd1_files_components \
-                            WHERE component = ? LIMIT 1";
-        let joins = (1..=selected_column)
+        let prev_selected_column = selected_column - 1;
+        trace!("listing {} components", path_components_bytes.len());
+        let joins = (1..selected_column)
             .map(|i| {
                 format!(
                     "INNER JOIN hd1_files_parents parents{i} ON \
                     parents{i}.tree_depth = {i} AND \
-                    parents{i}.component_id = ({query_component}) AND \
+                    parents{i}.component_id = {comp_id} AND \
                     parents{i}.parent_id = parents{prev_i}.tree_id",
+                    comp_id = components_to_id[path_components_str[i]],
                     prev_i = i - 1
                 )
             })
@@ -97,26 +99,20 @@ fn hd_list_children_parents(
         let query_builder = format!(
             //
             "SELECT DISTINCT \
-        comp{selected_column}.component \
+        comp.component \
         FROM hd1_files_parents parents0 \
         {joins} \
-        INNER JOIN hd1_files_components comp{selected_column} ON comp{selected_column}.id = parents{selected_column}.component_id \
+        INNER JOIN hd1_files_parents parents{selected_column} ON \
+            parents{selected_column}.tree_depth = {selected_column} AND \
+            parents{selected_column}.parent_id = parents{prev_selected_column}.tree_id \
+        INNER JOIN hd1_files_components comp ON comp.id = parents{selected_column}.component_id \
         WHERE \
             parents0.tree_depth = 0 AND \
-            parents0.component_id = ({query_component}) AND \
-            parents0.parent_id IS NULL"
+            parents0.component_id = {comp_id} AND \
+            parents0.parent_id IS NULL",
+            comp_id = components_to_id[path_components_str[0]]
         );
-
-        let mut query = diesel::sql_query(query_builder).into_boxed();
-        let mut query_components = path_components.clone();
-        // first is in where clause
-        let first = query_components.remove(0);
-        query_components.push(first);
-        for component in path_components {
-            query = query.bind::<Binary, _>(component);
-        }
-
-        rows = query.load::<PathResult>(conn.inner())?;
+        rows = diesel::sql_query(query_builder).load::<PathResult>(conn.inner())?;
     }
 
     let res = rows.into_iter().map(|v| v.component).collect();
@@ -711,4 +707,35 @@ pub fn storapi_hd_revert_by_pop(conn: &mut StorTransaction) -> StorDieselResult<
     Ok(())
 }
 
-// // "Back in my day..."
+#[cfg(test)]
+mod test {
+    use crate::api_hd::storapi_hd_list_children;
+    use crate::{PermaStore, StorDieselResult, StorTransaction, establish_connection};
+    use aelita_commons::log_init;
+    use xana_commons_rs::tracing_re::info;
+
+    #[test]
+    fn get_result() -> StorDieselResult<()> {
+        sql_test(|conn| {
+            let top_1 = "mnt";
+            let top_2 = "hug24";
+            let children = storapi_hd_list_children(conn, "/")?;
+            info!("top {}", children.join(", "));
+            let children = storapi_hd_list_children(conn, format!("/{top_1}"))?;
+            info!("{top_1} {}", children.join(", "));
+            let children = storapi_hd_list_children(conn, format!("/{top_2}"))?;
+            info!("{top_2} {}", children.join(", "));
+            panic!("??");
+            Ok(())
+        })
+    }
+
+    fn sql_test(
+        inner: impl Fn(&mut StorTransaction) -> StorDieselResult<()>,
+    ) -> StorDieselResult<()> {
+        log_init();
+        let conn = &mut establish_connection(PermaStore::AelitaNull).expect("bad conn");
+        StorTransaction::new_transaction("test", conn, inner)?;
+        Ok(())
+    }
+}
