@@ -95,6 +95,7 @@ macro_rules! id_type {
 id_type!(ModelJournalId);
 id_type!(ModelSpaceId);
 id_type!(ModelQbHostId);
+id_type!(ModelFileTreeId);
 
 impl ModelSpaceId {
     pub fn from_project_xrn(xrn: &SpaceXrn) -> Self {

@@ -111,7 +111,7 @@ mod test {
 
     #[test]
     fn convert_test() {
-        let addr = SpaceXrn::new(ProjectTypeXrn::Paper, 123);
+        let addr = SpaceXrn::new(ProjectTypeXrn::Simple, 123);
         assert_eq!(addr.into_addr().to_string(), "xrn:project:paper/123");
     }
 }

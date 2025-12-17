@@ -3,6 +3,7 @@ use crate::pages::browse_journal::handle_browse_journal;
 use crate::pages::browse_paths::{handle_browse_paths, handle_browse_paths_root};
 use crate::pages::fallback::handle_fallback;
 use crate::pages::handle_root::handle_root;
+use crate::pages::xrn_path::handle_xrn_path;
 use crate::pages::xrn_space::handle_xrn_space;
 use aelita_commons::log_init;
 use aelita_stor_diesel::PermaStore;
@@ -27,7 +28,8 @@ pub async fn start_server() {
         // xrn handling
         // route by prefix for performance
         // XrnFromUrl extractor parses this
-        .route("/xrn:project:{*xrn_value}", get(handle_xrn_space))
+        .route("/xrn:project{*xrn_value}", get(handle_xrn_space))
+        .route("/xrn:path{*xrn_value}", get(handle_xrn_path))
         .fallback(handle_fallback)
         .with_state(sqlstate)
         .layer(TraceLayer::new_for_http().make_span_with(SpanFactory {}));

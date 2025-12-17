@@ -3,4 +3,5 @@ pub mod browse_paths;
 pub mod fallback;
 pub mod handle_root;
 pub mod xrn_journal;
+pub mod xrn_path;
 pub mod xrn_space;
