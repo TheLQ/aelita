@@ -32,6 +32,101 @@ pub fn storapi_hd_list_children(
     conn: &mut StorTransaction,
     path: impl AsRef<Path>,
 ) -> StorDieselResult<Vec<String>> {
+    match 2 {
+        1 => hd_list_children_paths(conn, path),
+        2 => hd_list_children_parents(conn, path),
+        _ => unimplemented!(),
+    }
+}
+
+fn hd_list_children_parents(
+    conn: &mut StorTransaction,
+    path: impl AsRef<Path>,
+) -> StorDieselResult<Vec<String>> {
+    let path = path.as_ref();
+    let path_components = path_components(path, |c| c.as_bytes())?;
+    let selected_column = path_components.len();
+
+    let components_to_id_vec: Vec<(Vec<u8>, u32)> = schema::hd1_files_components::table
+        .select((
+            schema::hd1_files_components::component,
+            schema::hd1_files_components::id,
+        ))
+        .filter(schema::hd1_files_components::component.eq_any(&path_components))
+        .get_results(conn.inner())?;
+    let components_to_id = components_to_id_vec
+        .into_iter()
+        .map(|(k, v)| (String::from_utf8(k).unwrap(), v))
+        .collect::<HashMap<_, _>>();
+
+    #[derive(QueryableByName)]
+    struct PathResult {
+        #[diesel(sql_type = diesel::sql_types::Text)]
+        component: String,
+    }
+
+    let rows: Vec<PathResult>;
+    if path_components.is_empty() {
+        trace!("listing root");
+        let query_builder = format!(
+            //
+            "SELECT DISTINCT \
+            comp{selected_column}.component \
+            FROM hd1_files_parents parents0 \
+            INNER JOIN hd1_files_components comp{selected_column} ON comp{selected_column}.id = parents{selected_column}.component_id \
+            WHERE \
+                parents0.tree_depth = 0 AND \
+                parents0.parent_id IS NULL"
+        );
+        rows = diesel::sql_query(query_builder).load::<PathResult>(conn.inner())?;
+    } else {
+        trace!("listing {} components", path_components.len());
+        let query_component = "SELECT id FROM hd1_files_components \
+                            WHERE component = ? LIMIT 1";
+        let joins = (1..=selected_column)
+            .map(|i| {
+                format!(
+                    "INNER JOIN hd1_files_parents parents{i} ON \
+                    parents{i}.tree_depth = {i} AND \
+                    parents{i}.component_id = ({query_component}) AND \
+                    parents{i}.parent_id = parents{prev_i}.tree_id",
+                    prev_i = i - 1
+                )
+            })
+            .collect::<SpaceJoiner>();
+        let query_builder = format!(
+            //
+            "SELECT DISTINCT \
+        comp{selected_column}.component \
+        FROM hd1_files_parents parents0 \
+        {joins} \
+        INNER JOIN hd1_files_components comp{selected_column} ON comp{selected_column}.id = parents{selected_column}.component_id \
+        WHERE \
+            parents0.tree_depth = 0 AND \
+            parents0.component_id = ({query_component}) AND \
+            parents0.parent_id IS NULL"
+        );
+
+        let mut query = diesel::sql_query(query_builder).into_boxed();
+        let mut query_components = path_components.clone();
+        // first is in where clause
+        let first = query_components.remove(0);
+        query_components.push(first);
+        for component in path_components {
+            query = query.bind::<Binary, _>(component);
+        }
+
+        rows = query.load::<PathResult>(conn.inner())?;
+    }
+
+    let res = rows.into_iter().map(|v| v.component).collect();
+    Ok(res)
+}
+
+fn hd_list_children_paths(
+    conn: &mut StorTransaction,
+    path: impl AsRef<Path>,
+) -> StorDieselResult<Vec<String>> {
     let path = path.as_ref();
     let path_components = path_components(path, |c| c.as_bytes())?;
 
@@ -247,14 +342,11 @@ fn push_associations_simple(
         let root_components = paths
             .iter()
             .map(|p| {
-                let mut iter = p.as_ref().iter();
-                let next = iter.next();
-                assert_eq!(next.unwrap().to_str().unwrap(), "/");
-                *component_to_id
-                    .get(iter.next().unwrap().to_str().unwrap())
-                    .unwrap()
+                let path_components = path_components(p.as_ref(), |o| o.to_str().unwrap());
+                path_components
+                    .map(|path_components| *component_to_id.get(path_components[0]).unwrap())
             })
-            .collect::<Vec<_>>();
+            .try_collect::<_, Vec<_>, _>()?;
         let rows = diesel::insert_or_ignore_into(schema::hd1_files_parents::table)
             .values(
                 root_components
@@ -279,21 +371,21 @@ fn push_associations_simple(
         .collect::<HashMap<_, _>>();
 
     for comp_i in 0..HD_PATH_DEPTH {
-        let parent_to_child_components = paths
+        let parent_to_child_components: HashSet<(&str, &str)> = paths
             .iter()
             .filter_map(|v| {
-                let path = v.as_ref();
-                let mut iter = path.iter();
-                let next = iter.next();
-                assert_eq!(next.unwrap().to_str().unwrap(), "/");
-                let mut iter = iter.skip(comp_i);
+                let path = match path_components(v.as_ref(), |o| o.to_str().unwrap()) {
+                    Ok(v) => v,
+                    Err(e) => return Some(Err(e)),
+                };
+                let mut iter = path.iter().skip(comp_i);
                 match (iter.next(), iter.next()) {
                     (None, _) => None,
                     (Some(_), None) => None,
-                    (Some(parent), Some(child)) => Some((parent, child)),
+                    (Some(parent), Some(child)) => Some(Ok((*parent, *child))),
                 }
             })
-            .collect::<HashSet<_>>();
+            .try_collect::<_, HashSet<_>, _>()?;
     }
 
     let mut associations: HashSet<NewHdPathAssociation> = HashSet::new();

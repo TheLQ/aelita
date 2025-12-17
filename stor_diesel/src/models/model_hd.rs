@@ -149,3 +149,20 @@ pub fn path_components<'p, R>(
 
     Ok(component_strs)
 }
+
+#[cfg(test)]
+mod test {
+    use crate::model_hd::path_components;
+    use std::path::Path;
+
+    #[test]
+    fn is_component() {
+        let path = Path::new("/foo/bar");
+        let comp = path_components(path, |o| o.to_str().unwrap()).unwrap();
+        assert_eq!(comp, vec!["foo", "bar"]);
+
+        let path = Path::new("/");
+        let comp = path_components(path, |o| o.to_str().unwrap()).unwrap();
+        assert!(comp.is_empty());
+    }
+}

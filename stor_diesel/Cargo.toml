@@ -16,7 +16,7 @@ chrono = { workspace = true }
 strum = { workspace = true }
 #
 #version = "2.3"
-diesel = { version = "2.3", default-features = false, features = ["mysql", "chrono"] }
+diesel = { version = "2.3.4", default-features = false, features = ["mysql", "chrono"] }
 postcard = { version = "1.1", features = ["alloc"] }
 itertools = "0.14"
 fxhash = "0.2"
