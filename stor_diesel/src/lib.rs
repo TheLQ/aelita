@@ -6,7 +6,6 @@
 mod api;
 mod connection;
 mod err;
-mod example_structure;
 mod models;
 pub mod path_const;
 mod schema;

@@ -1,14 +1,15 @@
 use crate::{StorDieselError, StorDieselResult};
+use chrono::{DateTime, NaiveDateTime};
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
 use diesel::mysql::{Mysql, MysqlValue};
 use diesel::serialize::{IsNull, Output, ToSql};
-use diesel::sql_types::{Binary, Json};
-use serde::{Deserialize, Serialize};
+use diesel::sql_types::{Binary, Json, Timestamp};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::io::Write;
 use std::mem::transmute;
 use xana_commons_rs::BasicWatch;
-use xana_commons_rs::bencode_torrent_re::{SHA1_BYTES, SHA256_BYTES, TorHashArray, TorHashV1};
+use xana_commons_rs::bencode_torrent_re::{SHA1_BYTES, SHA256_BYTES, TorHashArray};
 use xana_commons_rs::tracing_re::trace;
 
 pub type TorHashV1Diesel = TorHashArrayDiesel<SHA1_BYTES>;
@@ -110,7 +111,7 @@ impl RawDieselBytes {
 
     pub fn deserialize_json<'d, D: serde::Deserialize<'d>>(&'d self) -> StorDieselResult<D> {
         serde_json::from_slice(&self.0).map_err(|e| {
-            let len = self.0.len().min(1000);
+            let len = self.0.len().min(10000);
             let extract = str::from_utf8(&self.0[0..len]).unwrap();
             StorDieselError::serde_extract(e, extract)
         })

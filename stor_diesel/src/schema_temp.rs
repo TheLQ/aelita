@@ -8,11 +8,11 @@ diesel::table! {
         tor_state -> Varchar,
     }
 }
-pub const SQL_FAST_TOR_CREATE: &str = "CREATE TEMPORARY TABLE `fast_tor_update` \
+pub const SQL_FAST_TOR_CREATE: &str = "CREATE TEMPORARY TABLE IF NOT EXISTS `fast_tor_update` \
 (tor_hash BINARY(20) NOT NULL PRIMARY KEY, \
 tor_state VARCHAR(20) \
 )";
-pub const SQL_FAST_TOR_DROP: &str = "DROP TEMPORARY TABLE `fast_tor_update`";
+pub const SQL_FAST_TOR_TRUNCATE: &str = "TRUNCATE TABLE `fast_tor_update`";
 
 diesel::joinable!(fast_tor_update -> tor1_torrents (tor_hash));
 diesel::allow_tables_to_appear_in_same_query!(fast_tor_update, tor1_torrents);

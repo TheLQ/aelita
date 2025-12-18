@@ -1,6 +1,5 @@
 use crate::err::StorImportResult;
 use crate::importers::qb_get_tor_json_v1::defs::ImportQbMetadata;
-use crate::util::HashExtractor;
 use aelita_stor_diesel::StorTransaction;
 use aelita_stor_diesel::api_tor::{
     storapi_tor_torrents_list_by_hash, storapi_tor_torrents_new,
@@ -8,7 +7,10 @@ use aelita_stor_diesel::api_tor::{
 };
 use aelita_stor_diesel::id_types::{ModelJournalTypeName, ModelTorrentState};
 use aelita_stor_diesel::model_journal::ModelJournalImmutable;
-use aelita_stor_diesel::model_tor::ModelTorrents;
+use aelita_stor_diesel::model_tor::{
+    ModelTorrentsDiesel, ModelTorrentsMeta, ModelTorrentsQBittorrent,
+};
+use xana_commons_rs::bencode_torrent_re::HashExtractor;
 use xana_commons_rs::tracing_re::info;
 
 pub fn storcommit_torrents(
@@ -25,7 +27,7 @@ pub fn storcommit_torrents(
     // meta_str.truncate(3999);
     // info!("{}", meta_str);
 
-    let local_tors: Vec<ModelTorrents> = row.data.deserialize_json()?;
+    let local_tors: Vec<ModelTorrentsQBittorrent> = row.data.deserialize_json()?;
     // let local_tors = local_tors_raw.as_tor_lookup_by_hash();
 
     let db_tors_raw =
@@ -33,7 +35,7 @@ pub fn storcommit_torrents(
     info!("existing {}", db_tors_raw.len());
     let db_tors = db_tors_raw.as_tor_lookup_by_hash();
 
-    let mut rows_new = Vec::new();
+    let mut rows_new: Vec<ModelTorrentsDiesel> = Vec::new();
     let mut rows_update = Vec::new();
     let mut count_existing_same = 0;
     let mut count_existing_changed = 0;
@@ -47,7 +49,7 @@ pub fn storcommit_torrents(
                 count_existing_changed += 1;
             }
         } else {
-            rows_new.push(local_tor)
+            rows_new.push(local_tor.into())
         }
     }
     info!(
@@ -58,7 +60,11 @@ pub fn storcommit_torrents(
         storapi_tor_torrents_update_status_batch(conn, rows_update)?;
     }
     if !rows_new.is_empty() {
-        storapi_tor_torrents_new(conn, rows_new)?;
+        let meta = ModelTorrentsMeta {
+            journal_id: row.journal_id,
+            qb_host_id: metadata.qb_host_id,
+        };
+        storapi_tor_torrents_new(conn, meta, rows_new)?;
     }
 
     Ok(())

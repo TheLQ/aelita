@@ -28,6 +28,15 @@ diesel::table! {
 }
 
 diesel::table! {
+    hd1_files_parents_bak (tree_id) {
+        tree_id -> Unsigned<Integer>,
+        tree_depth -> Unsigned<Integer>,
+        component_id -> Unsigned<Integer>,
+        parent_id -> Nullable<Unsigned<Integer>>,
+    }
+}
+
+diesel::table! {
     hd1_files_paths (path_id) {
         path_id -> Unsigned<Integer>,
         p0 -> Nullable<Unsigned<Integer>>,
@@ -133,14 +142,14 @@ diesel::table! {
         comment -> Text,
         path -> Text,
         progress -> Float,
-        original_size -> Unsigned<Bigint>,
-        selected_size -> Unsigned<Bigint>,
+        original_size -> Nullable<Unsigned<Bigint>>,
+        selected_size -> Nullable<Unsigned<Bigint>>,
         downloaded -> Unsigned<Bigint>,
         uploaded -> Unsigned<Bigint>,
         secs_active -> Unsigned<Integer>,
         secs_seeding -> Unsigned<Integer>,
         added_on -> Timestamp,
-        completion_on -> Timestamp,
+        completion_on -> Nullable<Timestamp>,
         #[max_length = 18]
         state -> Tor1TorrentsStateEnum,
     }

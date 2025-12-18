@@ -3,12 +3,13 @@ use crate::connection::StorTransaction;
 use crate::diesel_wrappers::TorHashV1Diesel;
 use crate::err::StorDieselResult;
 use crate::id_types::ModelTorrentState;
-use crate::model_tor::ModelSuperfast;
+use crate::model_tor::{
+    ModelSuperfast, ModelTorrentsDiesel, ModelTorrentsMeta, ModelTorrentsQBittorrent,
+};
 use crate::models::id_types::{ModelQbHostId, StorIdType};
-use crate::models::model_tor::{ModelQbHost, ModelTorrents, NewModelQbHosts};
-use crate::schema_temp::{SQL_FAST_TOR_CREATE, SQL_FAST_TOR_DROP};
+use crate::models::model_tor::{ModelQbHost, NewModelQbHosts};
+use crate::schema_temp::{SQL_FAST_TOR_CREATE, SQL_FAST_TOR_TRUNCATE};
 use crate::{assert_test_database, schema};
-use diesel::dsl::count;
 use diesel::{
     ExpressionMethods, HasQuery, Insertable, QueryDsl, RunQueryDsl, TextExpressionMethods, dsl,
 };
@@ -39,15 +40,16 @@ pub fn storapi_tor_host_list(conn: &mut StorTransaction) -> StorDieselResult<Vec
 
 pub fn storapi_tor_torrents_new(
     conn: &mut StorTransaction,
-    torrents: impl IntoIterator<Item = ModelTorrents>,
+    meta: ModelTorrentsMeta,
+    torrents: impl IntoIterator<Item = ModelTorrentsDiesel>,
 ) -> StorDieselResult<()> {
     let torrents = torrents.into_iter();
     for chunk in torrents
         .into_iter()
-        .chunks(SQL_PLACEHOLDER_MAX / /*columns*/5)
+        .chunks(SQL_PLACEHOLDER_MAX / /*columns*/16)
         .into_iter()
     {
-        let chunk = chunk.collect_vec();
+        let chunk = chunk.map(|v| (meta.clone(), v)).collect_vec();
         let expected_len = chunk.len();
         let rows = diesel::insert_into(schema::tor1_torrents::table)
             .values(chunk)
@@ -60,8 +62,8 @@ pub fn storapi_tor_torrents_new(
 pub fn storapi_tor_torrents_list_starts_with(
     conn: &mut StorTransaction,
     starts_with: &str,
-) -> StorDieselResult<Vec<ModelTorrents>> {
-    let mut query = ModelTorrents::query().into_boxed();
+) -> StorDieselResult<Vec<ModelTorrentsDiesel>> {
+    let mut query = ModelTorrentsDiesel::query().into_boxed();
     if !starts_with.is_empty() {
         query = query.filter(schema::tor1_torrents::name.like(format!("%{starts_with}%")));
     }
@@ -87,7 +89,7 @@ pub fn storapi_tor_torrents_list_starts_with_count(
 pub fn storapi_tor_torrents_list_by_hash(
     conn: &mut StorTransaction,
     info_hashes: impl IntoIterator<Item = impl Borrow<TorHashV1>>,
-) -> StorDieselResult<Vec<ModelTorrents>> {
+) -> StorDieselResult<Vec<ModelTorrentsDiesel>> {
     let mut res = Vec::new();
     for chunk in info_hashes
         .into_iter()
@@ -95,7 +97,7 @@ pub fn storapi_tor_torrents_list_by_hash(
         .into_iter()
     {
         let chunk: Vec<TorHashV1Diesel> = chunk.map(|v| v.borrow().into()).collect();
-        let rows = ModelTorrents::query()
+        let rows = ModelTorrentsDiesel::query()
             .filter(schema::tor1_torrents::infohash_v1.eq_any(chunk))
             .get_results(conn.inner())?;
         res.extend(rows);
@@ -122,8 +124,8 @@ pub fn storapi_tor_torrents_update_status_batch(
 ) -> StorDieselResult<()> {
     use crate::schema_temp;
 
-    let rows = diesel::sql_query(SQL_FAST_TOR_CREATE).execute(conn.inner());
-    check_insert_num_rows(rows, 0)?;
+    diesel::sql_query(SQL_FAST_TOR_CREATE).execute(conn.inner())?;
+    diesel::sql_query(SQL_FAST_TOR_TRUNCATE).execute(conn.inner())?;
 
     for chunk in updates.chunks(SQL_PLACEHOLDER_MAX / /*columns*/2) {
         let values = chunk
@@ -147,14 +149,11 @@ pub fn storapi_tor_torrents_update_status_batch(
     let rows = diesel::sql_query(
         "UPDATE `tor1_torrents` \
          INNER JOIN `fast_tor_update` \
-         ON `tor1_torrents`.`torhash` = `fast_tor_update`.`tor_hash` \
-         SET `tor1_torrents`.`tor_status` = `fast_tor_update`.`tor_state`",
+         ON `tor1_torrents`.`infohash_v1` = `fast_tor_update`.`tor_hash` \
+         SET `tor1_torrents`.`state` = `fast_tor_update`.`tor_state`",
     )
     .execute(conn.inner());
     check_insert_num_rows(rows, updates.len())?;
-
-    let rows = diesel::sql_query(SQL_FAST_TOR_DROP).execute(conn.inner());
-    check_insert_num_rows(rows, 0)?;
 
     Ok(())
 }

@@ -26,9 +26,22 @@
         </search>
     </form>
     <div id="message"></div>
-    <div id="entry-template" class="container x-entry">
-        <span class="x-name"></span>
-    </div>
+    <table id="search-results" class="table">
+        <thead>
+        <tr>
+            <td>Name</td>
+            <td>Status</td>
+            <td>Path</td>
+        </tr>
+        </thead>
+        <tbody>
+        <tr id="entry-template" class="x-entry-hidden">
+            <td class="x-name"></td>
+            <td class="x-status"></td>
+            <td class="x-path"></td>
+        </tr>
+        </tbody>
+    </table>
 </div>
 
 </body>

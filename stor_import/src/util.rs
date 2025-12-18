@@ -1,21 +1,16 @@
-use aelita_stor_diesel::model_tor::ModelTorrents;
+use aelita_stor_diesel::model_tor::ModelTorrentsQBittorrent;
+use serde::{Deserialize, Deserializer};
 use std::collections::HashMap;
-use xana_commons_rs::bencode_torrent_re::TorHashV1;
+use xana_commons_rs::bencode_torrent_re::{ByTorHash, SHA1_BYTES, TorHashArray, TorHashV1};
 
-pub trait HashExtractor<I> {
-    fn as_tor_lookup_by_hash(&self) -> HashMap<&TorHashV1, &I>;
-
-    fn into_tor_lookup_by_hash(self) -> HashMap<TorHashV1, I>;
-}
-
-impl HashExtractor<ModelTorrents> for Vec<ModelTorrents> {
-    fn as_tor_lookup_by_hash(&self) -> HashMap<&TorHashV1, &ModelTorrents> {
-        self.iter().map(|v| (&v.infohash_v1, v)).collect()
-    }
-
-    fn into_tor_lookup_by_hash(self) -> HashMap<TorHashV1, ModelTorrents> {
-        self.into_iter()
-            .map(|v| (v.infohash_v1.clone(), v))
-            .collect()
+pub fn none_on_negative_deserializer<'de, D>(deserializer: D) -> Result<Option<u64>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let raw = i64::deserialize(deserializer)?;
+    if raw < 0 {
+        Ok(None)
+    } else {
+        Ok(Some(raw as u64))
     }
 }

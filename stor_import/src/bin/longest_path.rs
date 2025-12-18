@@ -1,6 +1,6 @@
 use aelita_commons::log_init;
 use aelita_stor_diesel::compressed_paths::CompressedPaths;
-use aelita_stor_diesel::util_types::RawDieselBytes;
+use aelita_stor_diesel::diesel_wrappers::RawDieselBytes;
 use aelita_stor_import::COMPRESSEDD_CACHE;
 use aelita_stor_import::err::StorImportResult;
 use std::path::PathBuf;
