@@ -1,5 +1,5 @@
+use crate::models::diesel_wrappers::{TorHashV1Diesel, TorHashV2Diesel};
 use crate::models::id_types::{ModelJournalId, ModelQbHostId, ModelTorrentState};
-use crate::models::util_types::{TorHashV1Diesel, TorHashV2Diesel};
 use chrono::NaiveDateTime;
 use diesel::{HasQuery, Insertable};
 use serde::{Deserialize, Serialize};

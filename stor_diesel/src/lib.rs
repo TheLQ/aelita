@@ -20,6 +20,6 @@ pub use connection::{
 };
 pub use err::{StorDieselError, StorDieselResult};
 pub use models::{
-    compressed_paths, id_types, model_hd, model_journal, model_space, model_tor, util_types,
+    compressed_paths, diesel_wrappers, id_types, model_hd, model_journal, model_space, model_tor,
 };
 // pub use diesel as diesel_re;

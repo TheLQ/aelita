@@ -1,12 +1,12 @@
 use crate::api::common::{SQL_PLACEHOLDER_MAX, check_insert_num_rows, mysql_last_id};
 use crate::connection::StorTransaction;
+use crate::diesel_wrappers::TorHashV1Diesel;
 use crate::err::StorDieselResult;
 use crate::id_types::ModelTorrentState;
 use crate::model_tor::ModelSuperfast;
 use crate::models::id_types::{ModelQbHostId, StorIdType};
 use crate::models::model_tor::{ModelQbHost, ModelTorrents, NewModelQbHosts};
 use crate::schema_temp::{SQL_FAST_TOR_CREATE, SQL_FAST_TOR_DROP};
-use crate::util_types::TorHashV1Diesel;
 use crate::{assert_test_database, schema};
 use diesel::dsl::count;
 use diesel::{
