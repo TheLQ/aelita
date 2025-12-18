@@ -181,6 +181,7 @@ pub struct NewModelQbHosts {
 #[diesel(table_name = crate::schema_temp::fast_tor_update)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct ModelSuperfast {
-    pub tor_hash: TorHashV1Diesel,
+    #[diesel(serialize_as = TorHashV1Diesel, deserialize_as = TorHashV1Diesel)]
+    pub tor_hash: TorHashV1,
     pub tor_state: String,
 }

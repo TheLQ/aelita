@@ -131,7 +131,7 @@ pub fn storapi_tor_torrents_update_status_batch(
         let values = chunk
             .iter()
             .map(|(hash, state)| ModelSuperfast {
-                tor_hash: TorHashV1Diesel::from(hash),
+                tor_hash: hash.clone(),
                 tor_state: state.to_string(),
             })
             .collect::<Vec<_>>();
