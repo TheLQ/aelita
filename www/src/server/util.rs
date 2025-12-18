@@ -1,5 +1,7 @@
-use axum::http::header::ACCEPT;
-use axum::http::{HeaderMap, HeaderValue};
+use axum::body::Body;
+use axum::http::header::{ACCEPT, CONTENT_TYPE};
+use axum::http::{HeaderMap, HeaderValue, StatusCode};
+use axum::response::{IntoResponse, Response};
 use std::borrow::Borrow;
 use std::fmt::Display;
 
@@ -23,4 +25,17 @@ pub const CSS_HTML: &str =
 
 pub fn pretty_basic_page(title: impl Display, body: impl Display) -> String {
     format!("{CSS_HTML}<section class='section'><h1 class='title'>{title}</h1>{body}")
+}
+
+pub struct BasicResponse(pub StatusCode, pub mime::Name<'static>, pub Body);
+
+impl IntoResponse for BasicResponse {
+    fn into_response(self) -> Response {
+        Response::builder()
+            .status(self.0)
+            .header(CONTENT_TYPE, self.1.to_string())
+            .body(self.2)
+            // welp we can't do anything with it
+            .unwrap()
+    }
 }

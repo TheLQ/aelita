@@ -199,9 +199,22 @@ pub fn storapi_journal_commit_new(
     check_insert_num_rows(rows, 1)
 }
 
+pub fn storapi_journal_uncommit_all(conn: &mut StorTransaction) -> StorDieselResult<()> {
+    assert_test_database(conn)?;
+
+    diesel::update(schema::journal_immutable::table)
+        .set(schema::journal_immutable::committed.eq(false))
+        .execute(conn.inner())?;
+
+    Ok(())
+}
+
 pub fn storapi_reset_journal(conn: &mut StorTransaction) -> StorDieselResult<()> {
     assert_test_database(conn)?;
 
+    if 1 + 1 == 2 {
+        todo!()
+    }
     let journal_rows = diesel::delete(schema::journal_immutable::table).execute(conn.inner())?;
     info!("Reset {journal_rows} journal rows");
     Ok(())

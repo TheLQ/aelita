@@ -126,6 +126,7 @@ diesel::table! {
         journal_id -> Unsigned<Integer>,
         #[max_length = 20]
         torhash -> Binary,
+        name -> Text,
         tor_status_changed -> Timestamp,
         qb_host_id -> Unsigned<Integer>,
         #[max_length = 18]
@@ -145,6 +146,7 @@ diesel::joinable!(tor1_torrents -> journal_immutable (journal_id));
 diesel::allow_tables_to_appear_in_same_query!(
     hd1_files_components,
     hd1_files_parents,
+    hd1_files_parents_bak,
     hd1_files_paths,
     hd1_galleries,
     hd1_sites,

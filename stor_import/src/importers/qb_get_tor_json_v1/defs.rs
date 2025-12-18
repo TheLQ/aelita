@@ -14,6 +14,7 @@ pub struct ImportQbMetadata {
 pub struct ImportQbTorrent {
     pub content_path: String,
     pub infohash_v1: TorHashV1,
+    pub name: String,
     pub state: TorrentState,
     pub added_on: i64,
     pub completion_on: i64,

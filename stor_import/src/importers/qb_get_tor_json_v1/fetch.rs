@@ -2,7 +2,7 @@ use crate::err::StorImportResult;
 use crate::importers::qb_get_tor_json_v1::defs::ImportQbMetadata;
 use aelita_stor_diesel::StorTransaction;
 use aelita_stor_diesel::api_journal::storapi_journal_immutable_push_single;
-use aelita_stor_diesel::api_tor::storapi_tor_host_get;
+use aelita_stor_diesel::api_tor::storapi_tor_host_list;
 use aelita_stor_diesel::id_types::ModelJournalTypeName;
 use aelita_stor_diesel::model_journal::NewModelJournalImmutable;
 use aelita_stor_diesel::model_tor::ModelQbHost;
@@ -15,7 +15,7 @@ use xana_commons_rs::qbittorrent_re::QBittorrentClientBuilder;
 use xana_commons_rs::tracing_re::{Level, info, span};
 
 pub fn storfetch_torrents(conn: &mut StorTransaction<'_>) -> StorImportResult<()> {
-    let hosts = storapi_tor_host_get(conn)?;
+    let hosts = storapi_tor_host_list(conn)?;
     info!(
         "connecting to {} hosts: {}",
         hosts.len(),

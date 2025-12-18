@@ -8,6 +8,7 @@ use handlebars::html_escape;
 use std::backtrace::Backtrace;
 use std::num::ParseIntError;
 use thiserror::Error;
+use xana_commons_rs::qbittorrent_re::serde_json;
 use xana_commons_rs::tracing_re::error;
 use xana_commons_rs::{MyBacktrace, pretty_format_error};
 
@@ -27,6 +28,9 @@ pub enum WebError {
 
     #[error("WebError_Deadpool {0:?}")]
     Deadpool(#[from] deadpool_diesel::PoolError, Backtrace),
+
+    #[error("WebError_SerdeJson {0:?}")]
+    SerdeJson(#[from] serde_json::Error, Backtrace),
 
     #[error("WebError_Strum {0:?}")]
     Strum(#[from] strum::ParseError, Backtrace),
@@ -86,6 +90,7 @@ impl MyBacktrace for WebError {
             WebError::Handlebars(_, bt) => bt,
             WebError::DeadpoolInteract(_, bt) => bt,
             WebError::Deadpool(_, bt) => bt,
+            WebError::SerdeJson(_, bt) => bt,
             WebError::Strum(_, bt) => bt,
             WebError::StorDiesel(e) => e.my_backtrace(),
             WebError::Libxrn(e) => e.my_backtrace(),

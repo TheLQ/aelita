@@ -8,6 +8,7 @@ use diesel::{HasQuery, Insertable};
 pub struct ModelTorrents {
     pub journal_id: ModelJournalId,
     pub torhash: TorHashV1Diesel,
+    pub name: String,
     pub qb_host_id: ModelQbHostId,
     pub tor_status: ModelTorrentState,
     pub tor_status_changed: chrono::NaiveDateTime,
@@ -19,6 +20,7 @@ pub struct ModelTorrents {
 pub struct NewModelTorrents {
     pub journal_id: ModelJournalId,
     pub torhash: TorHashV1Diesel,
+    pub name: String,
     pub qb_host_id: ModelQbHostId,
     pub tor_status: ModelTorrentState,
 }

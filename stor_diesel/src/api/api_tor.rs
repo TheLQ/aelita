@@ -5,10 +5,12 @@ use crate::id_types::ModelTorrentState;
 use crate::model_tor::{ModelSuperfast, NewModelTorrents};
 use crate::models::id_types::{ModelQbHostId, StorIdType};
 use crate::models::model_tor::{ModelQbHost, ModelTorrents, NewModelQbHosts};
-use crate::schema;
 use crate::schema_temp::{SQL_FAST_TOR_CREATE, SQL_FAST_TOR_DROP};
 use crate::util_types::TorHashV1Diesel;
-use diesel::{ExpressionMethods, HasQuery, Insertable, QueryDsl, RunQueryDsl};
+use crate::{assert_test_database, schema};
+use diesel::{
+    ExpressionMethods, HasQuery, Insertable, QueryDsl, RunQueryDsl, TextExpressionMethods,
+};
 use xana_commons_rs::bencode_torrent_re::TorHashV1;
 use xana_commons_rs::qbittorrent_re::TorrentState;
 
@@ -26,7 +28,7 @@ pub fn storapi_tor_host_new(
     }
 }
 
-pub fn storapi_tor_host_get(conn: &mut StorTransaction) -> StorDieselResult<Vec<ModelQbHost>> {
+pub fn storapi_tor_host_list(conn: &mut StorTransaction) -> StorDieselResult<Vec<ModelQbHost>> {
     ModelQbHost::query()
         .get_results(conn.inner())
         .map_err(Into::into)
@@ -37,7 +39,7 @@ pub fn storapi_tor_torrents_new(
     torrents: &[NewModelTorrents],
 ) -> StorDieselResult<()> {
     assert_ne!(torrents.len(), 0);
-    for chunk in torrents.chunks(SQL_PLACEHOLDER_MAX / /*columns*/4) {
+    for chunk in torrents.chunks(SQL_PLACEHOLDER_MAX / /*columns*/5) {
         let rows = diesel::insert_into(schema::tor1_torrents::table)
             .values(chunk)
             .execute(conn.inner());
@@ -46,7 +48,21 @@ pub fn storapi_tor_torrents_new(
     Ok(())
 }
 
-pub fn storapi_tor_torrents_get_by_hash(
+pub fn storapi_tor_torrents_list_starts_with(
+    conn: &mut StorTransaction,
+    starts_with: &str,
+) -> StorDieselResult<Vec<ModelTorrents>> {
+    let mut query = ModelTorrents::query().into_boxed();
+    if !starts_with.is_empty() {
+        query = query.filter(schema::tor1_torrents::name.like(format!("{starts_with}%")));
+    }
+    query
+        .limit(100)
+        .get_results(conn.inner())
+        .map_err(Into::into)
+}
+
+pub fn storapi_tor_torrents_list_by_hash(
     conn: &mut StorTransaction,
     info_hashes: &[TorHashV1Diesel],
 ) -> StorDieselResult<Vec<ModelTorrents>> {
@@ -118,6 +134,7 @@ pub fn storapi_tor_torrents_update_status_batch(
 }
 
 pub fn storapi_tor_reset(conn: &mut StorTransaction) -> StorDieselResult<()> {
+    assert_test_database(conn)?;
     diesel::delete(schema::tor1_qb_host::table).execute(conn.inner())?;
     diesel::delete(schema::tor1_torrents::table).execute(conn.inner())?;
     Ok(())

@@ -3,7 +3,7 @@ use crate::importers::qb_get_tor_json_v1::defs::{ImportQbMetadata, ImportQbTorre
 use crate::util::HashExtractor;
 use aelita_stor_diesel::StorTransaction;
 use aelita_stor_diesel::api_tor::{
-    storapi_tor_torrents_get_by_hash, storapi_tor_torrents_new,
+    storapi_tor_torrents_list_by_hash, storapi_tor_torrents_new,
     storapi_tor_torrents_update_status_batch,
 };
 use aelita_stor_diesel::id_types::ModelJournalTypeName;
@@ -28,7 +28,7 @@ pub fn storcommit_torrents(
     let local_tors_raw: Vec<ImportQbTorrent> = row.data.deserialize_json()?;
     let local_tors = local_tors_raw.as_tor_lookup_by_hash();
 
-    let db_tors_raw = storapi_tor_torrents_get_by_hash(
+    let db_tors_raw = storapi_tor_torrents_list_by_hash(
         conn,
         local_tors
             .keys()
@@ -56,6 +56,7 @@ pub fn storcommit_torrents(
             rows_new.push(NewModelTorrents {
                 journal_id: row.journal_id,
                 torhash: local_hash.into(),
+                name: local_tor.name.clone(),
                 qb_host_id: metadata.qb_host_id,
                 tor_status: local_tor.state.into(),
             })
