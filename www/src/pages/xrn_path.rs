@@ -8,9 +8,7 @@ use aelita_stor_diesel::api_hd::storapi_hd_list_children;
 use aelita_xrn::defs::path_xrn::PathXrn;
 use axum::body::Body;
 use axum::extract::State;
-use axum::http::{StatusCode, header};
-use axum::response::Response;
-use mime::TEXT_HTML;
+use axum::http::StatusCode;
 use serde::Serialize;
 use std::path::PathBuf;
 use std::sync::LazyLock;
@@ -18,7 +16,7 @@ use std::sync::LazyLock;
 pub async fn handle_xrn_path(
     State(state): State<SqlState>,
     XrnFromUrl(xrn): XrnFromUrl<PathXrn>,
-) -> WebResult<Response> {
+) -> WebResult<BasicResponse> {
     _handle_xrn_path(state, xrn).await
 }
 

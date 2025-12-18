@@ -1,23 +1,14 @@
-use crate::controllers::handlebars::HandlebarsPage;
 use crate::controllers::sqlcontroller::SqlState;
-use crate::err::{WebError, WebResult};
+use crate::err::WebResult;
 use crate::server::util::BasicResponse;
-use aelita_stor_diesel::api_hd::storapi_hd_list_children;
-use aelita_stor_diesel::api_journal::storapi_journal_list;
 use aelita_stor_diesel::api_tor::{
     storapi_tor_torrents_list_starts_with, storapi_tor_torrents_list_starts_with_count,
-    storapi_tor_torrents_update_status_batch,
 };
-use aelita_stor_diesel::model_journal::ModelJournalImmutableDiesel;
 use axum::body::Body;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
-use axum::http::header::CONTENT_TYPE;
-use axum::response::Response;
 use serde::Serialize;
-use std::backtrace::Backtrace;
 use std::collections::HashMap;
-use std::sync::LazyLock;
 use std::time::Duration;
 use tokio::time::sleep;
 use xana_commons_rs::qbittorrent_re::serde_json;
