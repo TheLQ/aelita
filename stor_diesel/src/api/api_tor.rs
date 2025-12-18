@@ -17,6 +17,7 @@ use itertools::Itertools;
 use std::borrow::Borrow;
 use xana_commons_rs::bencode_torrent_re::TorHashV1;
 use xana_commons_rs::qbittorrent_re::TorrentState;
+use xana_commons_rs::tracing_re::trace;
 
 pub fn storapi_tor_host_new(
     conn: &mut StorTransaction,
@@ -38,17 +39,16 @@ pub fn storapi_tor_host_list(conn: &mut StorTransaction) -> StorDieselResult<Vec
         .map_err(Into::into)
 }
 
-pub fn storapi_tor_torrents_new(
+pub fn storapi_tor_torrents_push(
     conn: &mut StorTransaction,
     meta: ModelTorrentsMeta,
-    torrents: impl IntoIterator<Item = ModelTorrentsDiesel>,
+    torrents: Vec<ModelTorrentsDiesel>,
 ) -> StorDieselResult<()> {
-    let torrents = torrents.into_iter();
-    for chunk in torrents
-        .into_iter()
-        .chunks(SQL_PLACEHOLDER_MAX / /*columns*/16)
-        .into_iter()
-    {
+    const CHUNK_SIZE: usize = SQL_PLACEHOLDER_MAX / /*columns*/16;
+    let total_chunks = torrents.as_chunks::<CHUNK_SIZE>().0.len();
+    let chunks = torrents.into_iter().chunks(CHUNK_SIZE);
+    for (i, chunk) in chunks.into_iter().enumerate() {
+        trace!("Insert chunk {i} of {total_chunks}");
         let chunk = chunk.map(|v| (meta.clone(), v)).collect_vec();
         let expected_len = chunk.len();
         let rows = diesel::insert_into(schema::tor1_torrents::table)

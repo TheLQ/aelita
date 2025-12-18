@@ -34,14 +34,17 @@ pub enum StorDieselError {
     #[error("StorDieselError_TryFromNumber {0}")]
     TryFromNumber(#[from] TryFromIntError, Backtrace),
 
-    #[error("WebError_Diesel {0:?}")]
+    #[error("StorDieselError_Diesel {0:?}")]
     Diesel(#[from] diesel::result::Error, Backtrace),
 
-    #[error("QueryFail {0:?}")]
+    #[error("StorDieselError_QueryFail {0:?}")]
     QueryFail(String, Backtrace),
 
-    #[error("Unknown component(s) {0}")]
+    #[error("StorDieselError_Unknown component(s) {0}")]
     UnknownComponent(String, Backtrace),
+
+    #[error("StorDieselError_UnknownTimestamp {0}")]
+    UnknownTimestamp(String, Backtrace),
 }
 
 impl StorDieselError {
@@ -55,6 +58,10 @@ impl StorDieselError {
             message: Some(message.into()),
             backtrace: Backtrace::capture(),
         }
+    }
+
+    pub fn unknown_timestamp(input: impl Into<String>) -> Self {
+        Self::UnknownTimestamp(input.into(), Backtrace::capture())
     }
 }
 
@@ -70,6 +77,7 @@ impl MyBacktrace for StorDieselError {
             StorDieselError::Diesel(_, bt) => bt,
             StorDieselError::QueryFail(_, bt) => bt,
             StorDieselError::UnknownComponent(_, bt) => bt,
+            StorDieselError::UnknownTimestamp(_, bt) => bt,
         }
     }
 }

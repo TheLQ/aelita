@@ -2,7 +2,7 @@ use crate::err::StorImportResult;
 use crate::importers::qb_get_tor_json_v1::defs::ImportQbMetadata;
 use aelita_stor_diesel::StorTransaction;
 use aelita_stor_diesel::api_tor::{
-    storapi_tor_torrents_list_by_hash, storapi_tor_torrents_new,
+    storapi_tor_torrents_list_by_hash, storapi_tor_torrents_push,
     storapi_tor_torrents_update_status_batch,
 };
 use aelita_stor_diesel::id_types::{ModelJournalTypeName, ModelTorrentState};
@@ -49,7 +49,7 @@ pub fn storcommit_torrents(
                 count_existing_changed += 1;
             }
         } else {
-            rows_new.push(local_tor.into())
+            rows_new.push(local_tor.try_into()?)
         }
     }
     info!(
@@ -64,7 +64,7 @@ pub fn storcommit_torrents(
             journal_id: row.journal_id,
             qb_host_id: metadata.qb_host_id,
         };
-        storapi_tor_torrents_new(conn, meta, rows_new)?;
+        storapi_tor_torrents_push(conn, meta, rows_new)?;
     }
 
     Ok(())

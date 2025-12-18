@@ -1,6 +1,6 @@
 use crate::models::diesel_wrappers::{TorHashV1Diesel, TorHashV2Diesel};
 use crate::models::id_types::{ModelJournalId, ModelQbHostId, ModelTorrentState};
-use crate::util::deserialize_negative_to_zero;
+use crate::{StorDieselError, StorDieselResult};
 use chrono::{DateTime, NaiveDateTime};
 use diesel::{HasQuery, Insertable, Queryable, QueryableByName};
 use serde::{Deserialize, Serialize};
@@ -66,8 +66,10 @@ pub struct ModelTorrentsDiesel {
     pub state: ModelTorrentState,
 }
 
-impl From<ModelTorrentsQBittorrent> for ModelTorrentsDiesel {
-    fn from(
+impl TryFrom<ModelTorrentsQBittorrent> for ModelTorrentsDiesel {
+    type Error = StorDieselError;
+
+    fn try_from(
         ModelTorrentsQBittorrent {
             infohash_v1,
             infohash_v2,
@@ -85,8 +87,8 @@ impl From<ModelTorrentsQBittorrent> for ModelTorrentsDiesel {
             completion_on,
             state,
         }: ModelTorrentsQBittorrent,
-    ) -> Self {
-        Self {
+    ) -> StorDieselResult<Self> {
+        Ok(Self {
             infohash_v1,
             infohash_v2,
             name,
@@ -100,15 +102,21 @@ impl From<ModelTorrentsQBittorrent> for ModelTorrentsDiesel {
             secs_active,
             secs_seeding,
             added_on: DateTime::from_timestamp_secs(added_on)
-                .expect("valid added_on timestamp")
+                .ok_or_else(|| StorDieselError::unknown_timestamp("valid added_on timestamp"))?
                 .naive_utc(),
-            completion_on: negative_one_to_none(completion_on).map(|v| {
-                DateTime::from_timestamp_secs(v as i64)
-                    .expect("valid completion_on")
-                    .naive_utc()
-            }),
+            completion_on: if let Some(timestamp) = negative_one_to_none(completion_on) {
+                Some(
+                    DateTime::from_timestamp_secs(timestamp as i64)
+                        .ok_or_else(|| {
+                            StorDieselError::unknown_timestamp("valid completion_on timestamp")
+                        })?
+                        .naive_utc(),
+                )
+            } else {
+                None
+            },
             state,
-        }
+        })
     }
 }
 
