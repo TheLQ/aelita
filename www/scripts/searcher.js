@@ -3,10 +3,8 @@
 const ID_SEARCH_BOX = "search-box";
 const ID_X_ENTRY = "x-entry";
 const ID_X_ENTRY_HIDDEN = "x-entry-hidden";
-const ID_X_NAME = "x-name";
-const ID_X_STATUS = "x-status";
-const ID_X_PATH = "x-path";
 const ID_ENTRY_TEMPLATE = "entry-template";
+const ID_DISPLAY_TEMPLATE = "display-template";
 
 function init() {
     console.log("init searcher")
@@ -128,7 +126,8 @@ function debug_search_state() {
 function set_search_results(tor_entries) {
     set_message(`found ${tor_entries.length} - ${debug_search_state()}`)
 
-    let template = document.querySelector(`#${ID_ENTRY_TEMPLATE}`);
+    let entry_template = document.querySelector(`#${ID_ENTRY_TEMPLATE}`);
+    let display_template = document.querySelector(`#${ID_DISPLAY_TEMPLATE}`);
 
     tor_entries.reverse();
     for (const existing_root of document.querySelectorAll(`.${ID_X_ENTRY}`)) {
@@ -148,16 +147,55 @@ function set_search_results(tor_entries) {
     while (tor_entries.length !== 0) {
         let next = tor_entries.pop();
 
-        let new_entry = template.cloneNode(true);
+        let new_entry = entry_template.cloneNode(true);
         new_entry.id = "";
         new_entry.classList.remove(ID_X_ENTRY_HIDDEN)
-        set_search_result(new_entry, next);
-        template.parentElement.appendChild(new_entry)
+        let new_display = display_template.cloneNode(true);
+        new_display.id = "";
+        new_display.classList.remove(ID_X_ENTRY_HIDDEN)
+
+        entry_template.parentElement.appendChild(new_entry)
+        display_template.parentElement.appendChild(new_display)
+
+        set_search_result([new_entry, new_display], next);
+
     }
 }
 
-function set_search_result(root, tor_entry) {
-    root.querySelector(`.${ID_X_NAME}`).innerText = tor_entry.name;
-    root.querySelector(`.${ID_X_STATUS}`).innerText = tor_entry.status;
-    root.querySelector(`.${ID_X_PATH}`).innerText = tor_entry.path
+function set_search_result(roots, tor_entry) {
+    for (const clazz of Object.keys(tor_metas)) {
+        let json_field = tor_metas[clazz];
+        let json_value = tor_entry[json_field];
+        console.log(`applying ${json_field}=${json_value} class ${clazz}`, tor_entry)
+        let not_found = true;
+        for (const root of roots) {
+            let elem = root.querySelector(`.${clazz}`);
+            if (elem === null) {
+                console.debug(`class ${clazz} not found for`, root)
+                continue
+            } else {
+                console.debug(`class ${clazz} found`, root)
+            }
+            elem.innerText = json_value;
+            not_found = false;
+            break;
+        }
+        if (not_found) {
+            throw new Error(`no elem found class ${clazz} field ${json_field}`)
+        }
+    }
+}
+
+let tor_metas = {
+    "s-name": "name",
+    "s-state": "state",
+    "s-path": "path",
+    "s-progress": "progress",
+    "s-added": "added_on",
+    "s-completed": "completion_on",
+    "s-size": "original_size",
+    "s-downloaded": "downloaded",
+    "s-uploaded": "uploaded",
+    "s-time-active": "secs_active",
+    "s-time-seeding": "secs_seeding",
 }

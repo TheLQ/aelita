@@ -40,22 +40,7 @@ async fn render_search_json(state: SqlState, query: &str) -> WebResult<BasicResp
         })
         .await?;
 
-    #[derive(Serialize)]
-    struct TorEntry {
-        name: String,
-        status: String,
-        path: String,
-    }
-    let front_children = children
-        .into_iter()
-        .map(|tor| TorEntry {
-            name: tor.name.clone(),
-            status: tor.state.inner().to_string(),
-            path: tor.name.to_string(),
-        })
-        .collect::<Vec<_>>();
-
-    let json = serde_json::to_string(&front_children)?;
+    let json = serde_json::to_string(&children)?;
     Ok(BasicResponse(StatusCode::OK, mime::JSON, Body::from(json)))
 }
 

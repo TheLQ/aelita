@@ -29,16 +29,37 @@
     <table id="search-results" class="table">
         <thead>
         <tr>
-            <td>Name</td>
-            <td>Status</td>
-            <td>Path</td>
+            <td colspan="4">Name</td>
+            <td colspan="1">Status</td>
+            <td colspan="4">Path</td>
+        </tr>
+        <tr>
+            <td class="x-state">State</td>
+            <td class="x-progress">Progress</td>
+            <td class="x-added">Added</td>
+            <td class="x-completed">Completed</td>
+            <td class="x-size">Size</td>
+            <td class="x-downloaded">Downloaded</td>
+            <td class="x-uploaded">Uploaded</td>
+            <td class="x-time-active">Time Active</td>
+            <td class="x-time-seeding">Time Seeding</td>
         </tr>
         </thead>
         <tbody>
-        <tr id="entry-template" class="x-entry-hidden">
-            <td class="x-name"></td>
-            <td class="x-status"></td>
-            <td class="x-path"></td>
+        <tr id="entry-template" class="x-entry x-entry-hidden">
+            <td colspan="4" class="s-name"></td>
+            <td colspan="1" class="s-state"></td>
+            <td colspan="4" class="s-path"></td>
+        </tr>
+        <tr id="display-template" class="x-tor-display x-entry-hidden">
+            <td class="s-progress"></td>
+            <td class="s-added"></td>
+            <td class="s-completed"></td>
+            <td class="s-size"></td>
+            <td class="s-downloaded"></td>
+            <td class="s-uploaded"></td>
+            <td class="s-time-active"></td>
+            <td class="s-time-seeding"></td>
         </tr>
         </tbody>
     </table>
