@@ -5,3 +5,16 @@
 #message {
     color: lightgray;
 }
+
+.s-name {
+    max-width: 25vw;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.s-path {
+    max-width: 25vw;
+    text-wrap: nowrap;
+    text-overflow: ellipsis;
+}

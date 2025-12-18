@@ -30,6 +30,9 @@ function init() {
         console.log("submit-event", e)
         await push_search()
     })
+
+    // browser might cache last search term
+    push_search()
 }
 
 function set_message(value) {
@@ -47,8 +50,8 @@ const STATE_RUNNING = 2;
 // const STATE_RUNNING_AND_NEXT = 3;
 const search_state = {
     state: STATE_OFF,
-    next_query: null,
-    last_query: null,
+    next_query: "",
+    last_query: "",
 };
 
 async function push_search() {
@@ -60,12 +63,8 @@ async function push_search() {
 
 async function update_search() {
     if (
-        // first call
-        !(search_state.next_query == null && search_state.last_query == null) &&
-        (
-            search_state.next_query == null ||
-            search_state.next_query === search_state.last_query
-        )
+        search_state.next_query === "" ||
+        search_state.next_query === search_state.last_query
     ) {
         console.debug(`ignore next ${search_state.next_query} last ${search_state.last_query}`)
         search_state.state = STATE_OFF;
@@ -139,8 +138,10 @@ function set_search_results(tor_entries) {
         if (next === undefined) {
             // list is shorter than the existing entries
             existing_root.classList.add(ID_X_ENTRY_HIDDEN)
+            existing_root.nextElementSibling.classList.add(ID_X_ENTRY_HIDDEN)
         } else {
             existing_root.classList.remove(ID_X_ENTRY_HIDDEN)
+            existing_root.nextElementSibling.classList.remove(ID_X_ENTRY_HIDDEN)
             set_search_result(existing_root, next)
         }
     }

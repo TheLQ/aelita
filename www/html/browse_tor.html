@@ -9,7 +9,7 @@
 </head>
 <body>
 
-<div class="section">
+<div class=".container .is-max-desktop">
     <form id="search-form">
         <search class="field">
             <label class="label" for="search-box">Name</label>
@@ -26,15 +26,15 @@
         </search>
     </form>
     <div id="message"></div>
-    <table id="search-results" class="table">
+    <table id="search-results" class="table is-striped is-fullwidth">
         <thead>
         <tr>
-            <td colspan="4">Name</td>
-            <td colspan="1">Status</td>
-            <td colspan="4">Path</td>
+            <td colspan="4" class="s-name">Name</td>
+            <td colspan="1" class="s-state">State</td>
+            <td colspan="4" class="s-path">Path</td>
         </tr>
         <tr>
-            <td class="x-state">State</td>
+
             <td class="x-progress">Progress</td>
             <td class="x-added">Added</td>
             <td class="x-completed">Completed</td>
@@ -46,7 +46,7 @@
         </tr>
         </thead>
         <tbody>
-        <tr id="entry-template" class="x-entry x-entry-hidden">
+        <tr id="entry-template" class="x-entry x-entry-hidden has-background-text-20">
             <td colspan="4" class="s-name"></td>
             <td colspan="1" class="s-state"></td>
             <td colspan="4" class="s-path"></td>
