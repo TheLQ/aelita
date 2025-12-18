@@ -8,8 +8,9 @@ use crate::models::model_tor::{ModelQbHost, ModelTorrents, NewModelQbHosts};
 use crate::schema_temp::{SQL_FAST_TOR_CREATE, SQL_FAST_TOR_DROP};
 use crate::util_types::TorHashV1Diesel;
 use crate::{assert_test_database, schema};
+use diesel::dsl::count;
 use diesel::{
-    ExpressionMethods, HasQuery, Insertable, QueryDsl, RunQueryDsl, TextExpressionMethods,
+    ExpressionMethods, HasQuery, Insertable, QueryDsl, RunQueryDsl, TextExpressionMethods, dsl,
 };
 use xana_commons_rs::bencode_torrent_re::TorHashV1;
 use xana_commons_rs::qbittorrent_re::TorrentState;
@@ -54,12 +55,25 @@ pub fn storapi_tor_torrents_list_starts_with(
 ) -> StorDieselResult<Vec<ModelTorrents>> {
     let mut query = ModelTorrents::query().into_boxed();
     if !starts_with.is_empty() {
-        query = query.filter(schema::tor1_torrents::name.like(format!("{starts_with}%")));
+        query = query.filter(schema::tor1_torrents::name.like(format!("%{starts_with}%")));
     }
     query
         .limit(100)
         .get_results(conn.inner())
         .map_err(Into::into)
+}
+
+pub fn storapi_tor_torrents_list_starts_with_count(
+    conn: &mut StorTransaction,
+    starts_with: &str,
+) -> StorDieselResult<i64> {
+    let mut query = schema::tor1_torrents::table
+        .select(dsl::count(schema::tor1_torrents::torhash))
+        .into_boxed();
+    if !starts_with.is_empty() {
+        query = query.filter(schema::tor1_torrents::name.like(format!("%{starts_with}%")));
+    }
+    query.first::<i64>(conn.inner()).map_err(Into::into)
 }
 
 pub fn storapi_tor_torrents_list_by_hash(

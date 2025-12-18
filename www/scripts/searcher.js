@@ -16,12 +16,10 @@ function init() {
 
     // todo: wut why no work on Firefox
     search_box.addEventListener("search", (e) => {
-        set_message(e.value);
         console.log("search=event", e)
     })
     // instead do
     search_box.addEventListener("keyup", async (e) => {
-        set_message(e.value);
         console.log("key-event", e)
         await push_search()
     })
@@ -35,7 +33,7 @@ function init() {
 }
 
 function set_message(value) {
-    console.info(`search message: ${value}`);
+    console.info(`display message: ${value}`);
     let tmp_output = document.getElementById("message");
     tmp_output.innerText = value;
 }
@@ -50,27 +48,38 @@ const STATE_RUNNING = 2;
 const search_state = {
     state: STATE_OFF,
     next_query: null,
+    last_query: null,
 };
 
 async function push_search() {
     let new_search = document.getElementById(ID_SEARCH_BOX).value;
     search_state.next_query = new_search;
-    console.info(`update search for ${search_state.next_query}`);
 
     await update_search()
 }
 
 async function update_search() {
+    if (
+        // first call
+        !(search_state.next_query == null && search_state.last_query == null) &&
+        (
+            search_state.next_query == null ||
+            search_state.next_query === search_state.last_query
+        )
+    ) {
+        console.debug(`ignore next ${search_state.next_query} last ${search_state.last_query}`)
+        search_state.state = STATE_OFF;
+        search_state.next_query = null;
+        return;
+    }
+
+    let debug = debug_search_state();
     let is_fetch;
     if (search_state.state === STATE_OFF) {
-        console.log(`fetch search "${search_state.next_query}"`)
+        set_message(`fetch search "${search_state.next_query} - ${debug}"`)
         is_fetch = true;
     } else if (search_state.state === STATE_RUNNING) {
-        if (search_state.next_query == null) {
-            console.log(`queue search "${search_state.next_query}"`)
-        } else {
-            console.log(`re-queue search "${search_state.next_query}"`)
-        }
+        set_message(`queue search "${search_state.next_query} - ${debug}"`)
         is_fetch = false;
     } else {
         throw new Error("unknown")
@@ -78,22 +87,45 @@ async function update_search() {
 
     if (is_fetch) {
         if (search_state.next_query == null) {
-            throw new Error("no value")
+            throw new Error("expected value")
         }
-        let url = `/browse/tor?prefix=${search_state.next_query}`;
-        console.info(`fetch ${url}`)
+        search_state.state = STATE_RUNNING;
+
+        let cached_next = search_state.next_query;
+        let url = `/browse/tor?prefix=${cached_next}`;
+        console.info(`fetch ${url} - ${debug_search_state()}`)
+        let response;
         try {
+
             let response_raw = await fetch(url)
-            let response = await response_raw.json()
-            set_search_results(response)
+            response = await response_raw.json()
+            search_state.state = STATE_OFF
+
         } catch (e) {
             console.error(`failed fetch ${url} - ${e}`)
         }
+        set_search_results(response)
+        if (search_state.next_query === cached_next) {
+            search_state.next_query = null
+        }
+        search_state.last_query = cached_next
     }
 }
 
+function debug_search_state() {
+    let state;
+    if (search_state.state === STATE_OFF) {
+        state = "OFF"
+    } else if (search_state.state === STATE_RUNNING) {
+        state = "RUNNING"
+    } else {
+        return "SearchState ??UNKNOWN??"
+    }
+    return `SearchState ${state}`
+}
+
 function set_search_results(tor_entries) {
-    set_message(`found ${tor_entries.length}`)
+    set_message(`found ${tor_entries.length} - ${debug_search_state()}`)
 
     let template = document.querySelector(`#${ID_ENTRY_TEMPLATE}`);
 

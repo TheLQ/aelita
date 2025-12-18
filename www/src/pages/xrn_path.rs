@@ -2,7 +2,7 @@ use crate::controllers::handlebars::HandlebarsPage;
 use crate::controllers::sqlcontroller::SqlState;
 use crate::err::{WebError, WebResult};
 use crate::server::convert_xrn::XrnFromUrl;
-use crate::server::util::pretty_basic_page;
+use crate::server::util::{BasicResponse, pretty_basic_page};
 use aelita_stor_diesel::StorDieselError;
 use aelita_stor_diesel::api_hd::storapi_hd_list_children;
 use aelita_xrn::defs::path_xrn::PathXrn;
@@ -22,7 +22,7 @@ pub async fn handle_xrn_path(
     _handle_xrn_path(state, xrn).await
 }
 
-async fn _handle_xrn_path(state: SqlState, xrn: PathXrn) -> WebResult<Response> {
+async fn _handle_xrn_path(state: SqlState, xrn: PathXrn) -> WebResult<BasicResponse> {
     let children = state
         .sqlfs
         .transact({
@@ -35,21 +35,18 @@ async fn _handle_xrn_path(state: SqlState, xrn: PathXrn) -> WebResult<Response> 
         .await;
     match children {
         Err(WebError::StorDiesel(StorDieselError::UnknownComponent(values, _))) => {
-            Response::builder()
-                .header(header::CONTENT_TYPE, TEXT_HTML.to_string())
-                .status(StatusCode::NOT_FOUND)
-                .body(Body::from(pretty_basic_page(
-                    "404 Path component(s) not found",
-                    values,
-                )))
-                .map_err(Into::into)
+            Ok(BasicResponse(
+                StatusCode::OK,
+                mime::HTML,
+                Body::from(pretty_basic_page("404 Path component(s) not found", values)),
+            ))
         }
         Err(e) => Err(e)?,
-        Ok(children) => Response::builder()
-            .header(header::CONTENT_TYPE, TEXT_HTML.to_string())
-            .status(StatusCode::OK)
-            .body(render_html(xrn.path().to_path_buf(), children)?)
-            .map_err(Into::into),
+        Ok(children) => Ok(BasicResponse(
+            StatusCode::OK,
+            mime::HTML,
+            render_html(xrn.path().to_path_buf(), children)?,
+        )),
     }
 }
 

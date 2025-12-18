@@ -1,4 +1,4 @@
-use crate::server::util::pretty_basic_page;
+use crate::server::util::{BasicResponse, pretty_basic_page};
 use aelita_stor_diesel::StorDieselError;
 use aelita_xrn::err::LibxrnError;
 use axum::body::Body;
@@ -75,11 +75,13 @@ impl IntoResponse for WebError {
         let pretty = pretty_format_error(&self);
         error!("Status 500 {}", pretty);
         let body = pretty_basic_page("500", format!("<pre>{}</pre>", html_escape(&pretty)));
-        Response::builder()
-            .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .header(header::CONTENT_TYPE, "text/html")
-            .body(Body::from(body))
-            .unwrap()
+
+        BasicResponse(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            mime::HTML,
+            Body::from(body),
+        )
+        .into_response()
     }
 }
 

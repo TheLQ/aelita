@@ -5,7 +5,8 @@ use crate::server::util::BasicResponse;
 use aelita_stor_diesel::api_hd::storapi_hd_list_children;
 use aelita_stor_diesel::api_journal::storapi_journal_list;
 use aelita_stor_diesel::api_tor::{
-    storapi_tor_torrents_list_starts_with, storapi_tor_torrents_update_status_batch,
+    storapi_tor_torrents_list_starts_with, storapi_tor_torrents_list_starts_with_count,
+    storapi_tor_torrents_update_status_batch,
 };
 use aelita_stor_diesel::model_journal::ModelJournalImmutableDiesel;
 use axum::body::Body;
@@ -17,27 +18,33 @@ use serde::Serialize;
 use std::backtrace::Backtrace;
 use std::collections::HashMap;
 use std::sync::LazyLock;
+use std::time::Duration;
+use tokio::time::sleep;
 use xana_commons_rs::qbittorrent_re::serde_json;
 
 pub async fn handle_browse_tor(
     State(state): State<SqlState>,
     Query(params): Query<HashMap<String, String>>,
 ) -> WebResult<BasicResponse> {
-    if let Some(prefix) = params.get("prefix") {
-        render_prefix_search_json(state, prefix.as_str()).await
+    if let Some(query) = params.get("query") {
+        if let Some(_) = params.get("as_count") {
+            render_search_count(state, query.as_str()).await
+        } else {
+            render_search_json(state, query.as_str()).await
+        }
     } else {
         render_html_list(state).await
     }
 }
 
-async fn render_prefix_search_json(state: SqlState, prefix: &str) -> WebResult<BasicResponse> {
+async fn render_search_json(state: SqlState, query: &str) -> WebResult<BasicResponse> {
     let children = state
         .sqlfs
         .transact({
-            let prefix = prefix.to_string();
+            let query = query.to_string();
             move |conn| {
                 //
-                storapi_tor_torrents_list_starts_with(conn, &prefix)
+                storapi_tor_torrents_list_starts_with(conn, &query)
             }
         })
         .await?;
@@ -51,8 +58,28 @@ async fn render_prefix_search_json(state: SqlState, prefix: &str) -> WebResult<B
         .map(|tor| TorEntry { name: tor.name })
         .collect::<Vec<_>>();
 
+    sleep(Duration::from_secs(5)).await;
+
     let json = serde_json::to_string(&front_children)?;
     Ok(BasicResponse(StatusCode::OK, mime::JSON, Body::from(json)))
+}
+
+async fn render_search_count(state: SqlState, query: &str) -> WebResult<BasicResponse> {
+    let children = state
+        .sqlfs
+        .transact({
+            let query = query.to_string();
+            move |conn| {
+                //
+                storapi_tor_torrents_list_starts_with_count(conn, &query)
+            }
+        })
+        .await?;
+    Ok(BasicResponse(
+        StatusCode::OK,
+        mime::PLAIN,
+        Body::from(children.to_string()),
+    ))
 }
 
 async fn render_html_list(state: SqlState) -> WebResult<BasicResponse> {
