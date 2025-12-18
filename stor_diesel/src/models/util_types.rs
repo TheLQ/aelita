@@ -1,48 +1,91 @@
-use crate::StorDieselResult;
+use crate::{StorDieselError, StorDieselResult};
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
 use diesel::mysql::{Mysql, MysqlValue};
 use diesel::serialize::{IsNull, Output, ToSql};
 use diesel::sql_types::{Binary, Json};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::io::Write;
+use std::mem::transmute;
 use xana_commons_rs::BasicWatch;
-use xana_commons_rs::bencode_torrent_re::TorHashV1;
+use xana_commons_rs::bencode_torrent_re::{SHA1_BYTES, SHA256_BYTES, TorHashArray, TorHashV1};
 use xana_commons_rs::tracing_re::trace;
 
-#[derive(Debug, diesel::expression::AsExpression, diesel::deserialize::FromSqlRow)]
-#[diesel(sql_type = diesel::sql_types::Binary)]
-pub struct TorHashV1Diesel(TorHashV1);
+pub type TorHashV1Diesel = TorHashArrayDiesel<SHA1_BYTES>;
+pub type TorHashV2Diesel = TorHashArrayDiesel<SHA256_BYTES>;
 
-impl TorHashV1Diesel {
-    pub fn inner_hash(&self) -> &TorHashV1 {
+#[derive(
+    Debug, diesel::expression::AsExpression, diesel::deserialize::FromSqlRow, Serialize, Deserialize,
+)]
+#[diesel(sql_type = diesel::sql_types::Binary)]
+#[serde(transparent)]
+#[repr(transparent)]
+pub struct TorHashArrayDiesel<const SIZE: usize>(TorHashArray<SIZE>);
+
+impl<const SIZE: usize> TorHashArrayDiesel<SIZE> {
+    pub fn inner_hash(&self) -> &TorHashArray<SIZE> {
         &self.0
+    }
+
+    pub fn into_inner_hash(self) -> TorHashArray<SIZE> {
+        self.0
     }
 }
 
-impl From<TorHashV1> for TorHashV1Diesel {
-    fn from(value: TorHashV1) -> Self {
+//
+
+impl<const SIZE: usize> From<TorHashArray<SIZE>> for TorHashArrayDiesel<SIZE> {
+    fn from(value: TorHashArray<SIZE>) -> Self {
         Self(value)
     }
 }
 
-impl<'t> From<&'t TorHashV1> for TorHashV1Diesel {
-    fn from(value: &'t TorHashV1) -> Self {
+impl<'t, const SIZE: usize> From<&'t TorHashArray<SIZE>> for TorHashArrayDiesel<SIZE> {
+    fn from(value: &'t TorHashArray<SIZE>) -> Self {
+        // cannot transmute ref to owned...
         Self(value.clone())
     }
 }
 
-impl<Db: Backend> FromSql<Binary, Db> for TorHashV1Diesel
+impl<'t, const SIZE: usize> From<&'t TorHashArray<SIZE>> for &'t TorHashArrayDiesel<SIZE> {
+    fn from(value: &'t TorHashArray<SIZE>) -> Self {
+        unsafe { transmute(value) }
+    }
+}
+
+//
+
+impl<const SIZE: usize> From<TorHashArrayDiesel<SIZE>> for TorHashArray<SIZE> {
+    fn from(value: TorHashArrayDiesel<SIZE>) -> Self {
+        value.0
+    }
+}
+
+impl<'t, const SIZE: usize> From<&'t TorHashArrayDiesel<SIZE>> for TorHashArray<SIZE> {
+    fn from(value: &'t TorHashArrayDiesel<SIZE>) -> Self {
+        value.0.clone()
+    }
+}
+
+impl<'t, const SIZE: usize> From<&'t TorHashArrayDiesel<SIZE>> for &'t TorHashArray<SIZE> {
+    fn from(value: &'t TorHashArrayDiesel<SIZE>) -> Self {
+        unsafe { transmute(value) }
+    }
+}
+
+//
+
+impl<Db: Backend, const SIZE: usize> FromSql<Binary, Db> for TorHashArrayDiesel<SIZE>
 where
     *const [u8]: FromSql<Binary, Db>,
 {
     fn from_sql(bytes: Db::RawValue<'_>) -> diesel::deserialize::Result<Self> {
         let inner = <Vec<u8> as FromSql<Binary, Db>>::from_sql(bytes)?;
-        Ok(Self(TorHashV1::from_raw(inner.as_array().unwrap().clone())))
+        Ok(Self(TorHashArray::from_raw(inner.try_into().unwrap())))
     }
 }
 
-impl<Db: Backend> ToSql<Binary, Db> for TorHashV1Diesel
+impl<Db: Backend, const SIZE: usize> ToSql<Binary, Db> for TorHashArrayDiesel<SIZE>
 where
     [u8]: ToSql<Binary, Db>,
 {
@@ -66,7 +109,11 @@ impl RawDieselBytes {
     }
 
     pub fn deserialize_json<'d, D: serde::Deserialize<'d>>(&'d self) -> StorDieselResult<D> {
-        serde_json::from_slice(&self.0).map_err(Into::into)
+        serde_json::from_slice(&self.0).map_err(|e| {
+            let len = self.0.len().min(1000);
+            let extract = str::from_utf8(&self.0[0..len]).unwrap();
+            StorDieselError::serde_extract(e, extract)
+        })
     }
 
     pub fn serialize_postcard<V: Serialize>(value: &V) -> StorDieselResult<Self> {

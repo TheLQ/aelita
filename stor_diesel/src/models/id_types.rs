@@ -1,12 +1,13 @@
 use crate::err::StorDieselError;
 use crate::schema::sql_types::JournalImmutableJournalTypeEnum;
-use crate::schema::sql_types::Tor1TorrentsTorStatusEnum;
+use crate::schema::sql_types::Tor1TorrentsStateEnum;
 use aelita_xrn::defs::space_xrn::SpaceXrn;
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
 use diesel::mysql::{Mysql, MysqlValue};
 use diesel::serialize::{IsNull, Output, ToSql};
 use diesel::sql_types::{Integer, Text, Unsigned};
+use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::io::Write;
 use std::str::FromStr;
@@ -201,16 +202,28 @@ pub enum ModelJournalTypeName {
 enum_value!(JournalImmutableJournalTypeEnum -> ModelJournalTypeName);
 
 #[derive(
-    Debug, Hash, Eq, PartialEq, diesel::expression::AsExpression, diesel::deserialize::FromSqlRow,
+    Debug,
+    Hash,
+    Eq,
+    PartialEq,
+    diesel::expression::AsExpression,
+    diesel::deserialize::FromSqlRow,
+    Serialize,
+    Deserialize,
 )]
-#[diesel(sql_type = Tor1TorrentsTorStatusEnum)]
+#[diesel(sql_type = Tor1TorrentsStateEnum)]
 #[diesel(sql_type = Text)]
+#[serde(transparent)]
 pub struct ModelTorrentState(TorrentState);
-enum_value!(Tor1TorrentsTorStatusEnum -> ModelTorrentState);
+enum_value!(Tor1TorrentsStateEnum -> ModelTorrentState);
 
 impl ModelTorrentState {
     pub fn inner(&self) -> &TorrentState {
         &self.0
+    }
+
+    pub fn into_inner(self) -> TorrentState {
+        self.0
     }
 }
 

@@ -4,6 +4,8 @@ const ID_SEARCH_BOX = "search-box";
 const ID_X_ENTRY = "x-entry";
 const ID_X_ENTRY_HIDDEN = "x-entry-hidden";
 const ID_X_NAME = "x-name";
+const ID_X_STATUS = "x-status";
+const ID_X_PATH = "x-path";
 const ID_ENTRY_TEMPLATE = "entry-template";
 
 function init() {
@@ -92,15 +94,13 @@ async function update_search() {
         search_state.state = STATE_RUNNING;
 
         let cached_next = search_state.next_query;
-        let url = `/browse/tor?prefix=${cached_next}`;
+        let url = `/browse/tor?query=${cached_next}`;
         console.info(`fetch ${url} - ${debug_search_state()}`)
         let response;
         try {
-
             let response_raw = await fetch(url)
             response = await response_raw.json()
             search_state.state = STATE_OFF
-
         } catch (e) {
             console.error(`failed fetch ${url} - ${e}`)
         }
@@ -108,7 +108,8 @@ async function update_search() {
         if (search_state.next_query === cached_next) {
             search_state.next_query = null
         }
-        search_state.last_query = cached_next
+        search_state.last_query = cached_next;
+        await update_search()
     }
 }
 
@@ -149,11 +150,14 @@ function set_search_results(tor_entries) {
 
         let new_entry = template.cloneNode(true);
         new_entry.id = "";
+        new_entry.classList.remove(ID_X_ENTRY_HIDDEN)
         set_search_result(new_entry, next);
         template.parentElement.appendChild(new_entry)
     }
 }
 
 function set_search_result(root, tor_entry) {
-    root.querySelector(`.${ID_X_NAME}`).innerText = tor_entry.name
+    root.querySelector(`.${ID_X_NAME}`).innerText = tor_entry.name;
+    root.querySelector(`.${ID_X_STATUS}`).innerText = tor_entry.status;
+    root.querySelector(`.${ID_X_PATH}`).innerText = tor_entry.path
 }

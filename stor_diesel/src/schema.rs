@@ -7,7 +7,7 @@ pub mod sql_types {
 
     #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
     #[diesel(mysql_type(name = "Enum"))]
-    pub struct Tor1TorrentsTorStatusEnum;
+    pub struct Tor1TorrentsStateEnum;
 }
 
 diesel::table! {
@@ -120,17 +120,29 @@ diesel::table! {
 
 diesel::table! {
     use diesel::sql_types::*;
-    use super::sql_types::Tor1TorrentsTorStatusEnum;
+    use super::sql_types::Tor1TorrentsStateEnum;
 
-    tor1_torrents (torhash) {
+    tor1_torrents (infohash_v1) {
         journal_id -> Unsigned<Integer>,
-        #[max_length = 20]
-        torhash -> Binary,
-        name -> Text,
-        tor_status_changed -> Timestamp,
         qb_host_id -> Unsigned<Integer>,
+        #[max_length = 20]
+        infohash_v1 -> Binary,
+        #[max_length = 32]
+        infohash_v2 -> Binary,
+        name -> Text,
+        comment -> Text,
+        path -> Text,
+        progress -> Float,
+        original_size -> Unsigned<Bigint>,
+        selected_size -> Unsigned<Bigint>,
+        downloaded -> Unsigned<Bigint>,
+        uploaded -> Unsigned<Bigint>,
+        secs_active -> Unsigned<Integer>,
+        secs_seeding -> Unsigned<Integer>,
+        added_on -> Timestamp,
+        completion_on -> Timestamp,
         #[max_length = 18]
-        tor_status -> Tor1TorrentsTorStatusEnum,
+        state -> Tor1TorrentsStateEnum,
     }
 }
 

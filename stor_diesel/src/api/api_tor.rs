@@ -2,7 +2,7 @@ use crate::api::common::{SQL_PLACEHOLDER_MAX, check_insert_num_rows, mysql_last_
 use crate::connection::StorTransaction;
 use crate::err::StorDieselResult;
 use crate::id_types::ModelTorrentState;
-use crate::model_tor::{ModelSuperfast, NewModelTorrents};
+use crate::model_tor::ModelSuperfast;
 use crate::models::id_types::{ModelQbHostId, StorIdType};
 use crate::models::model_tor::{ModelQbHost, ModelTorrents, NewModelQbHosts};
 use crate::schema_temp::{SQL_FAST_TOR_CREATE, SQL_FAST_TOR_DROP};
@@ -12,6 +12,8 @@ use diesel::dsl::count;
 use diesel::{
     ExpressionMethods, HasQuery, Insertable, QueryDsl, RunQueryDsl, TextExpressionMethods, dsl,
 };
+use itertools::Itertools;
+use std::borrow::Borrow;
 use xana_commons_rs::bencode_torrent_re::TorHashV1;
 use xana_commons_rs::qbittorrent_re::TorrentState;
 
@@ -37,14 +39,20 @@ pub fn storapi_tor_host_list(conn: &mut StorTransaction) -> StorDieselResult<Vec
 
 pub fn storapi_tor_torrents_new(
     conn: &mut StorTransaction,
-    torrents: &[NewModelTorrents],
+    torrents: impl IntoIterator<Item = ModelTorrents>,
 ) -> StorDieselResult<()> {
-    assert_ne!(torrents.len(), 0);
-    for chunk in torrents.chunks(SQL_PLACEHOLDER_MAX / /*columns*/5) {
+    let torrents = torrents.into_iter();
+    for chunk in torrents
+        .into_iter()
+        .chunks(SQL_PLACEHOLDER_MAX / /*columns*/5)
+        .into_iter()
+    {
+        let chunk = chunk.collect_vec();
+        let expected_len = chunk.len();
         let rows = diesel::insert_into(schema::tor1_torrents::table)
             .values(chunk)
             .execute(conn.inner());
-        check_insert_num_rows(rows, chunk.len())?;
+        check_insert_num_rows(rows, expected_len)?;
     }
     Ok(())
 }
@@ -68,7 +76,7 @@ pub fn storapi_tor_torrents_list_starts_with_count(
     starts_with: &str,
 ) -> StorDieselResult<i64> {
     let mut query = schema::tor1_torrents::table
-        .select(dsl::count(schema::tor1_torrents::torhash))
+        .select(dsl::count_star())
         .into_boxed();
     if !starts_with.is_empty() {
         query = query.filter(schema::tor1_torrents::name.like(format!("%{starts_with}%")));
@@ -78,13 +86,17 @@ pub fn storapi_tor_torrents_list_starts_with_count(
 
 pub fn storapi_tor_torrents_list_by_hash(
     conn: &mut StorTransaction,
-    info_hashes: &[TorHashV1Diesel],
+    info_hashes: impl IntoIterator<Item = impl Borrow<TorHashV1>>,
 ) -> StorDieselResult<Vec<ModelTorrents>> {
-    assert_ne!(info_hashes.len(), 0);
     let mut res = Vec::new();
-    for chunk in info_hashes.chunks(SQL_PLACEHOLDER_MAX) {
+    for chunk in info_hashes
+        .into_iter()
+        .chunks(SQL_PLACEHOLDER_MAX)
+        .into_iter()
+    {
+        let chunk: Vec<TorHashV1Diesel> = chunk.map(|v| v.borrow().into()).collect();
         let rows = ModelTorrents::query()
-            .filter(schema::tor1_torrents::torhash.eq_any(chunk))
+            .filter(schema::tor1_torrents::infohash_v1.eq_any(chunk))
             .get_results(conn.inner())?;
         res.extend(rows);
     }
@@ -97,8 +109,8 @@ pub fn storapi_tor_torrents_update_status(
     state: &TorrentState,
 ) -> StorDieselResult<()> {
     let rows = diesel::update(schema::tor1_torrents::table)
-        .filter(schema::tor1_torrents::torhash.eq(TorHashV1Diesel::from(hash)))
-        .set(schema::tor1_torrents::tor_status.eq(ModelTorrentState::from(state)))
+        .filter(schema::tor1_torrents::infohash_v2.eq(TorHashV1Diesel::from(hash)))
+        .set(schema::tor1_torrents::state.eq(ModelTorrentState::from(state)))
         .execute(conn.inner());
     check_insert_num_rows(rows, 1)
 }

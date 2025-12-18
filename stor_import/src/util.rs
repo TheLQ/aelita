@@ -4,10 +4,18 @@ use xana_commons_rs::bencode_torrent_re::TorHashV1;
 
 pub trait HashExtractor<I> {
     fn as_tor_lookup_by_hash(&self) -> HashMap<&TorHashV1, &I>;
+
+    fn into_tor_lookup_by_hash(self) -> HashMap<TorHashV1, I>;
 }
 
 impl HashExtractor<ModelTorrents> for Vec<ModelTorrents> {
     fn as_tor_lookup_by_hash(&self) -> HashMap<&TorHashV1, &ModelTorrents> {
-        self.iter().map(|v| (v.torhash.inner_hash(), v)).collect()
+        self.iter().map(|v| (&v.infohash_v1, v)).collect()
+    }
+
+    fn into_tor_lookup_by_hash(self) -> HashMap<TorHashV1, ModelTorrents> {
+        self.into_iter()
+            .map(|v| (v.infohash_v1.clone(), v))
+            .collect()
     }
 }
