@@ -2,6 +2,7 @@ pub mod api_hd;
 pub mod api_journal;
 pub mod api_space;
 pub mod api_tor;
+mod api_tor_mut;
 pub mod api_variables;
 mod common;
 
