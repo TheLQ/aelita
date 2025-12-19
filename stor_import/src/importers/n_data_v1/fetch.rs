@@ -92,7 +92,7 @@ fn paths_compressed() -> StorImportResult<(CompressedPaths, Vec<u8>)> {
 
 pub fn storfetch_ndata(conn: &mut StorTransaction) -> StorImportResult<()> {
     let (_compressed, compressed_encoded) = paths_compressed()?;
-    let compressed_encoded = std::fs::read(COMPRESSEDD_CACHE).map_io_err(COMPRESSEDD_CACHE)?;
+    // let compressed_encoded = std::fs::read(COMPRESSEDD_CACHE).map_io_err(COMPRESSEDD_CACHE)?;
     let data = RawDieselBytes(compressed_encoded);
 
     let journal_id = storapi_journal_immutable_push_single(

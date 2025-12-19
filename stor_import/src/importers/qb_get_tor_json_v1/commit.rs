@@ -1,11 +1,11 @@
 use crate::err::StorImportResult;
 use crate::importers::qb_get_tor_json_v1::defs::ImportQbMetadata;
 use aelita_stor_diesel::StorTransaction;
-use aelita_stor_diesel::api_tor::{
-    storapi_tor_torrents_list_by_hash, storapi_tor_torrents_push,
-    storapi_tor_torrents_update_status_batch,
+use aelita_stor_diesel::api_tor::storapi_tor_torrents_list_by_hash;
+use aelita_stor_diesel::api_tor_mut::{
+    storapi_tor_torrents_push, storapi_tor_torrents_update_status_batch,
 };
-use aelita_stor_diesel::id_types::{ModelJournalTypeName, ModelTorrentState};
+use aelita_stor_diesel::id_types::ModelJournalTypeName;
 use aelita_stor_diesel::model_journal::ModelJournalImmutable;
 use aelita_stor_diesel::model_tor::{
     ModelTorrentsDiesel, ModelTorrentsMeta, ModelTorrentsQBittorrent,
