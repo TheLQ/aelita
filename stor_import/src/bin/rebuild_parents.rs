@@ -1,5 +1,5 @@
 use aelita_commons::log_init;
-use aelita_stor_diesel::api_hd_mut::storapi_rebuild_parents;
+use aelita_stor_diesel::storapi_rebuild_parents;
 use aelita_stor_diesel::{PermaStore, StorTransaction, establish_connection};
 use aelita_stor_import::err::StorImportResult;
 use std::process::ExitCode;

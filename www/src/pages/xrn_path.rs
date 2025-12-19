@@ -4,7 +4,7 @@ use crate::err::{WebError, WebResult};
 use crate::server::convert_xrn::XrnFromUrl;
 use crate::server::util::{BasicResponse, pretty_basic_page};
 use aelita_stor_diesel::StorDieselError;
-use aelita_stor_diesel::api_hd::storapi_hd_list_children;
+use aelita_stor_diesel::storapi_hd_list_children;
 use aelita_xrn::defs::path_xrn::PathXrn;
 use axum::body::Body;
 use axum::extract::State;

@@ -3,9 +3,9 @@ use crate::api::api_journal::{storapi_journal_immutable_push_single, storapi_res
 use crate::api::api_space::{storapi_reset_space, storapi_space_new, storapi_space_owned_new};
 use crate::api::assert_test_database;
 use crate::connection::{StorConnection, StorTransaction};
-use crate::diesel_wrappers::RawDieselBytes;
 use crate::err::StorDieselResult;
 use crate::models::date::StorDate;
+use crate::models::diesel_wrappers::RawDieselBytes;
 use crate::models::id_types::ModelJournalTypeName;
 use crate::models::model_journal::{ModelJournalImmutable, NewModelJournalImmutable};
 use crate::models::model_space::{ModelSpaceOwned, NewModelSpaceName};

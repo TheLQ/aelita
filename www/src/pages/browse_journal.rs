@@ -2,8 +2,8 @@ use crate::controllers::handlebars::HbsPage;
 use crate::controllers::state::WState;
 use crate::err::WebResult;
 use crate::server::util::BasicResponse;
-use aelita_stor_diesel::api_journal::storapi_journal_list;
-use aelita_stor_diesel::model_journal::ModelJournalImmutableDiesel;
+use aelita_stor_diesel::ModelJournalImmutableDiesel;
+use aelita_stor_diesel::storapi_journal_list;
 use axum::extract::State;
 use serde::Serialize;
 

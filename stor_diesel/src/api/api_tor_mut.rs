@@ -1,9 +1,10 @@
+use crate::api::assert_test_database;
 use crate::api::common::{SQL_PLACEHOLDER_MAX, check_insert_num_rows, mysql_last_id};
-use crate::diesel_wrappers::TorHashV1Diesel;
-use crate::id_types::{ModelQbHostId, ModelTorrentState, StorIdType};
-use crate::model_tor::{ModelSuperfast, ModelTorrentsDiesel, ModelTorrentsMeta, NewModelQbHosts};
+use crate::models::diesel_wrappers::TorHashV1Diesel;
 use crate::schema_temp::{SQL_FAST_TOR_CREATE, SQL_FAST_TOR_TRUNCATE};
-use crate::{StorDieselResult, StorTransaction, assert_test_database, schema};
+use crate::{ModelQbHostId, ModelTorrentState, StorIdType};
+use crate::{ModelSuperfast, ModelTorrentsDiesel, ModelTorrentsMeta, NewModelQbHosts};
+use crate::{StorDieselResult, StorTransaction, schema};
 use diesel::RunQueryDsl;
 use diesel::prelude::*;
 use itertools::Itertools;

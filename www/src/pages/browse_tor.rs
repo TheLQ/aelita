@@ -2,7 +2,7 @@ use crate::controllers::handlebars::HbsPage;
 use crate::controllers::state::WState;
 use crate::err::WebResult;
 use crate::server::util::BasicResponse;
-use aelita_stor_diesel::api_tor::{
+use aelita_stor_diesel::{
     storapi_tor_torrents_list_starts_with, storapi_tor_torrents_list_starts_with_count,
 };
 use axum::body::Body;

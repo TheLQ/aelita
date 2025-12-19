@@ -1,8 +1,8 @@
+use crate::ModelTorrentsDiesel;
 use crate::api::common::SQL_PLACEHOLDER_MAX;
 use crate::connection::StorTransaction;
-use crate::diesel_wrappers::TorHashV1Diesel;
 use crate::err::StorDieselResult;
-use crate::model_tor::ModelTorrentsDiesel;
+use crate::models::diesel_wrappers::TorHashV1Diesel;
 use crate::models::model_tor::ModelQbHost;
 use crate::schema;
 use diesel::{ExpressionMethods, HasQuery, QueryDsl, RunQueryDsl, TextExpressionMethods, dsl};

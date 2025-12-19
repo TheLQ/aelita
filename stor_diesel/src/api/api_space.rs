@@ -1,9 +1,10 @@
+use crate::api::assert_test_database;
 use crate::api::common::{check_insert_num_rows, mysql_last_id};
 use crate::connection::StorTransaction;
 use crate::err::StorDieselResult;
 use crate::models::id_types::{ModelSpaceId, StorIdType};
 use crate::models::model_space::{ModelSpaceName, ModelSpaceOwned, NewModelSpaceName};
-use crate::{assert_test_database, schema};
+use crate::schema;
 use diesel::prelude::*;
 use diesel::{HasQuery, QueryDsl, RunQueryDsl, dsl};
 use std::ops::Range;

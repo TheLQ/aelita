@@ -1,8 +1,6 @@
 use crate::api::common::SQL_PLACEHOLDER_MAX;
-use crate::model_hd::{
-    HdPathAssociation, NewHdPathAssociation, NewHdPathAssociationRoot, path_components,
-};
 use crate::models::model_hd::HD_PATH_DEPTH;
+use crate::{HdPathAssociation, NewHdPathAssociation, NewHdPathAssociationRoot, path_components};
 use crate::{StorDieselError, StorDieselResult, StorTransaction};
 use crate::{schema, schema_temp};
 use diesel::RunQueryDsl;
@@ -332,7 +330,7 @@ fn push_associations_simple(
 
 #[cfg(test)]
 mod test {
-    use crate::api_hd::storapi_hd_list_children;
+    use crate::storapi_hd_list_children;
     use crate::{PermaStore, StorDieselResult, StorTransaction, establish_connection};
     use aelita_commons::log_init;
     use xana_commons_rs::tracing_re::info;

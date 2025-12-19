@@ -1,4 +1,4 @@
-use aelita_stor_diesel::id_types::ModelQbHostId;
+use aelita_stor_diesel::ModelQbHostId;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]

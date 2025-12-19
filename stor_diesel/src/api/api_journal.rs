@@ -1,12 +1,11 @@
 use crate::api::common::{assert_test_database, check_insert_num_rows, mysql_last_id};
 use crate::connection::StorTransaction;
 use crate::err::{StorDieselError, StorDieselResult};
-use crate::model_journal::ModelJournalImmutableDiesel;
 use crate::models::id_types::{ModelJournalId, StorIdType};
 use crate::models::model_journal::{
     ModelJournalImmutable, NewModelJournalImmutable, NewModelJournalImmutableDiesel,
 };
-use crate::schema;
+use crate::{ModelJournalImmutableDiesel, schema};
 use chrono::NaiveDateTime;
 use diesel::dsl;
 use diesel::prelude::*;
