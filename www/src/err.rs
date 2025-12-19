@@ -2,7 +2,7 @@ use crate::server::util::{BasicResponse, pretty_basic_page};
 use aelita_stor_diesel::StorDieselError;
 use aelita_xrn::err::LibxrnError;
 use axum::body::Body;
-use axum::http::{StatusCode, header};
+use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use handlebars::html_escape;
 use std::backtrace::Backtrace;

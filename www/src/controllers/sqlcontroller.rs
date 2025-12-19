@@ -3,8 +3,6 @@ use aelita_stor_diesel::load_db_url_from_env;
 use aelita_stor_diesel::{PermaStore, StorTransaction};
 use aelita_stor_diesel::{StorDieselResult, apply_stor_instrument};
 use deadpool_diesel::mysql::{Hook, Manager, Pool};
-use handlebars::Handlebars;
-use std::sync::Arc;
 use std::time::SystemTime;
 use xana_commons_rs::tracing_re::{info, trace};
 
@@ -40,7 +38,7 @@ impl SqlController {
         let result = conn
             .interact(|conn| {
                 //
-                StorTransaction::new_transaction("www", conn, inner)
+                StorTransaction::new_transaction(&basic_cause("www"), conn, inner)
             })
             .await??;
         Ok(result)

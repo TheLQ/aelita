@@ -172,7 +172,7 @@ macro_rules! enum_value {
 
         impl ToSql<$diesel_type, Mysql> for $name {
             fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Mysql>) -> diesel::serialize::Result {
-                let as_str: &str = self.into();
+                let as_str: &str = self.as_ref();
                 out.write_all(as_str.as_bytes())?;
                 Ok(IsNull::No)
             }
@@ -189,7 +189,7 @@ macro_rules! enum_value {
     diesel::expression::AsExpression,
     diesel::deserialize::FromSqlRow,
     strum::EnumString,
-    strum::IntoStaticStr,
+    strum::AsRefStr,
     strum::VariantArray,
     strum::Display,
 )]
@@ -236,6 +236,12 @@ impl From<TorrentState> for ModelTorrentState {
 impl<'t> From<&'t TorrentState> for ModelTorrentState {
     fn from(value: &'t TorrentState) -> Self {
         Self(value.clone())
+    }
+}
+
+impl AsRef<str> for ModelTorrentState {
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
     }
 }
 
