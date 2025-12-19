@@ -140,9 +140,11 @@ function set_search_results(tor_entries) {
             existing_root.classList.add(ID_X_ENTRY_HIDDEN)
             existing_root.nextElementSibling.classList.add(ID_X_ENTRY_HIDDEN)
         } else {
-            existing_root.classList.remove(ID_X_ENTRY_HIDDEN)
+            if (existing_root.classList != null) {
+                existing_root.classList.remove(ID_X_ENTRY_HIDDEN)
+            }
             existing_root.nextElementSibling.classList.remove(ID_X_ENTRY_HIDDEN)
-            set_search_result(existing_root, next)
+            set_search_result([existing_root], next)
         }
     }
     while (tor_entries.length !== 0) {
@@ -151,14 +153,17 @@ function set_search_results(tor_entries) {
         let new_entry = entry_template.cloneNode(true);
         new_entry.id = "";
         new_entry.classList.remove(ID_X_ENTRY_HIDDEN)
-        let new_display = display_template.cloneNode(true);
-        new_display.id = "";
-        new_display.classList.remove(ID_X_ENTRY_HIDDEN)
+        // let new_display = display_template.cloneNode(true);
+        // new_display.id = "";
+        // new_display.classList.remove(ID_X_ENTRY_HIDDEN)
 
         entry_template.parentElement.appendChild(new_entry)
-        display_template.parentElement.appendChild(new_display)
+        // display_template.parentElement.appendChild(new_display)
 
-        set_search_result([new_entry, new_display], next);
+        set_search_result([
+            new_entry,
+            //new_display
+        ], next);
 
     }
 }
