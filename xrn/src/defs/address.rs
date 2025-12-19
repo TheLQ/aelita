@@ -1,4 +1,5 @@
-use crate::err::LibxrnError;
+use crate::defs::common::XrnTypeImpl;
+use crate::err::{LibxrnError, XrnErrorKind};
 use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer};
 use std::backtrace::Backtrace;
@@ -13,13 +14,6 @@ pub struct XrnAddr {
     value: String,
 }
 
-#[derive(Clone, Debug, AsRefStr, EnumString, PartialEq, VariantArray, IntoStaticStr, Display)]
-#[strum(serialize_all = "lowercase")]
-pub enum XrnType {
-    Project,
-    Path,
-}
-
 impl XrnAddr {
     pub fn new(atype: XrnType, value: impl Into<String>) -> Self {
         Self {
@@ -28,8 +22,8 @@ impl XrnAddr {
         }
     }
 
-    pub fn atype(&self) -> &XrnType {
-        &self.atype
+    pub fn atype(&self) -> XrnType {
+        self.atype
     }
 
     pub fn value(&self) -> &str {
@@ -46,21 +40,16 @@ impl Display for XrnAddr {
 impl FromStr for XrnAddr {
     type Err = LibxrnError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len() < 5 {
-            return Err(LibxrnError::ParseShort(s.into(), Backtrace::capture()));
-        }
-        let (prefix, remain) = s.split_at(4);
-        if prefix != "xrn:" {
-            return Err(LibxrnError::ParsePrefix(s.into(), Backtrace::capture()));
-        }
-
-        let Some(atype) = XrnType::try_prefix(remain) else {
-            return Err(LibxrnError::InvalidType(
-                remain.to_string(),
-                Backtrace::capture(),
-            ));
+        let remain = match s.split_at_checked(3) {
+            Some(("xrn", remain)) => remain,
+            _ => return Err(XrnErrorKind::AddrPrefix.err_raw(s)),
         };
-        let (_atype_raw, remain) = remain.split_at(atype.as_ref().len());
+
+        let (atype, remain) = match XrnType::split_type(remain) {
+            None => return Err(XrnErrorKind::AddrInvalidType.err_raw(s)),
+            Some((_, "")) => return Err(XrnErrorKind::PathEmptyValue.err_raw(s)),
+            Some(v) => v,
+        };
         Ok(XrnAddr {
             atype,
             value: remain.to_string(),
@@ -68,16 +57,16 @@ impl FromStr for XrnAddr {
     }
 }
 
-impl XrnType {
-    fn try_prefix(input: &str) -> Option<Self> {
-        for atype in Self::VARIANTS {
-            if input.starts_with(atype.as_ref()) {
-                return Some(atype.clone());
-            }
-        }
-        None
-    }
+#[derive(
+    Clone, Copy, Debug, AsRefStr, EnumString, PartialEq, VariantArray, IntoStaticStr, Display,
+)]
+#[strum(serialize_all = "lowercase")]
+pub enum XrnType {
+    Project,
+    Path,
 }
+
+impl XrnTypeImpl<'_> for XrnType {}
 
 struct XrnAddrVisitor;
 
@@ -123,13 +112,13 @@ mod test {
     fn parse_test() -> LibxrnResult<()> {
         let addr_raw = "xrn:project:page/123";
         let addr = XrnAddr::from_str(addr_raw)?;
-        assert_eq!(addr.atype(), &XrnType::Project);
+        assert_eq!(addr.atype(), XrnType::Project);
         assert_eq!(addr.value(), ":page/123");
         assert_eq!(addr.to_string(), addr_raw);
 
         let addr_raw = "xrn:path/page/123";
         let addr = XrnAddr::from_str(addr_raw)?;
-        assert_eq!(addr.atype(), &XrnType::Path);
+        assert_eq!(addr.atype(), XrnType::Path);
         assert_eq!(addr.value(), "/page/123");
         assert_eq!(addr.to_string(), addr_raw);
 

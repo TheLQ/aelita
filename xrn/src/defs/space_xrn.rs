@@ -1,6 +1,6 @@
 use crate::defs::address::{XrnAddr, XrnType};
 use crate::defs::common::SubXrn;
-use crate::err::LibxrnError;
+use crate::err::{LibxrnError, XrnErrorKind};
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
 use std::backtrace::Backtrace;
@@ -52,27 +52,31 @@ impl TryFrom<XrnAddr> for SpaceXrn {
     type Error = LibxrnError;
 
     fn try_from(addr: XrnAddr) -> Result<Self, Self::Error> {
-        if addr.atype() != &XrnType::Project {
-            return Err(LibxrnError::AddrInvalidType(addr, Backtrace::capture()));
-        }
+        // if addr.atype() != XrnType::Project {
+        //     return Err(LibxrnError::kind(XrnErrorKind::SpaceInvalidInputType));
+        // }
 
-        let value = addr.value();
-        let Some(sep) = value.find("/") else {
-            return Err(LibxrnError::AddrMissingSeparator(
-                addr,
-                Backtrace::capture(),
-            ));
-        };
-        let (ptype_raw, remain) = value.split_at(sep);
-        let Ok(ptype) = ProjectTypeXrn::from_str(ptype_raw) else {
-            return Err(LibxrnError::AddrInvalidType(addr, Backtrace::capture()));
-        };
-
-        let Ok(id) = remain[1..].parse() else {
-            return Err(LibxrnError::AddrNotANumber(addr, Backtrace::capture()));
-        };
-
-        Ok(Self { ptype, id })
+        todo!()
+        // let value = addr.value();
+        // let Some(sep) = value.find("/") else {
+        //     return Err(LibxrnError::AddrMissingSeparator(
+        //         addr,
+        //         Backtrace::capture(),
+        //     ));
+        // };
+        // let (ptype_raw, remain) = value.split_at(sep);
+        // let Ok(ptype) = ProjectTypeXrn::from_str(ptype_raw) else {
+        //     return Err(LibxrnError::AddrInvalidType(
+        //         addr,
+        //         "unknown-space-type".into(),
+        //         Backtrace::capture(),
+        //     ));
+        // };
+        //
+        // let Ok(id) = remain[1..].parse() else {
+        //     return Err(LibxrnError::AddrNotANumber(addr, Backtrace::capture()));
+        // };
+        // Ok(Self { ptype, id })
     }
 }
 
