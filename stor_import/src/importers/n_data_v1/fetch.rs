@@ -13,7 +13,7 @@ use xana_commons_rs::tracing_re::{error, info};
 use xana_commons_rs::{BasicWatch, LOCALE, SimpleIoMap, read_dirs_recursive_better};
 
 static ROOTS: LazyLock<Vec<String>> = LazyLock::new(|| {
-    let path = Path::new("ndata_roots.txt");
+    let path = Path::new("local_data/ndata_roots.txt");
     let raw = std::fs::read_to_string(path).map_io_err(path).unwrap();
     raw.split('\n').map(|s| s.to_string()).collect()
 });

@@ -152,7 +152,7 @@ pub fn path_components<'p, R>(
 
 #[cfg(test)]
 mod test {
-    use crate::model_hd::path_components;
+    use crate::path_components;
     use std::path::Path;
 
     #[test]
