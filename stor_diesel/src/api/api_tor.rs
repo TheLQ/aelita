@@ -1,23 +1,14 @@
-use crate::api::common::{SQL_PLACEHOLDER_MAX, check_insert_num_rows, mysql_last_id};
+use crate::api::common::SQL_PLACEHOLDER_MAX;
 use crate::connection::StorTransaction;
 use crate::diesel_wrappers::TorHashV1Diesel;
 use crate::err::StorDieselResult;
-use crate::id_types::ModelTorrentState;
-use crate::model_tor::{
-    ModelSuperfast, ModelTorrentsDiesel, ModelTorrentsMeta, ModelTorrentsQBittorrent,
-};
-use crate::models::id_types::{ModelQbHostId, StorIdType};
-use crate::models::model_tor::{ModelQbHost, NewModelQbHosts};
-use crate::schema_temp::{SQL_FAST_TOR_CREATE, SQL_FAST_TOR_TRUNCATE};
-use crate::{assert_test_database, schema};
-use diesel::{
-    ExpressionMethods, HasQuery, Insertable, QueryDsl, RunQueryDsl, TextExpressionMethods, dsl,
-};
+use crate::model_tor::ModelTorrentsDiesel;
+use crate::models::model_tor::ModelQbHost;
+use crate::schema;
+use diesel::{ExpressionMethods, HasQuery, QueryDsl, RunQueryDsl, TextExpressionMethods, dsl};
 use itertools::Itertools;
 use std::borrow::Borrow;
 use xana_commons_rs::bencode_torrent_re::TorHashV1;
-use xana_commons_rs::qbittorrent_re::TorrentState;
-use xana_commons_rs::tracing_re::trace;
 
 pub fn storapi_tor_host_list(conn: &mut StorTransaction) -> StorDieselResult<Vec<ModelQbHost>> {
     ModelQbHost::query()

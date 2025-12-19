@@ -1,11 +1,10 @@
 use crate::{StorDieselError, StorDieselResult};
-use chrono::{DateTime, NaiveDateTime};
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
 use diesel::mysql::{Mysql, MysqlValue};
 use diesel::serialize::{IsNull, Output, ToSql};
-use diesel::sql_types::{Binary, Json, Timestamp};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use diesel::sql_types::{Binary, Json};
+use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::mem::transmute;
 use xana_commons_rs::BasicWatch;

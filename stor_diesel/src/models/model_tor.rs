@@ -2,12 +2,11 @@ use crate::models::diesel_wrappers::{TorHashV1Diesel, TorHashV2Diesel};
 use crate::models::id_types::{ModelJournalId, ModelQbHostId, ModelTorrentState};
 use crate::{StorDieselError, StorDieselResult};
 use chrono::{DateTime, NaiveDateTime};
-use diesel::{HasQuery, Insertable, Queryable, QueryableByName};
+use diesel::{HasQuery, Insertable};
 use serde::{Deserialize, Serialize};
 use xana_commons_rs::bencode_torrent_re::{
     ByTorHash, SHA1_BYTES, SHA256_BYTES, TorHashArray, TorHashV1, TorHashV2,
 };
-use xana_commons_rs::qbittorrent_re::TorrentState;
 
 #[derive(HasQuery, Insertable, Debug, Clone, Serialize, Deserialize)]
 #[diesel(table_name = crate::schema::tor1_torrents)]

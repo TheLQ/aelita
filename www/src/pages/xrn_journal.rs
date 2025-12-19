@@ -3,9 +3,9 @@ use crate::err::WebResult;
 use axum::body::Body;
 use axum::extract::{Path, State};
 
-pub async fn handle_xrn_journal(
-    State(state): State<WState<'_>>,
-    xrn_raw: Option<Path<String>>,
+pub async fn _handle_xrn_journal(
+    State(_state): State<WState<'_>>,
+    _xrn_raw: Option<Path<String>>,
 ) -> WebResult<Body> {
     todo!()
 }

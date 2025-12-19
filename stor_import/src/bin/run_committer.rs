@@ -1,13 +1,13 @@
 use aelita_commons::log_init;
+use aelita_stor_diesel::api_hd_mut::storapi_hd_revert_by_pop;
 use aelita_stor_diesel::api_journal::{
-    storapi_journal_commit_new, storapi_journal_commit_remain_next, storapi_journal_uncommit_all,
+    storapi_journal_commit_new, storapi_journal_commit_remain_next,
 };
-use aelita_stor_diesel::api_tor_mut::storapi_tor_reset;
 use aelita_stor_diesel::id_types::ModelJournalTypeName;
 use aelita_stor_diesel::model_journal::ModelJournalImmutable;
 use aelita_stor_diesel::{PermaStore, StorTransaction, establish_connection_or_panic};
 use aelita_stor_import::err::{StorImportError, StorImportResult};
-use aelita_stor_import::storcommit_torrents;
+use aelita_stor_import::{storcommit_hd, storcommit_torrents};
 use std::ops::ControlFlow;
 use std::process::ExitCode;
 use xana_commons_rs::tracing_re::info;

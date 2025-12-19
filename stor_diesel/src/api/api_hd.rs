@@ -1,29 +1,21 @@
 use crate::api::common::SQL_PLACEHOLDER_MAX;
-use crate::api_variables::{storapi_row_count, storapi_variables_get_str};
-use crate::id_types::{ModelJournalId, ModelJournalTypeName};
 use crate::model_hd::{
     HdPathAssociation, NewHdPathAssociation, NewHdPathAssociationRoot, path_components,
 };
-use crate::models::model_hd::{HD_PATH_DEPTH, HdPathDiesel};
-use crate::path_const::PathConst;
-use crate::schema_temp::{FAST_HD_COMPONENTS_CREATE, FAST_HD_COMPONENTS_TRUNCATE};
-use crate::{StorDieselError, StorDieselResult, StorTransaction, assert_test_database};
+use crate::models::model_hd::HD_PATH_DEPTH;
+use crate::{StorDieselError, StorDieselResult, StorTransaction};
 use crate::{schema, schema_temp};
 use diesel::RunQueryDsl;
-use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
-use diesel::sql_types::{Binary, Unsigned};
-use fxhash::FxHashSet;
+use diesel::sql_types::Binary;
 use itertools::Itertools;
 use std::backtrace::Backtrace;
 use std::collections::{HashMap, HashSet};
-use std::ffi::OsStr;
-use std::fmt::Write;
 use std::os::unix::prelude::OsStrExt;
 use std::path::Path;
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{info, trace};
-use xana_commons_rs::{BasicWatch, CommaJoiner, LOCALE, SimpleIoMap, SpaceJoiner};
+use xana_commons_rs::{BasicWatch, LOCALE, SpaceJoiner};
 
 pub fn storapi_hd_list_children(
     conn: &mut StorTransaction,
