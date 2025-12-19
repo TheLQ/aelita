@@ -1,17 +1,15 @@
 use crate::defs::address::{XrnAddr, XrnType};
 use crate::defs::common::{SubXrn, XrnTypeImpl};
 use crate::err::{LibxrnError, XrnErrorKind};
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Serialize, Serializer};
 use std::fmt::Formatter;
-use std::fs::rename;
 use std::os::unix::prelude::OsStrExt;
 use std::path::{Path, PathBuf};
-use std::str::Utf8Error;
 
 #[derive(Debug, Clone)]
 pub struct PathXrn {
-    path: PathBuf,
     ptype: PathXrnType,
+    path: PathBuf,
     tree_id: Option<u32>,
 }
 
@@ -129,7 +127,7 @@ impl std::fmt::Display for PathXrn {
 }
 
 #[derive(
-    Debug, Clone, Copy, PartialEq, strum::IntoStaticStr, strum::EnumString, strum::VariantArray,
+    Debug, Clone, Copy, PartialEq, strum::AsRefStr, strum::EnumString, strum::VariantArray,
 )]
 #[strum(serialize_all = "lowercase")]
 pub enum PathXrnType {

@@ -1,10 +1,7 @@
 use crate::defs::address::XrnAddr;
 use std::backtrace::Backtrace;
-use std::borrow::Borrow;
 use std::fmt::{Display, Formatter};
-use std::num::ParseIntError;
-use std::str::Utf8Error;
-use strum::{AsRefStr, AsStaticStr};
+use strum::AsRefStr;
 use thiserror::Error;
 use xana_commons_rs::MyBacktrace;
 
@@ -31,6 +28,8 @@ pub enum XrnErrorKind {
     //
     SpaceInvalidInputType,
     SpaceInvalidType,
+    SpaceEmptyValue,
+    InvalidSpaceId,
     //
     // InvalidUtf8,
     // InvalidInt,

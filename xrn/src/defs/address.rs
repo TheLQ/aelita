@@ -2,10 +2,9 @@ use crate::defs::common::XrnTypeImpl;
 use crate::err::{LibxrnError, XrnErrorKind};
 use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer};
-use std::backtrace::Backtrace;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use strum::{AsRefStr, Display, EnumString, IntoStaticStr, VariantArray};
+use strum::{AsRefStr, Display, EnumString, VariantArray};
 
 /// xrn:project:1000000
 #[derive(Debug)]
@@ -57,12 +56,10 @@ impl FromStr for XrnAddr {
     }
 }
 
-#[derive(
-    Clone, Copy, Debug, AsRefStr, EnumString, PartialEq, VariantArray, IntoStaticStr, Display,
-)]
+#[derive(Clone, Copy, Debug, AsRefStr, EnumString, PartialEq, VariantArray, Display)]
 #[strum(serialize_all = "lowercase")]
 pub enum XrnType {
-    Project,
+    Space,
     Path,
 }
 
@@ -102,9 +99,9 @@ mod test {
 
     #[test]
     fn enum_test() {
-        assert_eq!(XrnType::Project.as_ref(), "project");
+        assert_eq!(XrnType::Space.as_ref(), "project");
 
-        let addr = XrnAddr::new(XrnType::Project, ":page/123");
+        let addr = XrnAddr::new(XrnType::Space, ":page/123");
         assert_eq!(addr.to_string(), "xrn:project:page/123")
     }
 
@@ -112,7 +109,7 @@ mod test {
     fn parse_test() -> LibxrnResult<()> {
         let addr_raw = "xrn:project:page/123";
         let addr = XrnAddr::from_str(addr_raw)?;
-        assert_eq!(addr.atype(), XrnType::Project);
+        assert_eq!(addr.atype(), XrnType::Space);
         assert_eq!(addr.value(), ":page/123");
         assert_eq!(addr.to_string(), addr_raw);
 

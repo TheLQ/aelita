@@ -1,17 +1,23 @@
-use crate::defs::address::XrnType;
+use crate::defs::address::{XrnAddr, XrnType};
 use xana_commons_rs::tracing_re::trace;
 
 pub trait SubXrn {
     fn atype() -> XrnType;
+
+    fn to_addr<'u>(&'u self) -> XrnAddr
+    where
+        XrnAddr: From<&'u Self>,
+    {
+        self.into()
+    }
 }
 
 pub trait XrnTypeImpl<'s>
 where
-    Self: strum::VariantArray + Clone,
-    &'static str: From<&'s Self>,
+    Self: strum::VariantArray + Clone + AsRef<str>,
 {
     fn is_starts_with(&'static self, input: &'s str) -> Option<(Self, &'s str)> {
-        let lookup: &'static str = self.into();
+        let lookup: &'static str = self.as_ref();
         trace!("testing {lookup} on {input}");
 
         let (sep, remain) = input.split_at_checked(1)?;
