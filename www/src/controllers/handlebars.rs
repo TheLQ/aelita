@@ -9,14 +9,16 @@ use std::path::PathBuf;
 use strum::VariantArray;
 
 impl<'h> WState<'h> {
-    fn render_page_body(&self, page: HbsPage, data: impl Serialize) -> WebResult<Body> {
-        let html = self.handlebars.backend.render(page.as_ref(), &data)?;
-        Ok(Body::from(html))
+    fn render_page_string(&self, page: HbsPage, data: impl Serialize) -> WebResult<String> {
+        self.handlebars
+            .backend
+            .render(page.as_ref(), &data)
+            .map_err(Into::into)
     }
 
     pub fn render_page(&self, page: HbsPage, data: impl Serialize) -> WebResult<BasicResponse> {
-        let body = self.render_page_body(page, data)?;
-        Ok(BasicResponse(StatusCode::OK, mime::HTML, body))
+        let body = self.render_page_string(page, data)?;
+        Ok(BasicResponse(StatusCode::OK, mime::HTML, Body::from(body)))
     }
 }
 pub struct HandlebarsController<'h> {

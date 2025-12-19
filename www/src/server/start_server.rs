@@ -12,7 +12,7 @@ use aelita_stor_diesel::PermaStore;
 use axum::Router;
 use axum::http::header::CACHE_CONTROL;
 use axum::http::{HeaderValue, Request};
-use axum::routing::{get, post};
+use axum::routing::get;
 use tower::ServiceBuilder;
 use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
