@@ -1,23 +1,25 @@
-use crate::controllers::handlebars::HandlebarsPage;
-use crate::controllers::sqlcontroller::SqlState;
+use crate::controllers::handlebars::HbsPage;
+use crate::controllers::state::WState;
 use crate::err::WebResult;
+use crate::server::util::BasicResponse;
 use aelita_stor_diesel::api_journal::storapi_journal_list;
 use aelita_stor_diesel::model_journal::ModelJournalImmutableDiesel;
-use axum::body::Body;
 use axum::extract::State;
 use serde::Serialize;
-use std::sync::LazyLock;
 
-pub async fn handle_browse_journal(State(state): State<SqlState>) -> WebResult<Body> {
+pub async fn handle_browse_journal(State(state): State<WState<'_>>) -> WebResult<BasicResponse> {
     let journals = state
         .sqlfs
         .transact(|conn| storapi_journal_list(conn))
         .await?;
 
-    render_html_list(journals)
+    render_html_list(state, journals)
 }
 
-fn render_html_list(journals: Vec<ModelJournalImmutableDiesel>) -> WebResult<Body> {
+fn render_html_list(
+    state: WState<'_>,
+    journals: Vec<ModelJournalImmutableDiesel>,
+) -> WebResult<BasicResponse> {
     #[derive(Serialize)]
     struct JournalEntry {
         xrn: String,
@@ -45,13 +47,5 @@ fn render_html_list(journals: Vec<ModelJournalImmutableDiesel>) -> WebResult<Bod
             )
             .collect(),
     };
-    let tpl = get_template();
-    tpl.render(props)
-}
-
-fn get_template() -> &'static HandlebarsPage {
-    const TEMPLATE: &str = include_str!("../../html/browse_journal.hbs");
-    static INSTANCE: LazyLock<HandlebarsPage> =
-        LazyLock::new(|| HandlebarsPage::from_template(TEMPLATE));
-    &INSTANCE
+    state.render_page(HbsPage::Browse_Journal, props)
 }

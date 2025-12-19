@@ -10,7 +10,7 @@ use aelita_stor_diesel::model_journal::ModelJournalImmutable;
 use aelita_stor_diesel::model_tor::{
     ModelTorrentsDiesel, ModelTorrentsMeta, ModelTorrentsQBittorrent,
 };
-use xana_commons_rs::bencode_torrent_re::HashExtractor;
+use xana_commons_rs::bencode_torrent_re::HashExtractorAs;
 use xana_commons_rs::tracing_re::info;
 
 pub fn storcommit_torrents(

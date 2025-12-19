@@ -1,4 +1,5 @@
-use crate::controllers::sqlcontroller::SqlState;
+use crate::controllers::state::WState;
+use crate::err::WebResult;
 use crate::pages::browse_journal::handle_browse_journal;
 use crate::pages::browse_paths::{handle_browse_paths, handle_browse_paths_root};
 use crate::pages::browse_tor::handle_browse_tor;
@@ -19,11 +20,10 @@ use tower_http::trace::{MakeSpan, TraceLayer};
 use xana_commons_rs::tracing_re::{Level, info};
 
 /// Begin magic
-#[tokio::main]
-pub async fn start_server() {
+pub async fn start_server() -> WebResult<()> {
     log_init();
 
-    let sqlstate = SqlState::new(PermaStore::AelitaNull);
+    let sqlstate = WState::new(PermaStore::AelitaNull)?;
 
     let app = Router::new()
         .route("/", get(handle_root))
@@ -54,6 +54,8 @@ pub async fn start_server() {
     info!("Starting server on {addr}");
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
+
+    Ok(())
 }
 
 #[derive(Clone)]

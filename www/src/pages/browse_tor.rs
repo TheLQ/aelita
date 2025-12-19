@@ -1,4 +1,5 @@
-use crate::controllers::sqlcontroller::SqlState;
+use crate::controllers::handlebars::HbsPage;
+use crate::controllers::state::WState;
 use crate::err::WebResult;
 use crate::server::util::BasicResponse;
 use aelita_stor_diesel::api_tor::{
@@ -7,16 +8,11 @@ use aelita_stor_diesel::api_tor::{
 use axum::body::Body;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
-use serde::Serialize;
 use std::collections::HashMap;
-use std::path::Path;
-use std::time::Duration;
-use tokio::time::sleep;
-use xana_commons_rs::SimpleIoMap;
 use xana_commons_rs::qbittorrent_re::serde_json;
 
 pub async fn handle_browse_tor(
-    State(state): State<SqlState>,
+    State(state): State<WState<'_>>,
     Query(params): Query<HashMap<String, String>>,
 ) -> WebResult<BasicResponse> {
     if let Some(query) = params.get("query") {
@@ -30,7 +26,7 @@ pub async fn handle_browse_tor(
     }
 }
 
-async fn render_search_json(state: SqlState, query: &str) -> WebResult<BasicResponse> {
+async fn render_search_json(state: WState<'_>, query: &str) -> WebResult<BasicResponse> {
     let children = state
         .sqlfs
         .transact({
@@ -46,7 +42,7 @@ async fn render_search_json(state: SqlState, query: &str) -> WebResult<BasicResp
     Ok(BasicResponse(StatusCode::OK, mime::JSON, Body::from(json)))
 }
 
-async fn render_search_count(state: SqlState, query: &str) -> WebResult<BasicResponse> {
+async fn render_search_count(state: WState<'_>, query: &str) -> WebResult<BasicResponse> {
     let children = state
         .sqlfs
         .transact({
@@ -64,30 +60,11 @@ async fn render_search_count(state: SqlState, query: &str) -> WebResult<BasicRes
     ))
 }
 
-async fn render_html_list(state: SqlState) -> WebResult<BasicResponse> {
+async fn render_html_list(state: WState<'_>) -> WebResult<BasicResponse> {
     // let tpl = get_template();
     // let body = tpl.render(())?;
 
     // let body = Body::from(get_html_const());
 
-    let body = get_html_disk()?;
-    Ok(BasicResponse(StatusCode::OK, mime::HTML, body))
+    state.render_page(HbsPage::Browse_Tor, ())
 }
-
-fn get_html_const() -> Body {
-    const TEMPLATE: &str = include_str!("../../html/browse_tor.html");
-    Body::from(TEMPLATE)
-}
-
-fn get_html_disk() -> WebResult<Body> {
-    let path = Path::new("www/html/browse_tor.html");
-    let content = std::fs::read_to_string(path).map_io_err(path)?;
-    Ok(Body::from(content))
-}
-
-// fn get_template() -> &'static HandlebarsPage {
-//     const TEMPLATE: &str = include_str!("../../html/browse_tor.hbs");
-//     static INSTANCE: LazyLock<HandlebarsPage> =
-//         LazyLock::new(|| HandlebarsPage::from_template(TEMPLATE));
-//     &INSTANCE
-// }

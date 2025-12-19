@@ -1,31 +1,30 @@
-use crate::controllers::handlebars::HandlebarsPage;
-use crate::controllers::sqlcontroller::SqlState;
+use crate::controllers::handlebars::HbsPage;
+use crate::controllers::state::WState;
 use crate::err::{WebError, WebResult};
 use crate::server::convert_xrn::XrnFromUrl;
+use crate::server::util::BasicResponse;
 use aelita_stor_diesel::api_journal::storapi_journal_get_created;
 use aelita_stor_diesel::api_space::storapi_space_get;
 use aelita_stor_diesel::id_types::ModelSpaceId;
 use aelita_xrn::defs::space_xrn::{ProjectTypeXrn, SpaceXrn};
-use axum::body::Body;
 use axum::extract::State;
 use serde::Serialize;
-use std::sync::LazyLock;
 
 pub async fn handle_xrn_space(
-    State(state): State<SqlState>,
+    State(state): State<WState<'_>>,
     XrnFromUrl(xrn): XrnFromUrl<SpaceXrn>,
-) -> WebResult<Body> {
+) -> WebResult<BasicResponse> {
     render_html(state, xrn).await
 }
 
-async fn render_html(state: SqlState, xrn: SpaceXrn) -> WebResult<Body> {
+async fn render_html(state: WState<'_>, xrn: SpaceXrn) -> WebResult<BasicResponse> {
     match xrn.ptype() {
         ProjectTypeXrn::Simple => render_simple(state, xrn).await,
         ptype => Err(WebError::unsupported_xrn_route(ptype.as_ref())),
     }
 }
 
-async fn render_simple(state: SqlState, xrn: SpaceXrn) -> WebResult<Body> {
+async fn render_simple(state: WState<'_>, xrn: SpaceXrn) -> WebResult<BasicResponse> {
     let space_id = ModelSpaceId::from_project_xrn(&xrn);
     let space_id_trans = space_id.clone();
     let (space, created) = state
@@ -57,8 +56,7 @@ async fn render_simple(state: SqlState, xrn: SpaceXrn) -> WebResult<Body> {
             title: space.description,
         },
     };
-    let tpl = get_template();
-    tpl.render(props)
+    state.render_page(HbsPage::Xrn_Space, props)
 }
 
 // #[derive(Deserialize)]
@@ -95,10 +93,3 @@ async fn render_simple(state: SqlState, xrn: SpaceXrn) -> WebResult<Body> {
 //     //
 //     // render_html(state, xrn).await
 // }
-
-fn get_template() -> &'static HandlebarsPage {
-    const TEMPLATE: &str = include_str!("../../html/xrn_space.hbs");
-    static INSTANCE: LazyLock<HandlebarsPage> =
-        LazyLock::new(|| HandlebarsPage::from_template(TEMPLATE));
-    &INSTANCE
-}

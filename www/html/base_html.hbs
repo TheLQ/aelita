@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{title}}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css">
+</head>
+<body>
+
+{{#with root}}
+    <nav class="navbar" role="navigation" aria-label="main navigation">
+        <div class="navbar-brand">
+            <a class="navbar-item" href="https://bulma.io">
+                <img src="/scripts/manta.webp" class="image"/>
+            </a>
+
+            <!--
+            todo mobile...
+            <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarBasicExample">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+            </a>
+            -->
+        </div>
+
+        <div class="navbar-menu">
+            <div class="navbar-start">
+                {{#each crumbs}}
+                    <a class="navbar-item" href="{{href}}">
+                        {{name}}
+                    </a>
+                {{/each}}
+            </div>
+
+            <div class="navbar-end">
+                {{#each tools}}
+                    <a class="navbar-item" href="{{href}}">
+                        {{name}}
+                    </a>
+                {{/each}}
+            </div>
+        </div>
+    </nav>
+{{/with}}
+
+<div id="wrapper">
+    {{> body}}
+</div>
+
+</body>
+</html>

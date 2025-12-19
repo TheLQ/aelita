@@ -1,5 +1,5 @@
-use crate::controllers::handlebars::HandlebarsPage;
-use crate::controllers::sqlcontroller::SqlState;
+use crate::controllers::handlebars::HbsPage;
+use crate::controllers::state::WState;
 use crate::err::{WebError, WebResult};
 use crate::server::convert_xrn::XrnFromUrl;
 use crate::server::util::{BasicResponse, pretty_basic_page};
@@ -11,16 +11,15 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use serde::Serialize;
 use std::path::PathBuf;
-use std::sync::LazyLock;
 
 pub async fn handle_xrn_path(
-    State(state): State<SqlState>,
+    State(state): State<WState<'_>>,
     XrnFromUrl(xrn): XrnFromUrl<PathXrn>,
 ) -> WebResult<BasicResponse> {
     _handle_xrn_path(state, xrn).await
 }
 
-async fn _handle_xrn_path(state: SqlState, xrn: PathXrn) -> WebResult<BasicResponse> {
+async fn _handle_xrn_path(state: WState<'_>, xrn: PathXrn) -> WebResult<BasicResponse> {
     let children = state
         .sqlfs
         .transact({
@@ -40,15 +39,15 @@ async fn _handle_xrn_path(state: SqlState, xrn: PathXrn) -> WebResult<BasicRespo
             ))
         }
         Err(e) => Err(e)?,
-        Ok(children) => Ok(BasicResponse(
-            StatusCode::OK,
-            mime::HTML,
-            render_html(xrn.path().to_path_buf(), children)?,
-        )),
+        Ok(children) => render_html(state, xrn.path().to_path_buf(), children),
     }
 }
 
-fn render_html(root: PathBuf, children: Vec<String>) -> WebResult<Body> {
+fn render_html(
+    state: WState<'_>,
+    root: PathBuf,
+    children: Vec<String>,
+) -> WebResult<BasicResponse> {
     #[derive(Serialize)]
     struct PathEntry {
         xrn: PathXrn,
@@ -76,13 +75,5 @@ fn render_html(root: PathBuf, children: Vec<String>) -> WebResult<Body> {
             })
             .collect(),
     };
-    let tpl = get_template();
-    tpl.render(props)
-}
-
-fn get_template() -> &'static HandlebarsPage {
-    const TEMPLATE: &str = include_str!("../../html/xrn_path.hbs");
-    static INSTANCE: LazyLock<HandlebarsPage> =
-        LazyLock::new(|| HandlebarsPage::from_template(TEMPLATE));
-    &INSTANCE
+    state.render_page(HbsPage::Xrn_Path, props)
 }

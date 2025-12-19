@@ -1,22 +1,21 @@
-use crate::controllers::handlebars::HandlebarsPage;
-use crate::controllers::sqlcontroller::SqlState;
+use crate::controllers::handlebars::HbsPage;
+use crate::controllers::state::WState;
 use crate::err::WebResult;
+use crate::server::util::BasicResponse;
 use aelita_stor_diesel::api_hd::storapi_hd_list_children;
-use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::response::{IntoResponse, Redirect};
 use serde::Serialize;
 use std::path::PathBuf;
-use std::sync::LazyLock;
 
-pub async fn handle_browse_paths_root(State(state): State<SqlState>) -> impl IntoResponse {
+pub async fn handle_browse_paths_root() -> impl IntoResponse {
     Redirect::to("/browse/paths/")
 }
 
 pub async fn handle_browse_paths(
-    State(state): State<SqlState>,
+    State(state): State<WState<'_>>,
     Path(path_raw): Path<String>,
-) -> WebResult<Body> {
+) -> WebResult<BasicResponse> {
     let path = std::path::Path::new(&path_raw).to_path_buf();
     let children = state
         .sqlfs
@@ -26,10 +25,14 @@ pub async fn handle_browse_paths(
         })
         .await?;
 
-    render_html(path, children)
+    render_html(state, path, children)
 }
 
-fn render_html(root: PathBuf, children: Vec<String>) -> WebResult<Body> {
+fn render_html(
+    state: WState<'_>,
+    root: PathBuf,
+    children: Vec<String>,
+) -> WebResult<BasicResponse> {
     #[derive(Serialize)]
     struct PathEntry {
         href: String,
@@ -50,13 +53,5 @@ fn render_html(root: PathBuf, children: Vec<String>) -> WebResult<Body> {
             })
             .collect(),
     };
-    let tpl = get_template();
-    tpl.render(props)
-}
-
-fn get_template() -> &'static HandlebarsPage {
-    const TEMPLATE: &str = include_str!("../../html/browse_paths.hbs");
-    static INSTANCE: LazyLock<HandlebarsPage> =
-        LazyLock::new(|| HandlebarsPage::from_template(TEMPLATE));
-    &INSTANCE
+    state.render_page(HbsPage::Browse_Journal, props)
 }

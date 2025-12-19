@@ -1,5 +1,5 @@
-use crate::controllers::handlebars::HandlebarsPage;
-use crate::controllers::sqlcontroller::{SqlState, basic_cause};
+use crate::controllers::sqlcontroller::basic_cause;
+use crate::controllers::state::WState;
 use crate::err::WebResult;
 use aelita_stor_diesel::api_journal::{storapi_journal_get_created, storapi_journal_list};
 use aelita_xrn::defs::address::XrnAddr;
@@ -12,7 +12,7 @@ use std::str::FromStr;
 use std::sync::LazyLock;
 
 pub async fn handle_xrn_journal(
-    State(state): State<SqlState>,
+    State(state): State<WState<'_>>,
     xrn_raw: Option<Path<String>>,
 ) -> WebResult<Body> {
     todo!()
@@ -40,10 +40,3 @@ pub async fn handle_xrn_journal(
 //     // show same page
 //     handle_registry_html(State(state), None).await
 // }
-
-fn get_template() -> &'static HandlebarsPage {
-    const TEMPLATE: &str = include_str!("../../html/xrn_journal.hbs");
-    static INSTANCE: LazyLock<HandlebarsPage> =
-        LazyLock::new(|| HandlebarsPage::from_template(TEMPLATE));
-    &INSTANCE
-}

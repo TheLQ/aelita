@@ -1,34 +1,69 @@
+use crate::controllers::state::WState;
 use crate::err::WebResult;
+use crate::server::util::BasicResponse;
 use axum::body::Body;
+use axum::http::StatusCode;
 use handlebars::Handlebars;
 use serde::Serialize;
+use std::path::PathBuf;
+use strum::VariantArray;
 
-const VIEWER_TEMPLATE_NAME: &str = "tpl_viewer";
-
-pub struct HandlebarsPage {
-    template: Handlebars<'static>,
-}
-
-impl HandlebarsPage {
-    pub fn from_template(template: &str) -> Self {
-        let mut hbs = Handlebars::new();
-        hbs.set_strict_mode(true);
-
-        // const HEADER_COMMON: &str = include_str!("../../html/header_common.html");
-        // hbs.register_template_string("header_common", HEADER_COMMON)
-        //     .unwrap();
-        //
-        // const MENU_COMMON: &str = include_str!("../../html/menu_common.html");
-        // hbs.register_template_string("menu_common", MENU_COMMON)
-        //     .unwrap();
-
-        hbs.register_template_string(VIEWER_TEMPLATE_NAME, template)
-            .unwrap();
-        HandlebarsPage { template: hbs }
+impl<'h> WState<'h> {
+    fn render_page_body(&self, page: HbsPage, data: impl Serialize) -> WebResult<Body> {
+        let html = self.handlebars.backend.render(page.as_ref(), &data)?;
+        Ok(Body::from(html))
     }
 
-    pub fn render(&self, params: impl Serialize) -> WebResult<Body> {
-        let html = self.template.render(VIEWER_TEMPLATE_NAME, &params)?;
-        Ok(Body::from(html))
+    pub fn render_page(&self, page: HbsPage, data: impl Serialize) -> WebResult<BasicResponse> {
+        let body = self.render_page_body(page, data)?;
+        Ok(BasicResponse(StatusCode::OK, mime::HTML, body))
+    }
+}
+pub struct HandlebarsController<'h> {
+    backend: Handlebars<'h>,
+}
+
+impl<'h> HandlebarsController<'h> {
+    pub(crate) fn new() -> WebResult<Self> {
+        let mut backend = Handlebars::new();
+        backend.set_strict_mode(true);
+        backend.set_dev_mode(true);
+
+        for page in HbsPage::VARIANTS {
+            backend.register_template_file(page.as_ref(), page.to_path())?;
+        }
+
+        Ok(Self { backend })
+    }
+}
+
+#[derive(Clone, Copy, strum::AsRefStr, strum::VariantArray)]
+#[allow(non_camel_case_types)]
+#[strum(serialize_all = "lowercase")]
+pub enum HbsPage {
+    Base_Html,
+    Browse_Journal,
+    Browse_Paths,
+    Browse_Space,
+    Browse_Tor,
+    Xrn_Journal,
+    Xrn_Path,
+    Xrn_Space,
+}
+
+fn html_dir_path() -> PathBuf {
+    PathBuf::from("www/html")
+}
+
+impl HbsPage {
+    fn to_path(&self) -> PathBuf {
+        html_dir_path().join(format!("{}.{}", self.as_ref(), self.extension()))
+    }
+
+    fn extension(&self) -> &'static str {
+        match self {
+            Self::Browse_Tor => "html",
+            _ => "hbs",
+        }
     }
 }

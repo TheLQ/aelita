@@ -23,6 +23,9 @@ pub enum WebError {
     #[error("WebError_Handlebars {0:?}")]
     Handlebars(#[from] handlebars::RenderError, Backtrace),
 
+    #[error("WebError_HandlebarsTemplate {0:?}")]
+    HandlebarsTemplate(#[from] handlebars::TemplateError, Backtrace),
+
     #[error("WebError_DeadpoolInteract {0:?}")]
     DeadpoolInteract(#[from] deadpool_diesel::InteractError, Backtrace),
 
@@ -93,6 +96,7 @@ impl MyBacktrace for WebError {
         match self {
             WebError::Axum(_, bt) => bt,
             WebError::Handlebars(_, bt) => bt,
+            WebError::HandlebarsTemplate(_, bt) => bt,
             WebError::DeadpoolInteract(_, bt) => bt,
             WebError::Deadpool(_, bt) => bt,
             WebError::SerdeJson(_, bt) => bt,
