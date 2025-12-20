@@ -4,7 +4,6 @@ use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use strum::{AsRefStr, Display, EnumString, VariantArray};
 
 /// xrn:project:1000000
 #[derive(Debug)]
@@ -56,7 +55,17 @@ impl FromStr for XrnAddr {
     }
 }
 
-#[derive(Clone, Copy, Debug, AsRefStr, EnumString, PartialEq, VariantArray, Display)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    strum::AsRefStr,
+    strum::EnumString,
+    strum::VariantArray,
+    strum::Display,
+    //
+)]
 #[strum(serialize_all = "lowercase")]
 pub enum XrnType {
     Space,

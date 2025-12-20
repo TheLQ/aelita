@@ -105,7 +105,14 @@ impl Display for SpaceXrn {
 }
 
 #[derive(
-    Debug, Clone, PartialEq, strum::AsRefStr, strum::EnumString, strum::VariantArray, strum::Display,
+    Debug,
+    Clone,
+    PartialEq,
+    strum::AsRefStr,
+    strum::EnumString,
+    strum::VariantArray,
+    strum::Display,
+    //
 )]
 #[strum(serialize_all = "lowercase")]
 // #[serde(rename_all = "lowercase")]

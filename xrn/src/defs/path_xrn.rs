@@ -127,7 +127,14 @@ impl std::fmt::Display for PathXrn {
 }
 
 #[derive(
-    Debug, Clone, Copy, PartialEq, strum::AsRefStr, strum::EnumString, strum::VariantArray,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    strum::AsRefStr,
+    strum::EnumString,
+    strum::VariantArray,
+    //
 )]
 #[strum(serialize_all = "lowercase")]
 pub enum PathXrnType {
