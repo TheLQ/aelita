@@ -14,7 +14,7 @@ pub mod tests;
 
 pub use api::{
     api_hd::*, api_hd_mut::*, api_journal::*, api_space::*, api_tor::*, api_tor_mut::*,
-    api_variables::*,
+    api_variables::*, show_create_table,
 };
 pub use connection::{
     PermaStore, StorTransaction, apply_stor_instrument, establish_connection,

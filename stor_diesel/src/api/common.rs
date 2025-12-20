@@ -1,7 +1,7 @@
 use crate::connection::{StorConnection, StorTransaction};
 use crate::err::{StorDieselError, StorDieselResult};
 use diesel::sql_types::{Integer, Text, Unsigned};
-use diesel::{QueryResult, RunQueryDsl, dsl};
+use diesel::{QueryResult, QueryableByName, RunQueryDsl, dsl};
 use std::backtrace::Backtrace;
 use xana_commons_rs::tracing_re::info;
 
@@ -30,4 +30,21 @@ pub fn assert_test_database(conn: &mut StorTransaction) -> QueryResult<()> {
 
 pub fn mysql_last_id(conn: &mut StorConnection) -> QueryResult<u32> {
     diesel::select(dsl::sql::<Unsigned<Integer>>("LAST_INSERT_ID()")).first(conn)
+}
+
+/// todo doesn't work
+pub fn show_create_table(
+    conn: &mut StorConnection,
+    table: impl Into<String>,
+) -> QueryResult<String> {
+    let table = table.into();
+    let row = diesel::sql_query(&format!("SHOW CREATE TABLE `{table}`"))
+        .get_result::<CreateResult>(conn)?;
+    Ok(row.create_table)
+}
+
+#[derive(QueryableByName)]
+struct CreateResult {
+    #[diesel(sql_type = Text)]
+    create_table: String,
 }
