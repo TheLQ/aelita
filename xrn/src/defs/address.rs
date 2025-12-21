@@ -36,16 +36,16 @@ impl Display for XrnAddr {
 }
 
 impl FromStr for XrnAddr {
-    type Err = LibxrnError;
+    type Err = Box<LibxrnError>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let remain = match s.split_at_checked(3) {
             Some(("xrn", remain)) => remain,
-            _ => return Err(XrnErrorKind::AddrPrefix.err_raw(s)),
+            _ => return Err(XrnErrorKind::AddrPrefix.build_message(s)),
         };
 
         let (atype, remain) = match XrnType::split_type(remain) {
-            None => return Err(XrnErrorKind::AddrInvalidType.err_raw(s)),
-            Some((_, "")) => return Err(XrnErrorKind::PathEmptyValue.err_raw(s)),
+            None => return Err(XrnErrorKind::AddrInvalidType.build_message(s)),
+            Some((_, "")) => return Err(XrnErrorKind::PathEmptyValue.build_message(s)),
             Some(v) => v,
         };
         Ok(XrnAddr {

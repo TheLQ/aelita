@@ -5,15 +5,7 @@ use strum::AsRefStr;
 use thiserror::Error;
 use xana_commons_rs::MyBacktrace;
 
-pub type LibxrnResult<T> = Result<T, LibxrnError>;
-
-#[derive(Error, Debug)]
-pub struct LibxrnError {
-    pub kind: XrnErrorKind,
-    name: String,
-    // description: Option<String>,
-    backtrace: Box<Backtrace>,
-}
+pub type LibxrnResult<T> = Result<T, Box<LibxrnError>>;
 
 #[derive(Debug, PartialEq, Eq, AsRefStr, strum::Display)]
 pub enum XrnErrorKind {
@@ -36,6 +28,8 @@ pub enum XrnErrorKind {
     InvalidTreeId,
 }
 
+xana_commons_rs::crash_builder!(LibxrnError, LibxrnErrorMeta, XrnErrorKind,);
+
 impl LibxrnError {
     // pub fn utf8_parse_addr(addr: impl Borrow<XrnAddr>) -> impl FnOnce(Utf8Error) -> Self {
     //     let name = addr.borrow().to_string();
@@ -54,36 +48,6 @@ impl LibxrnError {
     //         backtrace: Backtrace::capture(),
     //     }
     // }
-}
-
-impl MyBacktrace for LibxrnError {
-    fn my_backtrace(&self) -> &Backtrace {
-        &self.backtrace
-    }
-}
-
-impl Display for LibxrnError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "LibxrnError_{} for {}", self.kind.as_ref(), self.name)
-    }
-}
-
-impl XrnErrorKind {
-    pub fn err_addr(self, addr: XrnAddr) -> LibxrnError {
-        LibxrnError {
-            kind: self,
-            name: addr.to_string(),
-            backtrace: Box::new(Backtrace::capture()),
-        }
-    }
-
-    pub fn err_raw(self, raw: impl Into<String>) -> LibxrnError {
-        LibxrnError {
-            kind: self,
-            name: raw.into(),
-            backtrace: Box::new(Backtrace::capture()),
-        }
-    }
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-use crate::err::WebError;
+use crate::err::{WebError, WebErrorKind, WebErrorMeta};
 use aelita_xrn::defs::address::XrnAddr;
 use aelita_xrn::defs::common::SubXrn;
 use axum::extract::{FromRequestParts, Path};
@@ -28,13 +28,15 @@ where
     S: Send + Sync,
     T: TryFrom<XrnAddr> + SubXrn + Debug,
     <T as TryFrom<XrnAddr>>::Error: std::fmt::Debug + StdError,
+    Box<WebError>: From<<T as TryFrom<XrnAddr>>::Error>,
 {
-    type Rejection = WebError;
+    type Rejection = Box<WebError>;
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         let Path(xrn_value) = Path::<String>::from_request_parts(parts, _state)
             .await
-            .map_err(|e| WebError::assert(format!("failed 1st xrn {e}")))?;
+            .map_err(|e| WebErrorMeta::AxumReject(e).build_message("missing xrn parameter"))?;
+
         let best_addr = XrnAddr::new(T::atype(), xrn_value);
 
         // xrn type assumed as axum only gives us the xrn-value
@@ -42,20 +44,19 @@ where
         let full_uri = parts.uri.to_string();
         let (prefix_sep, addr_raw) = full_uri.split_at(1);
         if prefix_sep != "/" {
-            return Err(WebError::assert("uri"));
+            return Err(WebErrorKind::InvalidUri.build());
         }
         let raw_addr = XrnAddr::from_str(&addr_raw)?;
         if best_addr.atype() != raw_addr.atype() {
-            return Err(WebError::assert(format!(
-                "unexpected type {} vs {}",
+            return Err(WebErrorKind::InvalidXrnTypeForRoute.build_message(format!(
+                "expected {} got {}",
                 best_addr.atype(),
                 raw_addr.atype()
             )));
         }
 
         trace!("building addr with {}", best_addr);
-        let result =
-            T::try_from(best_addr).map_err(|e| WebError::assert(format!("parse fail {e}")))?;
+        let result = T::try_from(best_addr)?;
         Ok(XrnFromUrl(result))
     }
 }

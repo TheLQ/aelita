@@ -98,18 +98,18 @@ impl From<&PathXrn> for XrnAddr {
 }
 
 impl TryFrom<XrnAddr> for PathXrn {
-    type Error = LibxrnError;
+    type Error = Box<LibxrnError>;
 
     fn try_from(addr: XrnAddr) -> Result<Self, Self::Error> {
         if addr.atype() != XrnType::Path {
-            return Err(XrnErrorKind::PathInvalidInputType.err_addr(addr));
+            return Err(XrnErrorKind::PathInvalidInputType.build_message(addr));
         }
         let value = addr.value();
 
         let (ptype, remain) = match PathXrnType::split_type(value) {
-            None => return Err(XrnErrorKind::PathInvalidType.err_addr(addr)),
+            None => return Err(XrnErrorKind::PathInvalidType.build_message(addr)),
             Some((_, "")) => {
-                return Err(XrnErrorKind::PathEmptyValue.err_addr(addr));
+                return Err(XrnErrorKind::PathEmptyValue.build_message(addr));
             }
             Some(v) => v,
         };
@@ -121,7 +121,7 @@ impl TryFrom<XrnAddr> for PathXrn {
 
             let (_, cur_remain) = cur_remain.split_at_checked(tree_len).unwrap();
             let Ok(tree_id_raw) = cur_remain.parse::<u32>() else {
-                return Err(XrnErrorKind::InvalidTreeId.err_addr(addr));
+                return Err(XrnErrorKind::InvalidTreeId.build_message(addr));
             };
             tree_id = Some(tree_id_raw);
             value_remain

@@ -46,7 +46,7 @@ impl From<&SpaceXrn> for XrnAddr {
 }
 
 impl FromStr for SpaceXrn {
-    type Err = LibxrnError;
+    type Err = Box<LibxrnError>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let addr = XrnAddr::from_str(s)?;
         SpaceXrn::try_from(addr)
@@ -54,26 +54,26 @@ impl FromStr for SpaceXrn {
 }
 
 impl TryFrom<XrnAddr> for SpaceXrn {
-    type Error = LibxrnError;
+    type Error = Box<LibxrnError>;
 
     fn try_from(addr: XrnAddr) -> Result<Self, Self::Error> {
         if addr.atype() != XrnType::Space {
-            return Err(XrnErrorKind::SpaceInvalidInputType.err_addr(addr));
+            return Err(XrnErrorKind::SpaceInvalidInputType.build_message(addr));
         }
 
         let value = addr.value();
         let (stype, remain) = match SpaceXrnType::split_type(value) {
-            None => return Err(XrnErrorKind::SpaceInvalidType.err_addr(addr)),
-            Some((_, "")) => return Err(XrnErrorKind::SpaceEmptyValue.err_addr(addr)),
+            None => return Err(XrnErrorKind::SpaceInvalidType.build_message(addr)),
+            Some((_, "")) => return Err(XrnErrorKind::SpaceEmptyValue.build_message(addr)),
             Some(v) => v,
         };
 
         let next = remain.as_bytes().iter().skip(1).position(|v| v == &b':');
         let (id, remain) = match next.and_then(|v| value.split_at_checked(v)) {
-            None => return Err(XrnErrorKind::InvalidSpaceId.err_addr(addr)),
+            None => return Err(XrnErrorKind::InvalidSpaceId.build_message(addr)),
             Some((raw, remain)) => {
                 let Ok(id) = raw.parse::<u32>() else {
-                    return Err(XrnErrorKind::InvalidSpaceId.err_addr(addr));
+                    return Err(XrnErrorKind::InvalidSpaceId.build_message(addr));
                 };
                 (id, remain)
             }
