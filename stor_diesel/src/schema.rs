@@ -7,6 +7,14 @@ pub mod sql_types {
 
     #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
     #[diesel(mysql_type(name = "Enum"))]
+    pub struct SpaceOwnedChildType1Enum;
+
+    #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
+    #[diesel(mysql_type(name = "Enum"))]
+    pub struct SpaceOwnedChildType2Enum;
+
+    #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
+    #[diesel(mysql_type(name = "Enum"))]
     pub struct Tor1TorrentsStateEnum;
 }
 
@@ -108,12 +116,20 @@ diesel::table! {
 }
 
 diesel::table! {
-    space_owned (space_id) {
+    use diesel::sql_types::*;
+    use super::sql_types::SpaceOwnedChildType1Enum;
+    use super::sql_types::SpaceOwnedChildType2Enum;
+
+    space_owned (ref_id) {
+        ref_id -> Unsigned<Integer>,
         journal_id -> Unsigned<Integer>,
         space_id -> Unsigned<Integer>,
-        #[max_length = 100]
-        child_xrn -> Varchar,
-        description -> Text,
+        #[max_length = 5]
+        child_type1 -> SpaceOwnedChildType1Enum,
+        #[max_length = 6]
+        child_type2 -> SpaceOwnedChildType2Enum,
+        child_id -> Unsigned<Integer>,
+        description -> Nullable<Text>,
     }
 }
 

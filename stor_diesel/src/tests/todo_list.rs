@@ -6,7 +6,7 @@ use crate::connection::{StorConnection, StorTransaction};
 use crate::err::StorDieselResult;
 use crate::models::date::StorDate;
 use crate::models::diesel_wrappers::RawDieselBytes;
-use crate::models::id_types::ModelJournalTypeName;
+use crate::models::enum_types::ModelJournalTypeName;
 use crate::models::model_journal::{ModelJournalImmutable, NewModelJournalImmutable};
 use crate::models::model_space::{ModelSpaceOwned, NewModelSpaceName};
 use xana_commons_rs::tracing_re::info;

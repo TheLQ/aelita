@@ -1,5 +1,6 @@
 use crate::models::diesel_wrappers::RawDieselBytes;
-use crate::models::id_types::{ModelJournalId, ModelJournalTypeName};
+use crate::models::enum_types::ModelJournalTypeName;
+use crate::models::id_types::ModelJournalId;
 use chrono::NaiveDateTime;
 use diesel::{HasQuery, Insertable};
 

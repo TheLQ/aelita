@@ -1,9 +1,11 @@
 use crate::{StorDieselError, StorDieselResult};
+use aelita_xrn::defs::common::SubXrn;
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
 use diesel::mysql::{Mysql, MysqlValue};
+use diesel::row::NamedRow;
 use diesel::serialize::{IsNull, Output, ToSql};
-use diesel::sql_types::{Binary, Json};
+use diesel::sql_types::{Binary, Json, Unsigned};
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::mem::transmute;
@@ -168,3 +170,33 @@ where
         <[u8] as ToSql<Binary, Db>>::to_sql(&self.0, out)
     }
 }
+
+// impl<DB> QueryableByName<DB> for XrnDiesel
+// where
+//     DB: Backend,
+//     String: FromSql<diesel::sql_types::Text, DB>,
+//     u32: FromSql<Unsigned<diesel::sql_types::Integer>, DB>,
+// {
+//     fn build<'a>(row: &impl NamedRow<'a, DB>) -> diesel::deserialize::Result<Self> {
+//         let type1 = NamedRow::get::<diesel::sql_types::Text, _>(row, "child_type1")?;
+//         let type2 = NamedRow::get::<diesel::sql_types::Text, _>(row, "child_type2")?;
+//         let id = NamedRow::get::<Unsigned<diesel::sql_types::Integer>, _>(row, "id")?;
+//         Ok(Self { type1, type2, id })
+//     }
+// }
+
+// {
+// use diesel;
+// impl<__DB: diesel::backend::Backend> diesel::deserialize::QueryableByName<__DB> for PathResult
+// where
+//     String: diesel::deserialize::FromSql<diesel::sql_types::Text, __DB>,
+// {
+//     fn build<'__a>(row: &impl diesel::row::NamedRow<'__a, __DB>) -> diesel::deserialize::Result<Self> {
+//         let mut component = {
+//             let field = diesel::row::NamedRow::get::<diesel::sql_types::Text, String>(row, "component")?;
+//             <String as std::convert::Into<String>>::into(field)
+//         };
+//         diesel::deserialize::Result::Ok(Self { component: component })
+//     }
+// }
+// };

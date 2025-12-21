@@ -1,5 +1,6 @@
 use crate::models::diesel_wrappers::{TorHashV1Diesel, TorHashV2Diesel};
-use crate::models::id_types::{ModelJournalId, ModelQbHostId, ModelTorrentState};
+use crate::models::enum_types::ModelTorrentState;
+use crate::models::id_types::{ModelJournalId, ModelQbHostId};
 use crate::{StorDieselError, StorDieselResult};
 use chrono::{DateTime, NaiveDateTime};
 use diesel::{HasQuery, Insertable};
