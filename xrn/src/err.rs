@@ -52,23 +52,15 @@ impl LibxrnError {
 
 #[cfg(test)]
 pub mod test {
-    use crate::err::{LibxrnError, LibxrnResult, XrnErrorKind};
+    use crate::defs::path_xrn::PathXrn;
+    use crate::err::{LibxrnError, LibxrnErrorMeta, LibxrnResult, XrnErrorKind};
     use std::fmt::Display;
 
-    #[test]
-    fn some() {
-        assert_eq!(0, std::mem::size_of::<Result<(), Box<LibxrnError>>>());
-    }
-
-    pub fn assert_err_kind<T>(res: Result<T, LibxrnError>, expected_kind: XrnErrorKind)
-    where
-        T: Display,
-    {
-        assert_eq!(0, std::mem::size_of::<LibxrnResult<()>>());
-
+    pub fn assert_err_kind(res: LibxrnResult<PathXrn>, expected_kind: XrnErrorKind) {
         match res {
             Ok(res) => panic!("Expected {expected_kind}, got {res}"),
-            Err(LibxrnError { kind, .. }) if kind == expected_kind => {
+            Err(e) if matches!(std::ops::Deref::deref(&e), LibxrnError { meta: LibxrnErrorMeta::Kind(kind), .. } if *kind == expected_kind) =>
+            {
                 // success, we failed!
             }
             Err(e) => panic!("Expected err {expected_kind}, got err {e}"),

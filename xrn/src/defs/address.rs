@@ -108,15 +108,15 @@ mod test {
 
     #[test]
     fn enum_test() {
-        assert_eq!(XrnType::Space.as_ref(), "project");
+        assert_eq!(XrnType::Space.as_ref(), "space");
 
         let addr = XrnAddr::new(XrnType::Space, ":page/123");
-        assert_eq!(addr.to_string(), "xrn:project:page/123")
+        assert_eq!(addr.to_string(), "xrn:space:page/123")
     }
 
     #[test]
     fn parse_test() -> LibxrnResult<()> {
-        let addr_raw = "xrn:project:page/123";
+        let addr_raw = "xrn:space:page/123";
         let addr = XrnAddr::from_str(addr_raw)?;
         assert_eq!(addr.atype(), XrnType::Space);
         assert_eq!(addr.value(), ":page/123");
