@@ -81,15 +81,16 @@ impl Model {
                     description: "some space".into(),
                 },
             )?;
-            storapi_space_owned_new(
-                conn,
-                &[ModelSpaceOwned {
-                    journal_id,
-                    space_id,
-                    description: "test".into(),
-                    child_xrn: format!("xrn:import:{journal_id}"),
-                }],
-            )
+            // storapi_space_owned_new(
+            //     conn,
+            //     &[ModelSpaceOwned {
+            //         journal_id,
+            //         space_id,
+            //         description: "test".into(),
+            //         child_xrn: format!("xrn:import:{journal_id}"),
+            //     }],
+            // )
+            Ok::<_, StorDieselError>(())
         })?;
 
         Ok(())

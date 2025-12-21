@@ -1,5 +1,10 @@
 use crate::models::common::parse_type_checked;
-use crate::schema::sql_types::{JournalImmutableJournalTypeEnum, Tor1TorrentsStateEnum};
+use crate::schema::sql_types::{
+    JournalImmutableJournalTypeEnum, SpaceOwnedChildType1Enum, SpaceOwnedChildType2Enum,
+    Tor1TorrentsStateEnum,
+};
+use aelita_xrn::defs::address::XrnType;
+use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
 use diesel::mysql::Mysql;
 use diesel::mysql::MysqlValue;
@@ -121,3 +126,62 @@ impl From<ModelTorrentState> for &'static str {
         Self::from(&value.0)
     }
 }
+
+#[derive(
+    Debug,
+    Hash,
+    Eq,
+    PartialEq,
+    diesel::expression::AsExpression,
+    diesel::deserialize::FromSqlRow,
+    Serialize,
+    Deserialize,
+)]
+#[diesel(sql_type = SpaceOwnedChildType1Enum)]
+#[diesel(sql_type = SpaceOwnedChildType2Enum)]
+#[diesel(sql_type = diesel::sql_types::Text)]
+pub struct AnyEnumToText(String);
+
+impl AnyEnumToText {
+    pub fn new(input: impl Into<String>) -> Self {
+        Self(input.into())
+    }
+}
+
+impl AsRef<str> for AnyEnumToText {
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
+impl From<XrnType> for AnyEnumToText {
+    fn from(value: XrnType) -> Self {
+        Self(value.as_ref().to_string())
+    }
+}
+
+macro_rules! enum_to_string_map {
+    ($diesel_type:ident) => {
+        impl<DB: Backend> FromSql<$diesel_type, DB> for AnyEnumToText
+        where
+            String: FromSql<diesel::sql_types::Text, DB>,
+        {
+            fn from_sql(input_raw: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+                let value = <String as FromSql<diesel::sql_types::Text, DB>>::from_sql(input_raw)?;
+                Ok(Self(value))
+            }
+        }
+
+        impl<DB: Backend> ToSql<$diesel_type, DB> for AnyEnumToText
+        where
+            str: ToSql<diesel::sql_types::Text, DB>,
+        {
+            fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, DB>) -> diesel::serialize::Result {
+                let value: &str = self.0.as_ref();
+                <str as ToSql<diesel::sql_types::Text, DB>>::to_sql(&value, out)
+            }
+        }
+    };
+}
+enum_to_string_map!(SpaceOwnedChildType1Enum);
+enum_to_string_map!(SpaceOwnedChildType2Enum);

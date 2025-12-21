@@ -2,9 +2,11 @@ use crate::api::assert_test_database;
 use crate::api::common::{check_insert_num_rows, mysql_last_id};
 use crate::connection::StorTransaction;
 use crate::err::StorDieselResult;
+use crate::models::enum_types::AnyEnumToText;
 use crate::models::id_types::{ModelSpaceId, StorIdType};
 use crate::models::model_space::{ModelSpaceName, ModelSpaceOwned, NewModelSpaceName};
-use crate::schema;
+use crate::{ModelSpaceXrn, schema};
+use aelita_xrn::defs::common::SubXrn;
 use diesel::prelude::*;
 use diesel::{HasQuery, QueryDsl, RunQueryDsl, dsl};
 use std::ops::Range;
@@ -49,8 +51,24 @@ pub fn storapi_space_list_filtered(
 
 pub fn storapi_space_owned_new(
     conn: &mut StorTransaction,
-    spaces: &[ModelSpaceOwned],
+    spaces: impl IntoIterator<Item = (ModelSpaceOwned, ModelSpaceXrn)>,
 ) -> StorDieselResult<Vec<ModelSpaceId>> {
+    let spaces = spaces
+        .into_iter()
+        .map(|(row, xrn)| {
+            // let ModelSpaceOwned {
+            //     journal_id,
+            //     space_id,
+            //     description,
+            // } = row;
+
+            // let type1_name: &str = X::atype().as_ref();
+            // let child_type1 = schema::space_owned::child_type1.eq(AnyEnumToText::new(type1_name));
+            // (row, child_type1)
+            (row, xrn)
+        })
+        .collect::<Vec<_>>();
+
     let max_id: Option<ModelSpaceId> = schema::space_names::table
         .select(dsl::max(schema::space_names::space_id))
         .get_result(conn.inner())?;

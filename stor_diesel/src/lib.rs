@@ -22,6 +22,6 @@ pub use connection::{
 };
 pub use err::{StorDieselError, StorDieselResult};
 pub use models::{
-    compressed_paths::*, diesel_wrappers::*, id_types::*, model_hd::*, model_journal::*,
-    model_space::*, model_tor::*,
+    compressed_paths::*, diesel_wrappers::*, enum_types::ModelJournalTypeName, id_types::*,
+    model_hd::*, model_journal::*, model_space::*, model_tor::*,
 };
