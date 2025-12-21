@@ -56,6 +56,21 @@ pub struct ModelSpaceXrn {
     pub child_id: u32,
 }
 
+impl TryFrom<PathXrn> for ModelSpaceXrn {
+    type Error = StorDieselError;
+
+    fn try_from(value: PathXrn) -> Result<Self, Self::Error> {
+        let Some(child_id) = value.tree_id() else {
+            return Err(StorDieselError::query_fail("tree id required for xrn"));
+        };
+        Ok(Self {
+            child_type1: AnyEnumToText::new(XrnType::Path.as_ref()),
+            child_type2: AnyEnumToText::new(value.ptype().as_ref()),
+            child_id,
+        })
+    }
+}
+
 /// Magic Xrn Parser struct
 #[derive(Debug)]
 pub struct XrnDiesel(PathXrn);

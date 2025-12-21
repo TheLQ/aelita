@@ -2,7 +2,7 @@ use aelita_commons::log_init;
 use aelita_stor_diesel::{
     ModelJournalId, ModelSpaceOwned, ModelSpaceXrn, NewModelSpaceName, PermaStore,
     StorDieselResult, StorIdType, StorTransaction, establish_connection,
-    establish_connection_or_panic, storapi_space_new, storapi_space_owned_new,
+    establish_connection_or_panic, storapi_reset_space, storapi_space_new, storapi_space_owned_new,
 };
 use aelita_xrn::defs::path_xrn::{PathXrn, PathXrnType};
 use std::process::ExitCode;
@@ -21,10 +21,12 @@ pub fn run() -> StorDieselResult<()> {
 }
 
 fn generate(conn: &mut StorTransaction) -> StorDieselResult<()> {
+    storapi_reset_space(conn)?;
+
     let space_id = storapi_space_new(
         conn,
         NewModelSpaceName {
-            journal_id: ModelJournalId::new(u32::MAX),
+            journal_id: ModelJournalId::new(1),
             space_name: "test".to_string(),
             description: "test".to_string(),
         },
@@ -35,11 +37,11 @@ fn generate(conn: &mut StorTransaction) -> StorDieselResult<()> {
         conn,
         [(
             ModelSpaceOwned {
-                journal_id: ModelJournalId::new(u32::MAX),
+                journal_id: ModelJournalId::new(1),
                 space_id,
                 description: Some("fdf".into()),
             },
-            some_path_xrn.into(),
+            ModelSpaceXrn::try_from(some_path_xrn)?,
         )],
     )?;
 
