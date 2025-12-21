@@ -3,17 +3,44 @@ use crate::defs::common::{SubXrn, XrnTypeImpl};
 use crate::err::{LibxrnError, XrnErrorKind};
 use serde::{Serialize, Serializer};
 use std::fmt::Formatter;
+use std::fs::rename;
 use std::os::unix::prelude::OsStrExt;
 use std::path::{Path, PathBuf};
+
+const TREE_PREFIX_STR: &str = "/__tree";
 
 #[derive(Debug, Clone)]
 pub struct PathXrn {
     ptype: PathXrnType,
-    path: PathBuf,
+    path: Option<PathBuf>,
     tree_id: Option<u32>,
 }
 
 impl PathXrn {
+    pub fn new_path(ptype: PathXrnType, path: impl Into<PathBuf>) -> Self {
+        Self {
+            ptype,
+            path: Some(path.into()),
+            tree_id: None,
+        }
+    }
+
+    pub fn new_path_id(ptype: PathXrnType, path: PathBuf, tree_id: u32) -> Self {
+        Self {
+            ptype,
+            path: Some(path),
+            tree_id: Some(tree_id),
+        }
+    }
+
+    pub fn new_id(ptype: PathXrnType, tree_id: u32) -> Self {
+        Self {
+            ptype,
+            path: None,
+            tree_id: Some(tree_id),
+        }
+    }
+
     pub fn from_components(comp: &[String]) -> Self {
         let mut path = PathBuf::from("/");
         path.extend(comp);
@@ -24,7 +51,7 @@ impl PathXrn {
         let path = path.into();
         assert!(path.is_absolute());
         Self {
-            path,
+            path: Some(path.into()),
             ptype: PathXrnType::Fs,
             tree_id: None,
         }
@@ -34,8 +61,11 @@ impl PathXrn {
         self.ptype
     }
 
-    pub fn path(&self) -> &Path {
-        self.path.as_path()
+    // pub fn path_unwrap(&self) -> &Path {
+    //     self.path.as_ref().unwrap()
+    // }
+    pub fn path(&self) -> Option<&Path> {
+        self.path.as_ref().map(|v| v.as_path())
     }
 
     pub fn tree_id(&self) -> Option<u32> {
@@ -56,8 +86,16 @@ impl From<PathXrn> for XrnAddr {
 }
 
 impl From<&PathXrn> for XrnAddr {
-    fn from(value: &PathXrn) -> Self {
-        XrnAddr::new(XrnType::Path, value.path().to_str().unwrap())
+    fn from(input: &PathXrn) -> Self {
+        let mut value = String::new();
+        if let Some(path) = &input.path {
+            value.push_str(path.to_str().unwrap())
+        }
+        if let Some(tree_id) = &input.tree_id {
+            value.push_str(TREE_PREFIX_STR);
+            value.push_str(&tree_id.to_string());
+        }
+        XrnAddr::new(XrnType::Path, value)
     }
 }
 
@@ -78,29 +116,27 @@ impl TryFrom<XrnAddr> for PathXrn {
             Some(v) => v,
         };
 
-        const TREE_PREFIX_BYTES: &[u8] = b"__tree";
         let tree_id;
-        let mut path = PathBuf::from(remain);
-        if let Some((prefix, remain)) = path
-            .iter()
-            .last()
-            // safety: the path isn't empty so must have something
-            .unwrap()
-            .as_bytes()
-            .split_at_checked(TREE_PREFIX_BYTES.len())
-            && prefix == TREE_PREFIX_BYTES
-        {
-            let Ok(remain) = str::from_utf8(remain) else {
+        let remain = if let Some(tree_start) = remain.find(TREE_PREFIX_STR) {
+            let tree_len = TREE_PREFIX_STR.len();
+            let (value_remain, cur_remain) = remain.split_at_checked(tree_start).unwrap();
+
+            let (_, cur_remain) = cur_remain.split_at_checked(tree_len).unwrap();
+            let Ok(tree_id_raw) = cur_remain.parse::<u32>() else {
                 return Err(XrnErrorKind::InvalidTreeId.err_addr(addr));
             };
-            let Ok(id) = remain.parse::<u32>() else {
-                return Err(XrnErrorKind::InvalidTreeId.err_addr(addr));
-            };
-            path.pop();
-            tree_id = Some(id);
+            tree_id = Some(tree_id_raw);
+            value_remain
         } else {
             tree_id = None;
-        }
+            remain
+        };
+
+        let path = if remain.is_empty() {
+            None
+        } else {
+            Some(PathBuf::from(remain))
+        };
 
         Ok(Self {
             path,
@@ -169,7 +205,7 @@ mod tests {
 
         let path: PathXrn = addr.try_into()?;
         assert_eq!(path.ptype(), PathXrnType::Fs);
-        assert_eq!(path.path(), Path::new("/test/hello"));
+        assert_eq!(path.path(), Some(Path::new("/test/hello")));
         assert_eq!(path.tree_id(), None);
         Ok(path)
     }
@@ -199,7 +235,7 @@ mod tests {
     fn _good_path_tree_id() -> LibxrnResult<PathXrn> {
         let path: PathXrn = XrnAddr::from_str("xrn:path:fs/test/hello/__tree498")?.try_into()?;
         assert_eq!(path.ptype(), PathXrnType::Fs);
-        assert_eq!(path.path(), Path::new("/test/hello"));
+        assert_eq!(path.path(), Some(Path::new("/test/hello")));
         assert_eq!(path.tree_id(), Some(498));
         Ok(path)
     }
@@ -212,9 +248,20 @@ mod tests {
 
     fn _empty_tree_id() -> LibxrnResult<PathXrn> {
         let path: PathXrn = XrnAddr::from_str("xrn:path:fs/test/hello/__tree")?.try_into()?;
+        Ok(path)
+    }
+
+    #[test]
+    fn only_tree_id() {
+        log_init();
+        assert_err_kind(_empty_tree_id(), XrnErrorKind::InvalidTreeId)
+    }
+
+    fn _only_tree_id() -> LibxrnResult<PathXrn> {
+        let path: PathXrn = XrnAddr::from_str("xrn:path:fs/__tree6599")?.try_into()?;
         assert_eq!(path.ptype(), PathXrnType::Fs);
-        assert_eq!(path.path(), Path::new("/test/hello"));
-        assert_eq!(path.tree_id(), Some(498));
+        assert_eq!(path.path(), None);
+        assert_eq!(path.tree_id(), Some(6599));
         Ok(path)
     }
 }
