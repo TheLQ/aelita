@@ -6,8 +6,6 @@ use axum::body::Body;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use handlebars::html_escape;
-use std::backtrace::Backtrace;
-use thiserror::Error;
 use xana_commons_rs::qbittorrent_re::serde_json;
 use xana_commons_rs::tracing_re::error;
 use xana_commons_rs::{
@@ -16,11 +14,15 @@ use xana_commons_rs::{
 
 pub type WebResult<R> = Result<R, Box<WebError>>;
 
-#[derive(Debug, strum::AsRefStr)]
+#[derive(Debug, strum::AsRefStr, strum::Display)]
 pub enum WebErrorKind {
     Crash,
     InvalidUri,
     InvalidXrnTypeForRoute,
+    //
+    PathXrnMissingPath,
+    //
+    UnsupportedXrnRoute,
 }
 
 crash_builder!(
@@ -44,6 +46,7 @@ crash_builder!(
     (DeadpoolInteract, deadpool_diesel::InteractError),
     (Handlebars, handlebars::RenderError),
     (HandlebarsTemplate, handlebars::TemplateError),
+    (StorDieselError, StorDieselErrorKind),
 );
 crash_into_crash!(
     LibxrnError,
@@ -61,7 +64,17 @@ crash_into_crash!(
     WebError,
     WebErrorMeta,
     WebErrorKind,
-    []
+    [
+        Serde,
+        Chrono,
+        Diesel,
+        DieselConnect,
+        Postcard,
+        SimpleIo,
+        StdUtf8,
+        Strum,
+        TryFromNumber,
+    ]
 );
 
 // #[derive(Error, Debug)]

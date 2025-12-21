@@ -24,8 +24,6 @@ pub fn run() -> StorDieselResult<()> {
     let conn = &mut establish_connection(PermaStore::AelitaNull)
         .map_err(|(db_url, e)| StorDieselErrorMeta::DieselConnect(e).build_message(db_url))?;
 
-    assert_eq!(0, std::mem::size_of::<StorDieselResult<()>>());
-
     StorTransaction::new_transaction("build", conn, |conn| {
         let primary_keys = type_names::<XrnType>();
         diesel::sql_query(alter_enum_query("space_owned", "child_type1", primary_keys))

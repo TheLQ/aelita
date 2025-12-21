@@ -6,11 +6,11 @@ use aelita_stor_diesel::{
 };
 use aelita_xrn::defs::path_xrn::{PathXrn, PathXrnType};
 use std::process::ExitCode;
-use xana_commons_rs::pretty_main;
+use xana_commons_rs::{pretty_main, pretty_main_boxed};
 
 fn main() -> ExitCode {
     log_init();
-    pretty_main(run)
+    pretty_main_boxed(run)
 }
 
 pub fn run() -> StorDieselResult<()> {

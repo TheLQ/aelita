@@ -24,3 +24,8 @@ pub use models::{
     compressed_paths::*, diesel_wrappers::*, enum_types::ModelJournalTypeName, id_types::*,
     model_hd::*, model_journal::*, model_space::*, model_tor::*,
 };
+pub mod err_re {
+    pub use diesel::ConnectionError;
+    pub use diesel::result::Error as DieselError;
+    pub use postcard::Error as PostcardError;
+}

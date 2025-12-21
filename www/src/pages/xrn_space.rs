@@ -1,6 +1,6 @@
 use crate::controllers::handlebars::HbsPage;
 use crate::controllers::state::WState;
-use crate::err::{WebError, WebResult};
+use crate::err::{WebError, WebErrorKind, WebResult};
 use crate::server::convert_xrn::XrnFromUrl;
 use crate::server::util::BasicResponse;
 use aelita_stor_diesel::ModelSpaceId;
@@ -21,7 +21,7 @@ async fn render_html(state: WState<'_>, xrn: SpaceXrn) -> WebResult<BasicRespons
     #[allow(unreachable_patterns)]
     match xrn.stype() {
         SpaceXrnType::Simple => render_simple(state, xrn).await,
-        ptype => Err(WebError::unsupported_xrn_route(ptype.as_ref())),
+        ptype => Err(WebErrorKind::UnsupportedXrnRoute.build_message(ptype.as_ref())),
     }
 }
 
