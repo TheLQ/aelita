@@ -1,11 +1,10 @@
-use crate::{StorDieselError, StorDieselResult};
-use aelita_xrn::defs::common::SubXrn;
+use crate::StorDieselResult;
+use crate::err::StorDieselErrorMeta;
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
 use diesel::mysql::{Mysql, MysqlValue};
-use diesel::row::NamedRow;
 use diesel::serialize::{IsNull, Output, ToSql};
-use diesel::sql_types::{Binary, Json, Unsigned};
+use diesel::sql_types::{Binary, Json};
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::mem::transmute;
@@ -114,7 +113,7 @@ impl RawDieselBytes {
         serde_json::from_slice(&self.0).map_err(|e| {
             let len = self.0.len().min(10000);
             let extract = str::from_utf8(&self.0[0..len]).unwrap();
-            StorDieselError::serde_extract(e, extract)
+            StorDieselErrorMeta::Serde(e).build_message(extract)
         })
     }
 

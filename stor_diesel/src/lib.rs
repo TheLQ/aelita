@@ -5,12 +5,11 @@
 
 mod api;
 mod connection;
-mod err;
+pub mod err;
 mod models;
 pub mod path_const;
 mod schema;
 mod schema_temp;
-pub mod tests;
 
 pub use api::{
     api_hd::*, api_hd_mut::*, api_journal::*, api_space::*, api_tor::*, api_tor_mut::*,

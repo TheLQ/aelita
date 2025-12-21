@@ -3,8 +3,6 @@ use crate::defs::common::{SubXrn, XrnTypeImpl};
 use crate::err::{LibxrnError, XrnErrorKind};
 use serde::{Serialize, Serializer};
 use std::fmt::Formatter;
-use std::fs::rename;
-use std::os::unix::prelude::OsStrExt;
 use std::path::{Path, PathBuf};
 
 const TREE_PREFIX_STR: &str = "/__tree";

@@ -1,8 +1,7 @@
 use crate::connection::{StorConnection, StorTransaction};
-use crate::err::{StorDieselError, StorDieselResult};
+use crate::err::{StorDieselErrorKind, StorDieselResult};
 use diesel::sql_types::{Integer, Text, Unsigned};
 use diesel::{QueryResult, QueryableByName, RunQueryDsl, dsl};
-use std::backtrace::Backtrace;
 use xana_commons_rs::tracing_re::info;
 
 /// Avoid "Prepared statement contains too many placeholders"
@@ -11,11 +10,8 @@ pub const SQL_PLACEHOLDER_MAX: usize = 60_000;
 pub fn check_insert_num_rows(query: QueryResult<usize>, expected: usize) -> StorDieselResult<()> {
     let result_size = query?;
     if result_size != expected {
-        Err(StorDieselError::ResultLen {
-            actual: result_size,
-            expected,
-            backtrace: Backtrace::capture(),
-        })
+        Err(StorDieselErrorKind::ResultLen
+            .build_message(format!("actual {result_size} expected {expected}")))
     } else {
         Ok(())
     }

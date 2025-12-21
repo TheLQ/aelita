@@ -1,20 +1,17 @@
 use crate::StorDieselError;
+use crate::err::StorDieselErrorKind;
 use crate::models::common::parse_type_checked;
 use crate::models::enum_types::AnyEnumToText;
 use crate::models::id_types::{ModelJournalId, ModelSpaceId};
-use crate::schema;
-use crate::schema::space_owned::dsl::space_owned;
-use aelita_xrn::defs::address::{XrnAddr, XrnType};
+use aelita_xrn::defs::address::XrnType;
 use aelita_xrn::defs::path_xrn::{PathXrn, PathXrnType};
-use aelita_xrn::defs::space_xrn::SpaceXrnType;
 use diesel::backend::Backend;
-use diesel::deserialize::{FromSql, FromSqlRow};
-use diesel::query_builder::InsertStatement;
+use diesel::deserialize::FromSql;
 use diesel::row::NamedRow;
 use diesel::serialize::{Output, ToSql};
-use diesel::sql_types::{Binary, Nullable, Unsigned};
-use diesel::{HasQuery, Insertable, QueryableByName, Selectable, Table};
-use std::fmt::{Debug, Display, Formatter};
+use diesel::sql_types::{Binary, Unsigned};
+use diesel::{HasQuery, Insertable, QueryableByName};
+use std::fmt::Debug;
 use std::str::FromStr;
 
 #[derive(HasQuery, Debug)]
@@ -57,11 +54,11 @@ pub struct ModelSpaceXrn {
 }
 
 impl TryFrom<PathXrn> for ModelSpaceXrn {
-    type Error = StorDieselError;
+    type Error = Box<StorDieselError>;
 
     fn try_from(value: PathXrn) -> Result<Self, Self::Error> {
         let Some(child_id) = value.tree_id() else {
-            return Err(StorDieselError::query_fail("tree id required for xrn"));
+            return Err(StorDieselErrorKind::PathXrnRequiresId.build());
         };
         Ok(Self {
             child_type1: AnyEnumToText::new(XrnType::Path.as_ref()),
@@ -96,9 +93,9 @@ where
         let xrn_type_raw = NamedRow::get::<diesel::sql_types::Text, String>(row, "child_type1")?;
         let xrn_type = XrnType::from_str(&xrn_type_raw)?;
         if xrn_type != XrnType::Path {
-            return Err(Box::new(StorDieselError::query_fail(format!(
-                "Expected Path Xrn got {xrn_type}"
-            ))));
+            return Err(Box::new(
+                StorDieselErrorKind::NotPathXrn.build_message(xrn_type),
+            ));
         }
 
         let path_type_raw = NamedRow::get::<diesel::sql_types::Text, String>(row, "child_type2")?;
@@ -140,10 +137,8 @@ impl<Left, Right> SumType<Left, Right> {
 impl<Left, Right, Db> FromSql<Binary, Db> for SumType<Left, Right>
 where
     Db: Backend,
-    Left: Debug + FromStr,
-    Right: Debug + FromStr,
-    <Left as FromStr>::Err: Display,
-    <Right as FromStr>::Err: Display,
+    Left: Debug + FromStr<Err = strum::ParseError>,
+    Right: Debug + FromStr<Err = strum::ParseError>,
     *const [u8]: FromSql<Binary, Db>,
 {
     fn from_sql(bytes: Db::RawValue<'_>) -> diesel::deserialize::Result<Self> {
@@ -161,9 +156,7 @@ where
             })
         } else {
             let str_type = str::from_utf8(&raw_type).unwrap_or("UNKNOWN");
-            Err(Box::new(StorDieselError::query_fail(format!(
-                "Unknown type {str_type}",
-            ))))
+            Err(StorDieselErrorKind::UnknownType.build_message(str_type))
         }
     }
 }

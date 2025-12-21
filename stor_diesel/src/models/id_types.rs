@@ -1,17 +1,9 @@
-use crate::err::StorDieselError;
-use crate::schema::sql_types::JournalImmutableJournalTypeEnum;
-use crate::schema::sql_types::Tor1TorrentsStateEnum;
 use aelita_xrn::defs::space_xrn::SpaceXrn;
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
-use diesel::mysql::{Mysql, MysqlValue};
-use diesel::serialize::{IsNull, Output, ToSql};
-use diesel::sql_types::{Integer, Text, Unsigned};
-use serde::{Deserialize, Serialize};
+use diesel::serialize::{Output, ToSql};
+use diesel::sql_types::{Integer, Unsigned};
 use std::fmt::{Display, Formatter};
-use std::io::Write;
-use std::str::FromStr;
-use xana_commons_rs::qbittorrent_re::TorrentState;
 
 pub trait StorIdType {
     fn new(inner: u32) -> Self;

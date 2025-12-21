@@ -12,7 +12,7 @@ pub struct LibxrnError {
     pub kind: XrnErrorKind,
     name: String,
     // description: Option<String>,
-    backtrace: Backtrace,
+    backtrace: Box<Backtrace>,
 }
 
 #[derive(Debug, PartialEq, Eq, AsRefStr, strum::Display)]
@@ -73,7 +73,7 @@ impl XrnErrorKind {
         LibxrnError {
             kind: self,
             name: addr.to_string(),
-            backtrace: Backtrace::capture(),
+            backtrace: Box::new(Backtrace::capture()),
         }
     }
 
@@ -81,20 +81,27 @@ impl XrnErrorKind {
         LibxrnError {
             kind: self,
             name: raw.into(),
-            backtrace: Backtrace::capture(),
+            backtrace: Box::new(Backtrace::capture()),
         }
     }
 }
 
 #[cfg(test)]
 pub mod test {
-    use crate::err::{LibxrnError, XrnErrorKind};
+    use crate::err::{LibxrnError, LibxrnResult, XrnErrorKind};
     use std::fmt::Display;
+
+    #[test]
+    fn some() {
+        assert_eq!(0, std::mem::size_of::<Result<(), Box<LibxrnError>>>());
+    }
 
     pub fn assert_err_kind<T>(res: Result<T, LibxrnError>, expected_kind: XrnErrorKind)
     where
         T: Display,
     {
+        assert_eq!(0, std::mem::size_of::<LibxrnResult<()>>());
+
         match res {
             Ok(res) => panic!("Expected {expected_kind}, got {res}"),
             Err(LibxrnError { kind, .. }) if kind == expected_kind => {

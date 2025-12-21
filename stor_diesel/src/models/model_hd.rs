@@ -1,4 +1,5 @@
-use crate::{StorDieselError, StorDieselResult};
+use crate::StorDieselResult;
+use crate::err::StorDieselErrorKind;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ffi::OsStr;
@@ -130,18 +131,16 @@ pub fn path_components<'p, R>(
     let mut component_strs = Vec::new();
     let mut components = path.components();
     let Some(root) = components.next() else {
-        return Err(StorDieselError::query_fail("empty path"));
+        return Err(StorDieselErrorKind::EmptyPath.build_message(path.display()));
     };
     if root != Component::RootDir {
-        return Err(StorDieselError::query_fail("path does not start with root"));
+        return Err(StorDieselErrorKind::PathNotAbsolute.build_message(path.display()));
     }
     for component in components {
         let os_str = match component {
             Component::Normal(v) => v,
-            unknown => {
-                return Err(StorDieselError::query_fail(format!(
-                    "unknown component {unknown:?}"
-                )));
+            _unknown => {
+                return Err(StorDieselErrorKind::PathWeird.build_message(path.display()));
             }
         };
         component_strs.push(map(os_str));

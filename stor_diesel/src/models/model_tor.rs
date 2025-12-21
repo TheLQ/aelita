@@ -1,3 +1,4 @@
+use crate::err::StorDieselErrorKind;
 use crate::models::diesel_wrappers::{TorHashV1Diesel, TorHashV2Diesel};
 use crate::models::enum_types::ModelTorrentState;
 use crate::models::id_types::{ModelJournalId, ModelQbHostId};
@@ -67,7 +68,7 @@ pub struct ModelTorrentsDiesel {
 }
 
 impl TryFrom<ModelTorrentsQBittorrent> for ModelTorrentsDiesel {
-    type Error = StorDieselError;
+    type Error = Box<StorDieselError>;
 
     fn try_from(
         ModelTorrentsQBittorrent {
@@ -102,13 +103,13 @@ impl TryFrom<ModelTorrentsQBittorrent> for ModelTorrentsDiesel {
             secs_active,
             secs_seeding,
             added_on: DateTime::from_timestamp_secs(added_on)
-                .ok_or_else(|| StorDieselError::unknown_timestamp("valid added_on timestamp"))?
+                .ok_or_else(|| StorDieselErrorKind::UnknownTimestamp.build_message("added_on"))?
                 .naive_utc(),
             completion_on: if let Some(timestamp) = negative_one_to_none(completion_on) {
                 Some(
                     DateTime::from_timestamp_secs(timestamp as i64)
                         .ok_or_else(|| {
-                            StorDieselError::unknown_timestamp("valid completion_on timestamp")
+                            StorDieselErrorKind::UnknownTimestamp.build_message("completion_on")
                         })?
                         .naive_utc(),
                 )

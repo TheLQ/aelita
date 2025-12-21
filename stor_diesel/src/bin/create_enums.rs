@@ -1,6 +1,7 @@
 extern crate core;
 
 use aelita_commons::log_init;
+use aelita_stor_diesel::err::StorDieselErrorMeta;
 use aelita_stor_diesel::{
     ModelJournalTypeName, PermaStore, StorDieselError, StorDieselResult, StorTransaction,
     establish_connection,
@@ -11,16 +12,19 @@ use aelita_xrn::defs::space_xrn::SpaceXrnType;
 use diesel::RunQueryDsl;
 use std::process::ExitCode;
 use strum::VariantArray;
-use xana_commons_rs::{CommaJoiner, pretty_main};
+use xana_commons_rs::{CommaJoiner, pretty_main_boxed};
 
 fn main() -> ExitCode {
     log_init();
 
-    pretty_main(run)
+    pretty_main_boxed(run)
 }
 
 pub fn run() -> StorDieselResult<()> {
-    let conn = &mut establish_connection(PermaStore::AelitaNull).unwrap();
+    let conn = &mut establish_connection(PermaStore::AelitaNull)
+        .map_err(|(db_url, e)| StorDieselErrorMeta::DieselConnect(e).build_message(db_url))?;
+
+    assert_eq!(0, std::mem::size_of::<StorDieselResult<()>>());
 
     StorTransaction::new_transaction("build", conn, |conn| {
         let primary_keys = type_names::<XrnType>();
@@ -46,7 +50,7 @@ pub fn run() -> StorDieselResult<()> {
         ))
         .execute(conn.inner())?;
 
-        Ok::<(), StorDieselError>(())
+        Ok::<(), Box<StorDieselError>>(())
     })?;
 
     Ok(())

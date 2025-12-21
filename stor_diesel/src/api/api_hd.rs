@@ -1,13 +1,13 @@
 use crate::api::common::SQL_PLACEHOLDER_MAX;
+use crate::err::StorDieselErrorKind;
 use crate::models::model_hd::HD_PATH_DEPTH;
 use crate::{HdPathAssociation, NewHdPathAssociation, NewHdPathAssociationRoot, path_components};
-use crate::{StorDieselError, StorDieselResult, StorTransaction};
+use crate::{StorDieselResult, StorTransaction};
 use crate::{schema, schema_temp};
 use diesel::RunQueryDsl;
 use diesel::prelude::*;
 use diesel::sql_types::Binary;
 use itertools::Itertools;
-use std::backtrace::Backtrace;
 use std::collections::{HashMap, HashSet};
 use std::os::unix::prelude::OsStrExt;
 use std::path::Path;
@@ -50,10 +50,11 @@ fn hd_list_children_parents(
     if components_to_id.len() != path_components_str.len() {
         let mut missing = path_components_str.clone();
         missing.retain(|v| !components_to_id.contains_key(*v));
-        return Err(StorDieselError::UnknownComponent(
-            format!("{} total {}", missing.join(","), missing.len()),
-            Backtrace::capture(),
-        ));
+        return Err(StorDieselErrorKind::UnknownComponent.build_message(format!(
+            "{} total {}",
+            missing.join(","),
+            missing.len()
+        )));
     }
 
     #[derive(QueryableByName)]

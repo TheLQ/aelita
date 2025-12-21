@@ -1,6 +1,6 @@
 use crate::api::common::{assert_test_database, check_insert_num_rows, mysql_last_id};
 use crate::connection::StorTransaction;
-use crate::err::{StorDieselError, StorDieselResult};
+use crate::err::{StorDieselErrorKind, StorDieselResult};
 use crate::models::id_types::{ModelJournalId, StorIdType};
 use crate::models::model_journal::{
     ModelJournalImmutable, NewModelJournalImmutable, NewModelJournalImmutableDiesel,
@@ -182,12 +182,11 @@ pub fn storapi_journal_commit_new(
             // good
         }
         Some(v) => {
-            return Err(StorDieselError::query_fail(format!(
-                "expected commit latest {v} but got {to_commit}"
-            )));
+            return Err(StorDieselErrorKind::UnexpectedJournalIdForDatabase
+                .build_message(format!("expected commit latest {v} but got {to_commit}")));
         }
         None => {
-            return Err(StorDieselError::query_fail("no un-committed journal rows"));
+            return Err(StorDieselErrorKind::ZeroUncommittedJournals.build());
         }
     }
 
