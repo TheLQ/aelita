@@ -12,12 +12,12 @@ use aelita_xrn::defs::space_xrn::SpaceXrnType;
 use diesel::RunQueryDsl;
 use std::process::ExitCode;
 use strum::VariantArray;
-use xana_commons_rs::{CommaJoiner, pretty_main_boxed};
+use xana_commons_rs::{CommaJoiner, pretty_main};
 
 fn main() -> ExitCode {
     log_init();
 
-    pretty_main_boxed(run)
+    pretty_main(run)
 }
 
 pub fn run() -> StorDieselResult<()> {

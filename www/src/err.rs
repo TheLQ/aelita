@@ -8,9 +8,7 @@ use axum::response::{IntoResponse, Response};
 use handlebars::html_escape;
 use xana_commons_rs::qbittorrent_re::serde_json;
 use xana_commons_rs::tracing_re::error;
-use xana_commons_rs::{
-    MyBacktrace, SimpleIoError, crash_builder, crash_into_crash, pretty_format_error,
-};
+use xana_commons_rs::{SimpleIoError, crash_builder, pretty_format_error};
 
 pub type WebResult<R> = Result<R, Box<WebError>>;
 
@@ -30,51 +28,24 @@ crash_builder!(
     WebErrorMeta,
     WebErrorKind,
     // copied from stor_diesel/src/err.rs
-    (Serde, serde_json::Error),
-    (Chrono, chrono::ParseError),
-    (Diesel, aelita_stor_diesel::err_re::DieselError),
-    (DieselConnect, aelita_stor_diesel::err_re::ConnectionError),
-    (Postcard, aelita_stor_diesel::err_re::PostcardError),
-    (SimpleIo, SimpleIoError),
-    (StdUtf8, std::str::Utf8Error),
-    (Strum, strum::ParseError),
-    (TryFromNumber, std::num::TryFromIntError),
+    (extern Serde, serde_json::Error),
+    (extern Chrono, chrono::ParseError),
+    (extern Diesel, aelita_stor_diesel::err_re::DieselError),
+    (extern DieselConnect, aelita_stor_diesel::err_re::ConnectionError),
+    (extern Postcard, aelita_stor_diesel::err_re::PostcardError),
+    (extern SimpleIo, SimpleIoError),
+    (extern StdUtf8, std::str::Utf8Error),
+    (extern Strum, strum::ParseError),
+    (extern TryFromNumber, std::num::TryFromIntError),
     // www unique
-    (ParseInt, std::num::ParseIntError),
-    (AxumReject, axum::extract::rejection::PathRejection),
-    (Deadpool, deadpool_diesel::PoolError),
-    (DeadpoolInteract, deadpool_diesel::InteractError),
-    (Handlebars, handlebars::RenderError),
-    (HandlebarsTemplate, handlebars::TemplateError),
-    (StorDieselError, StorDieselErrorKind),
-);
-crash_into_crash!(
-    LibxrnError,
-    LibxrnErrorMeta,
-    XrnErrorKind,
-    WebError,
-    WebErrorMeta,
-    WebErrorKind,
-    []
-);
-crash_into_crash!(
-    StorDieselError,
-    StorDieselErrorMeta,
-    StorDieselErrorKind,
-    WebError,
-    WebErrorMeta,
-    WebErrorKind,
-    [
-        Serde,
-        Chrono,
-        Diesel,
-        DieselConnect,
-        Postcard,
-        SimpleIo,
-        StdUtf8,
-        Strum,
-        TryFromNumber,
-    ]
+    (extern ParseInt, std::num::ParseIntError),
+    (extern AxumReject, axum::extract::rejection::PathRejection),
+    (extern Deadpool, deadpool_diesel::PoolError),
+    (extern DeadpoolInteract, deadpool_diesel::InteractError),
+    (extern Handlebars, handlebars::RenderError),
+    (extern HandlebarsTemplate, handlebars::TemplateError),
+    (mod StorDieselError, StorDieselErrorKind),
+    (mod LibxrnError, XrnErrorKind),
 );
 
 // #[derive(Error, Debug)]

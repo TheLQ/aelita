@@ -1,5 +1,5 @@
 use crate::StorDieselError;
-use crate::err::StorDieselErrorMeta;
+use crate::err::{StorDieselErrorKind, StorDieselErrorMeta};
 use std::str::FromStr;
 
 pub fn parse_type_checked<Enum>(bytes: &[u8]) -> Result<Enum, Box<StorDieselError>>
