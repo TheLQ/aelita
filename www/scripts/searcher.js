@@ -65,6 +65,9 @@ const search_state = {
 
 async function push_search() {
     let new_search = document.getElementById(ID_SEARCH_BOX).value;
+    if (new_search == null) {
+        throw new Error("push_search expected value")
+    }
     search_state.next_query = new_search;
 
     await update_search()
@@ -77,7 +80,7 @@ async function update_search() {
     ) {
         console.debug(`ignore next ${search_state.next_query} last ${search_state.last_query}`)
         search_state.state = STATE_OFF;
-        search_state.next_query = null;
+        search_state.next_query = "";
         return;
     }
 
@@ -94,7 +97,7 @@ async function update_search() {
     }
 
     if (is_fetch) {
-        if (search_state.next_query == null) {
+        if (search_state.next_query === "" || search_state.next_query === null) {
             throw new Error("expected value")
         }
         search_state.state = STATE_RUNNING;
@@ -112,7 +115,7 @@ async function update_search() {
         }
         set_search_results(response)
         if (search_state.next_query === cached_next) {
-            search_state.next_query = null
+            search_state.next_query = ""
         }
         search_state.last_query = cached_next;
         await update_search()
@@ -135,7 +138,6 @@ function set_search_results(tor_entries) {
     set_message(`found ${tor_entries.length} - ${debug_search_state()}`)
 
     let entry_template = document.querySelector(`#${ID_ENTRY_TEMPLATE}`);
-    let display_template = document.querySelector(`#${ID_DISPLAY_TEMPLATE}`);
 
     tor_entries.reverse();
     for (const existing_root of document.querySelectorAll(`.${ID_X_ENTRY}`)) {
@@ -147,12 +149,10 @@ function set_search_results(tor_entries) {
         if (next === undefined) {
             // list is shorter than the existing entries
             existing_root.classList.add(ID_X_ENTRY_HIDDEN)
-            existing_root.nextElementSibling.classList.add(ID_X_ENTRY_HIDDEN)
         } else {
             if (existing_root.classList != null) {
                 existing_root.classList.remove(ID_X_ENTRY_HIDDEN)
             }
-            existing_root.nextElementSibling.classList.remove(ID_X_ENTRY_HIDDEN)
             set_search_result([existing_root], next)
         }
     }
@@ -186,16 +186,16 @@ function set_search_result(roots, tor_entry) {
             json_value = (parseFloat(json_value) * 100).toFixed(0);
             // json_value = `%${json_value}`;
         }
-        console.log(`applying ${json_field}=${json_value} class ${clazz}`, tor_entry);
+        // console.log(`applying ${json_field}=${json_value} class ${clazz}`, tor_entry);
 
         let not_found = true;
         for (const root of roots) {
             let elem = root.querySelector(`.${clazz}`);
             if (elem === null) {
-                console.debug(`class ${clazz} not found for`, root)
+                console.warn(`class ${clazz} not found for`, root)
                 continue
             } else {
-                console.debug(`class ${clazz} found`, root)
+                // console.debug(`class ${clazz} found`, root)
             }
             elem.innerText = json_value;
             not_found = false;
