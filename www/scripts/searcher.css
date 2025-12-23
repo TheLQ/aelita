@@ -24,3 +24,7 @@
 .s-progress {
     text-align: right !important;
 }
+
+#search-results {
+    --bulma-table-cell-padding: 0.1em 0.5em
+}
