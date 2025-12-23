@@ -54,7 +54,7 @@ pub enum HbsPage {
 }
 
 fn html_dir_path() -> PathBuf {
-    PathBuf::from("www/html")
+    PathBuf::from("www/src/pages")
 }
 
 impl HbsPage {
