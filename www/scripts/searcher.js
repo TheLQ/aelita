@@ -7,9 +7,13 @@ const ID_ENTRY_TEMPLATE = "entry-template";
 const ID_DISPLAY_TEMPLATE = "display-template";
 
 function init() {
-    console.log("init searcher")
-
     let form = document.getElementById('search-form');
+    if (form == null) {
+        console.log("no searcher to init");
+        return
+    } else {
+        console.log("init searcher")
+    }
 
     let search_box = document.getElementById(ID_SEARCH_BOX)
     console.log("for box", search_box)
@@ -24,11 +28,8 @@ function init() {
         await push_search()
     })
 
-    form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        set_message(search_box.value);
-        console.log("submit-event", e)
-        await push_search()
+    form.addEventListener("submit", (e) => {
+        submit_handler(e, "form-submit")
     })
 
     // browser might cache last search term
@@ -39,6 +40,14 @@ function set_message(value) {
     console.info(`display message: ${value}`);
     let tmp_output = document.getElementById("message");
     tmp_output.innerText = value;
+}
+
+function submit_handler(e, debug_source) {
+    let search_box = document.getElementById(ID_SEARCH_BOX)
+    e.preventDefault();
+    set_message(search_box.value);
+    console.log(debug_source, e)
+    push_search()
 }
 
 // document.addEventListener("DOMContentLoaded", init)
