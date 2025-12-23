@@ -1,7 +1,7 @@
 use crate::server::util::{BasicResponse, pretty_basic_page};
 use aelita_stor_diesel::StorDieselError;
-use aelita_stor_diesel::err::{StorDieselErrorKind, StorDieselErrorMeta};
-use aelita_xrn::err::{LibxrnError, LibxrnErrorMeta, XrnErrorKind};
+use aelita_stor_diesel::err::StorDieselErrorKind;
+use aelita_xrn::err::{LibxrnError, XrnErrorKind};
 use axum::body::Body;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};

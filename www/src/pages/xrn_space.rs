@@ -1,6 +1,6 @@
 use crate::controllers::handlebars::HbsPage;
 use crate::controllers::state::WState;
-use crate::err::{WebError, WebErrorKind, WebResult};
+use crate::err::{WebErrorKind, WebResult};
 use crate::server::convert_xrn::XrnFromUrl;
 use crate::server::util::BasicResponse;
 use aelita_stor_diesel::ModelSpaceId;
