@@ -172,7 +172,13 @@ function set_search_result(roots, tor_entry) {
     for (const clazz of Object.keys(tor_metas)) {
         let json_field = tor_metas[clazz];
         let json_value = tor_entry[json_field];
-        console.log(`applying ${json_field}=${json_value} class ${clazz}`, tor_entry)
+
+        if (json_field === "progress") {
+            json_value = (parseFloat(json_value) * 100).toFixed(0);
+            // json_value = `%${json_value}`;
+        }
+        console.log(`applying ${json_field}=${json_value} class ${clazz}`, tor_entry);
+
         let not_found = true;
         for (const root of roots) {
             let elem = root.querySelector(`.${clazz}`);

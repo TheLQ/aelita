@@ -20,3 +20,7 @@
     overflow: hidden;
     white-space: nowrap;
 }
+
+.s-progress {
+    text-align: right !important;
+}
