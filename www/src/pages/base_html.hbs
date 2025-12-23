@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{title}}</title>
+    <title>{{base.title}}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css">
 </head>
 <body>
 
-{{#with root}}
+<div>
     <nav class="navbar" role="navigation" aria-label="main navigation">
         <div class="navbar-brand">
             <a class="navbar-item" href="https://bulma.io">
-                <img src="/scripts/manta.webp" class="image"/>
+                <img src="/scripts/manta.webp" class="image" alt="code lyoko manta logo"/>
             </a>
 
             <!--
@@ -27,7 +27,7 @@
 
         <div class="navbar-menu">
             <div class="navbar-start">
-                {{#each crumbs}}
+                {{#each base.crumbs}}
                     <a class="navbar-item" href="{{href}}">
                         {{name}}
                     </a>
@@ -35,7 +35,7 @@
             </div>
 
             <div class="navbar-end">
-                {{#each tools}}
+                {{#each base.tools}}
                     <a class="navbar-item" href="{{href}}">
                         {{name}}
                     </a>
@@ -43,10 +43,10 @@
             </div>
         </div>
     </nav>
-{{/with}}
+</div>
 
 <div id="wrapper">
-    {{> body}}
+    {{> @partial-block }}
 </div>
 
 </body>

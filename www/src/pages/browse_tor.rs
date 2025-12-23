@@ -1,6 +1,7 @@
 use crate::controllers::handlebars::HbsPage;
 use crate::controllers::state::WState;
 use crate::err::WebResult;
+use crate::pages::base_html::BaseHtml;
 use crate::server::util::BasicResponse;
 use aelita_stor_diesel::{
     storapi_tor_torrents_list_starts_with, storapi_tor_torrents_list_starts_with_count,
@@ -8,6 +9,7 @@ use aelita_stor_diesel::{
 use axum::body::Body;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
+use serde::Serialize;
 use std::collections::HashMap;
 use xana_commons_rs::qbittorrent_re::serde_json;
 
@@ -66,5 +68,13 @@ async fn render_html_list(state: WState<'_>) -> WebResult<BasicResponse> {
 
     // let body = Body::from(get_html_const());
 
-    state.render_page(HbsPage::Browse_Tor, ())
+    #[derive(Serialize)]
+    struct Data {
+        initial_search: &'static str,
+    };
+    let params = BaseHtml::title("Browse Tor").build(Data {
+        initial_search: "Tor",
+    });
+
+    state.render_page(HbsPage::Browse_Tor, params)
 }

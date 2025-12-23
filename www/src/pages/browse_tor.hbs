@@ -1,64 +1,52 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Aelita Browse Paths</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css">
-    <link rel="stylesheet" href="/scripts/searcher.css">
-    <script src="/scripts/searcher.js"></script>
-</head>
-<body>
-
-<div class=".container .is-max-desktop">
-    <form id="search-form">
-        <search class="field">
-            <label class="label" for="search-box">Name</label>
-            <div class="control">
-                <input
-                        class="input"
-                        id="search-box"
-                        name="search-box-name"
-                        type="search"
-                        placeholder="Text input"/>
-            </div>
-            <!-- class="input" -->
-            <button class="button" type="submit">Search</button>
-        </search>
-    </form>
-    <div id="message"></div>
-    <table id="search-results" class="table is-striped is-fullwidth">
-        <thead>
-        <tr>
-            <td class="s-name">Name</td>
-            <td class="s-state">State</td>
-            <td class="s-path">Path</td>
-            <td class="x-progress">Done</td>
-            <td class="x-added">Added</td>
-            <td class="x-completed">Completed</td>
-            <td class="x-size">Size</td>
-            <td class="x-downloaded">Downloaded</td>
-            <td class="x-uploaded">Uploaded</td>
-            <td class="x-time-active">Time Active</td>
-            <td class="x-time-seeding">Time Seeding</td>
-        </tr>
-        </thead>
-        <tbody>
-        <tr id="entry-template" class="x-entry x-entry-hidden has-background-text-20">
-            <td class="s-name"></td>
-            <td class="s-state"></td>
-            <td class="s-path"></td>
-            <td class="s-progress"></td>
-            <td class="s-added"></td>
-            <td class="s-completed"></td>
-            <td class="s-size"></td>
-            <td class="s-downloaded"></td>
-            <td class="s-uploaded"></td>
-            <td class="s-time-active"></td>
-            <td class="s-time-seeding"></td>
-        </tr>
-        </tbody>
-    </table>
-</div>
-
-</body>
-</html>
+{{#> base_html}}
+    <div class=".container .is-max-desktop">
+        <form id="search-form">
+            <search class="field">
+                <label class="label" for="search-box">Name</label>
+                <div class="control">
+                    <input
+                            class="input"
+                            id="search-box"
+                            name="search-box-name"
+                            type="search"
+                            placeholder="Text input"/>
+                </div>
+                <!-- class="input" -->
+                <button class="button" type="submit">Search</button>
+            </search>
+        </form>
+        <div id="message"></div>
+        <table id="search-results" class="table is-striped is-fullwidth">
+            <thead>
+            <tr>
+                <td class="s-name">Name</td>
+                <td class="s-state">State</td>
+                <td class="s-path">Path</td>
+                <td class="x-progress">Done</td>
+                <td class="x-added">Added</td>
+                <td class="x-completed">Completed</td>
+                <td class="x-size">Size</td>
+                <td class="x-downloaded">Downloaded</td>
+                <td class="x-uploaded">Uploaded</td>
+                <td class="x-time-active">Time Active</td>
+                <td class="x-time-seeding">Time Seeding</td>
+            </tr>
+            </thead>
+            <tbody>
+            <tr id="entry-template" class="x-entry x-entry-hidden has-background-text-20">
+                <td class="s-name"></td>
+                <td class="s-state"></td>
+                <td class="s-path"></td>
+                <td class="s-progress"></td>
+                <td class="s-added"></td>
+                <td class="s-completed"></td>
+                <td class="s-size"></td>
+                <td class="s-downloaded"></td>
+                <td class="s-uploaded"></td>
+                <td class="s-time-active"></td>
+                <td class="s-time-seeding"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+{{/base_html}}

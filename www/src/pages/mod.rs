@@ -1,3 +1,4 @@
+mod base_html;
 pub mod browse_journal;
 pub mod browse_paths;
 pub mod browse_tor;
