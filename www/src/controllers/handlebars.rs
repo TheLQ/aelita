@@ -64,7 +64,7 @@ impl HbsPage {
 
     fn extension(&self) -> &'static str {
         match self {
-            Self::Browse_Tor => "html",
+            // Self::Browse_Tor => "html",
             _ => "hbs",
         }
     }
