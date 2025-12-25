@@ -31,7 +31,7 @@ impl BaseHtml {
                 href: "/browse/paths".to_string(),
             },
         ];
-        let mut crumbs = vec![
+        let crumbs = vec![
             BaseTool {
                 name: "hello".to_string(),
                 href: "/browse/tor".to_string(),

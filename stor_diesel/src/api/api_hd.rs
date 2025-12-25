@@ -11,6 +11,7 @@ use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::os::unix::prelude::OsStrExt;
 use std::path::Path;
+use xana_commons_rs::CrashErrKind;
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{info, trace};
 use xana_commons_rs::{BasicWatch, LOCALE, SpaceJoiner};

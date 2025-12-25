@@ -1,5 +1,5 @@
-use crate::StorDieselResult;
-use crate::err::StorDieselErrorMeta;
+use crate::err::StorDieselErrorKind;
+use crate::{StorDieselError, StorDieselResult};
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
 use diesel::mysql::{Mysql, MysqlValue};
@@ -105,25 +105,29 @@ where
 pub struct RawDieselBytes(pub Vec<u8>);
 
 impl RawDieselBytes {
-    pub fn serialize_json<V: Serialize>(value: V) -> StorDieselResult<Self> {
+    pub fn serialize_json<V: Serialize>(value: V) -> serde_json::Result<Self> {
         Ok(Self(serde_json::to_vec(&value)?))
     }
 
-    pub fn deserialize_json<'d, D: serde::Deserialize<'d>>(&'d self) -> StorDieselResult<D> {
+    pub fn deserialize_json<'d, D: serde::Deserialize<'d>>(
+        &'d self,
+    ) -> Result<D, (String, serde_json::Error)> {
         serde_json::from_slice(&self.0).map_err(|e| {
             let len = self.0.len().min(10000);
-            let extract = str::from_utf8(&self.0[0..len]).unwrap();
-            StorDieselErrorMeta::Serde(e).build_message(extract)
+            let extract = str::from_utf8(&self.0[0..len])
+                .unwrap_or("[not a string]")
+                .to_string();
+            (extract, e)
         })
     }
 
-    pub fn serialize_postcard<V: Serialize>(value: &V) -> StorDieselResult<Self> {
+    pub fn serialize_postcard<V: Serialize>(value: &V) -> postcard::Result<Self> {
         Ok(Self(postcard::to_allocvec(value)?))
     }
 
-    pub fn deserialize_postcard<'d, D: serde::Deserialize<'d>>(&'d self) -> StorDieselResult<D> {
+    pub fn deserialize_postcard<'d, D: serde::Deserialize<'d>>(&'d self) -> postcard::Result<D> {
         let watch = BasicWatch::start();
-        let res = postcard::from_bytes(&self.0).map_err(Into::into);
+        let res = postcard::from_bytes(&self.0);
         trace!("Deserialized in {watch}");
         res
     }

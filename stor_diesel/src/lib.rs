@@ -1,6 +1,6 @@
 #![feature(error_generic_member_access)]
 #![feature(iterator_try_collect)]
-#![feature(slice_as_array)]
+#![feature(array_as_slice)]
 #![feature(slice_pattern)]
 
 mod api;
@@ -25,6 +25,7 @@ pub use models::{
     model_hd::*, model_journal::*, model_space::*, model_tor::*,
 };
 pub mod err_re {
+    pub use chrono::ParseError as ChronoError;
     pub use diesel::ConnectionError;
     pub use diesel::result::Error as DieselError;
     pub use postcard::Error as PostcardError;

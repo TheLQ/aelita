@@ -1,6 +1,6 @@
 use crate::controllers::handlebars::HbsPage;
 use crate::controllers::state::WState;
-use crate::err::{WebError, WebErrorMeta, WebResult};
+use crate::err::{WebError, WebErrorCause, WebResult};
 use crate::server::convert_xrn::XrnFromUrl;
 use crate::server::util::{BasicResponse, pretty_basic_page};
 use aelita_stor_diesel::err::StorDieselErrorKind;
@@ -13,13 +13,13 @@ use serde::Serialize;
 use std::path::Path;
 
 pub async fn handle_xrn_path(
-    State(state): State<WState<'_>>,
+    State(state): State<WState>,
     XrnFromUrl(xrn): XrnFromUrl<PathXrn>,
 ) -> WebResult<BasicResponse> {
     _handle_xrn_path(state, xrn).await
 }
 
-async fn _handle_xrn_path(state: WState<'_>, xrn: PathXrn) -> WebResult<BasicResponse> {
+async fn _handle_xrn_path(state: WState, xrn: PathXrn) -> WebResult<BasicResponse> {
     let path = xrn.path();
     let path = if let Some(path) = path {
         path.to_path_buf()
@@ -37,29 +37,25 @@ async fn _handle_xrn_path(state: WState<'_>, xrn: PathXrn) -> WebResult<BasicRes
             }
         })
         .await;
+
+    if let Err(e) = &children
+        && let Some(cause) = &e.xana_err().cause
+        && let WebErrorCause::StorDieselError(StorDieselErrorKind::UnknownComponent) = cause
+    {
+        return Ok(BasicResponse(
+            StatusCode::OK,
+            mime::HTML,
+            Body::from(pretty_basic_page("404 Path component(s) not found", xrn)),
+        ));
+    }
     match children {
-        Err(e)
-            if matches!(
-                *e,
-                WebError {
-                    meta: WebErrorMeta::StorDieselError(StorDieselErrorKind::UnknownComponent),
-                    ..
-                }
-            ) =>
-        {
-            Ok(BasicResponse(
-                StatusCode::OK,
-                mime::HTML,
-                Body::from(pretty_basic_page("404 Path component(s) not found", xrn)),
-            ))
-        }
         Err(e) => Err(e)?,
         // xrn.path().unwrap()
         Ok(children) => render_html(state, &path, children),
     }
 }
 
-fn render_html(state: WState<'_>, root: &Path, children: Vec<String>) -> WebResult<BasicResponse> {
+fn render_html(state: WState, root: &Path, children: Vec<String>) -> WebResult<BasicResponse> {
     #[derive(Serialize)]
     struct PathEntry {
         xrn: PathXrn,

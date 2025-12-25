@@ -4,6 +4,7 @@ use crate::err::{LibxrnError, XrnErrorKind};
 use serde::{Serialize, Serializer};
 use std::fmt::Formatter;
 use std::path::{Path, PathBuf};
+use xana_commons_rs::CrashErrKind;
 
 const TREE_PREFIX_STR: &str = "/__tree";
 

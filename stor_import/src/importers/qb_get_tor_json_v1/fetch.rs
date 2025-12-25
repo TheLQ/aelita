@@ -1,4 +1,4 @@
-use crate::err::StorImportResult;
+use crate::err::{StorImportErrorKind, StorImportResult};
 use crate::importers::qb_get_tor_json_v1::defs::ImportQbMetadata;
 use aelita_stor_diesel::ModelJournalTypeName;
 use aelita_stor_diesel::ModelQbHost;
@@ -10,9 +10,9 @@ use aelita_stor_diesel::storapi_tor_host_list;
 use bytes::Bytes;
 use tokio::runtime::Handle;
 use tokio::task::JoinSet;
-use xana_commons_rs::BasicWatch;
 use xana_commons_rs::qbittorrent_re::QBittorrentClientBuilder;
 use xana_commons_rs::tracing_re::{Level, info, span};
+use xana_commons_rs::{BasicWatch, ResultXanaMap};
 
 pub fn storfetch_torrents(conn: &mut StorTransaction<'_>) -> StorImportResult<()> {
     let hosts = storapi_tor_host_list(conn)?;
@@ -34,9 +34,12 @@ pub fn storfetch_torrents(conn: &mut StorTransaction<'_>) -> StorImportResult<()
             NewModelJournalImmutable {
                 journal_type: ModelJournalTypeName::QbGetTorJson1,
                 data: RawDieselBytes(data.into()),
-                metadata: Some(RawDieselBytes::serialize_json(ImportQbMetadata {
-                    qb_host_id: model.qb_host_id,
-                })?),
+                metadata: Some(
+                    RawDieselBytes::serialize_json(ImportQbMetadata {
+                        qb_host_id: model.qb_host_id,
+                    })
+                    .xana_err(StorImportErrorKind::MalformedQbMetadata)?,
+                ),
                 cause_description: format!("stor {hosts_num} qb hosts"),
                 cause_xrn: None,
             },

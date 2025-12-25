@@ -1,6 +1,6 @@
 use crate::controllers::handlebars::HbsPage;
 use crate::controllers::state::WState;
-use crate::err::WebResult;
+use crate::err::{WebErrorKind, WebResult};
 use crate::pages::base_html::BaseHtml;
 use crate::server::util::BasicResponse;
 use aelita_stor_diesel::{
@@ -11,10 +11,11 @@ use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use serde::Serialize;
 use std::collections::HashMap;
+use xana_commons_rs::ResultXanaMap;
 use xana_commons_rs::qbittorrent_re::serde_json;
 
 pub async fn handle_browse_tor(
-    State(state): State<WState<'_>>,
+    State(state): State<WState>,
     Query(params): Query<HashMap<String, String>>,
 ) -> WebResult<BasicResponse> {
     if let Some(query) = params.get("query") {
@@ -28,7 +29,7 @@ pub async fn handle_browse_tor(
     }
 }
 
-async fn render_search_json(state: WState<'_>, query: &str) -> WebResult<BasicResponse> {
+async fn render_search_json(state: WState, query: &str) -> WebResult<BasicResponse> {
     let children = state
         .sqlfs
         .transact({
@@ -40,11 +41,11 @@ async fn render_search_json(state: WState<'_>, query: &str) -> WebResult<BasicRe
         })
         .await?;
 
-    let json = serde_json::to_string(&children)?;
+    let json = serde_json::to_string(&children).xana_err(WebErrorKind::SerdeToJsonResponse)?;
     Ok(BasicResponse(StatusCode::OK, mime::JSON, Body::from(json)))
 }
 
-async fn render_search_count(state: WState<'_>, query: &str) -> WebResult<BasicResponse> {
+async fn render_search_count(state: WState, query: &str) -> WebResult<BasicResponse> {
     let children = state
         .sqlfs
         .transact({
@@ -62,7 +63,7 @@ async fn render_search_count(state: WState<'_>, query: &str) -> WebResult<BasicR
     ))
 }
 
-async fn render_html_list(state: WState<'_>) -> WebResult<BasicResponse> {
+async fn render_html_list(state: WState) -> WebResult<BasicResponse> {
     // let tpl = get_template();
     // let body = tpl.render(())?;
 

@@ -6,6 +6,7 @@ use crate::{StorDieselError, StorDieselResult};
 use chrono::{DateTime, NaiveDateTime};
 use diesel::{HasQuery, Insertable};
 use serde::{Deserialize, Serialize};
+use xana_commons_rs::CrashErrKind;
 use xana_commons_rs::bencode_torrent_re::{
     ByTorHash, SHA1_BYTES, SHA256_BYTES, TorHashArray, TorHashV1, TorHashV2,
 };

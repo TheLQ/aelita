@@ -4,7 +4,7 @@ use axum::body::Body;
 use axum::extract::{Path, State};
 
 pub async fn _handle_xrn_journal(
-    State(_state): State<WState<'_>>,
+    State(_state): State<WState>,
     _xrn_raw: Option<Path<String>>,
 ) -> WebResult<Body> {
     todo!()

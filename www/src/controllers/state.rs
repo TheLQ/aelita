@@ -5,12 +5,17 @@ use aelita_stor_diesel::PermaStore;
 use std::sync::Arc;
 
 #[derive(Clone)]
-pub struct WState<'h> {
+pub struct WState {
     pub sqlfs: Arc<SqlController>,
-    pub handlebars: Arc<HandlebarsController<'h>>,
+    /*
+    todo: this shouldn't abuse static
+    but this is referenced in every web handler
+    which breaks #[axum::debug_handler]
+    */
+    pub handlebars: Arc<HandlebarsController<'static>>,
 }
 
-impl<'h> WState<'h> {
+impl WState {
     pub fn new(store: PermaStore) -> WebResult<Self> {
         Ok(Self {
             sqlfs: Arc::new(SqlController::new(store)),

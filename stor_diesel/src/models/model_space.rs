@@ -13,6 +13,7 @@ use diesel::sql_types::{Binary, Unsigned};
 use diesel::{HasQuery, Insertable, QueryableByName};
 use std::fmt::Debug;
 use std::str::FromStr;
+use xana_commons_rs::CrashErrKind;
 
 #[derive(HasQuery, Debug)]
 #[diesel(table_name = crate::schema::space_names)]

@@ -4,6 +4,7 @@ use crate::err::{LibxrnError, XrnErrorKind};
 use std::cmp::PartialEq;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use xana_commons_rs::CrashErrKind;
 
 /// xrn:project:paper/30305
 /// xrn:project:task/3045

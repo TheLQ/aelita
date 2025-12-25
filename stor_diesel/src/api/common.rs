@@ -2,6 +2,7 @@ use crate::connection::{StorConnection, StorTransaction};
 use crate::err::{StorDieselErrorKind, StorDieselResult};
 use diesel::sql_types::{Integer, Text, Unsigned};
 use diesel::{QueryResult, QueryableByName, RunQueryDsl, dsl};
+use xana_commons_rs::CrashErrKind;
 use xana_commons_rs::tracing_re::info;
 
 /// Avoid "Prepared statement contains too many placeholders"

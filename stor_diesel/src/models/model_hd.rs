@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::path::{Component, Path};
+use xana_commons_rs::CrashErrKind;
 
 pub const HD_PATH_DEPTH: usize = 11;
 

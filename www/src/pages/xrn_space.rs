@@ -9,15 +9,17 @@ use aelita_stor_diesel::storapi_space_get;
 use aelita_xrn::defs::space_xrn::{SpaceXrn, SpaceXrnType};
 use axum::extract::State;
 use serde::Serialize;
+use xana_commons_rs::CrashErrKind;
 
+#[axum::debug_handler]
 pub async fn handle_xrn_space(
-    State(state): State<WState<'_>>,
+    State(state): State<WState>,
     XrnFromUrl(xrn): XrnFromUrl<SpaceXrn>,
 ) -> WebResult<BasicResponse> {
     render_html(state, xrn).await
 }
 
-async fn render_html(state: WState<'_>, xrn: SpaceXrn) -> WebResult<BasicResponse> {
+async fn render_html(state: WState, xrn: SpaceXrn) -> WebResult<BasicResponse> {
     #[allow(unreachable_patterns)]
     match xrn.stype() {
         SpaceXrnType::Simple => render_simple(state, xrn).await,
@@ -25,7 +27,7 @@ async fn render_html(state: WState<'_>, xrn: SpaceXrn) -> WebResult<BasicRespons
     }
 }
 
-async fn render_simple(state: WState<'_>, xrn: SpaceXrn) -> WebResult<BasicResponse> {
+async fn render_simple(state: WState, xrn: SpaceXrn) -> WebResult<BasicResponse> {
     let space_id = ModelSpaceId::from_project_xrn(&xrn);
     let space_id_trans = space_id.clone();
     let (space, created) = state

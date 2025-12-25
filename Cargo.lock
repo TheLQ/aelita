@@ -38,6 +38,7 @@ dependencies = [
  "indexmap",
  "serde",
  "serde_json",
+ "strum",
  "thiserror",
  "tokio",
  "xana-commons-rs",

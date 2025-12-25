@@ -7,7 +7,7 @@ use aelita_stor_diesel::storapi_journal_list;
 use axum::extract::State;
 use serde::Serialize;
 
-pub async fn handle_browse_journal(State(state): State<WState<'_>>) -> WebResult<BasicResponse> {
+pub async fn handle_browse_journal(State(state): State<WState>) -> WebResult<BasicResponse> {
     let journals = state
         .sqlfs
         .transact(|conn| storapi_journal_list(conn))
@@ -17,7 +17,7 @@ pub async fn handle_browse_journal(State(state): State<WState<'_>>) -> WebResult
 }
 
 fn render_html_list(
-    state: WState<'_>,
+    state: WState,
     journals: Vec<ModelJournalImmutableDiesel>,
 ) -> WebResult<BasicResponse> {
     #[derive(Serialize)]

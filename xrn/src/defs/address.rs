@@ -4,6 +4,7 @@ use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use xana_commons_rs::CrashErrKind;
 
 /// xrn:project:1000000
 #[derive(Debug)]

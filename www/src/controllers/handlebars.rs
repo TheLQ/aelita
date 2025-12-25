@@ -1,19 +1,22 @@
 use crate::controllers::state::WState;
-use crate::err::WebResult;
+use crate::err::{WebErrorKind, WebResult};
 use crate::server::util::BasicResponse;
 use axum::body::Body;
 use axum::http::StatusCode;
-use handlebars::Handlebars;
+use handlebars::{
+    Context, Handlebars, Helper, HelperDef, HelperResult, Output, RenderContext, RenderErrorReason,
+};
 use serde::Serialize;
 use std::path::PathBuf;
 use strum::VariantArray;
+use xana_commons_rs::ResultXanaMap;
 
-impl<'h> WState<'h> {
+impl WState {
     fn render_page_string(&self, page: HbsPage, data: impl Serialize) -> WebResult<String> {
         self.handlebars
             .backend
             .render(page.as_ref(), &data)
-            .map_err(Into::into)
+            .xana_err(WebErrorKind::HandlebarsRenderFailed)
     }
 
     pub fn render_page(&self, page: HbsPage, data: impl Serialize) -> WebResult<BasicResponse> {
@@ -32,8 +35,11 @@ impl<'h> HandlebarsController<'h> {
         backend.set_dev_mode(true);
 
         for page in HbsPage::VARIANTS {
-            backend.register_template_file(page.as_ref(), page.to_path())?;
+            backend
+                .register_template_file(page.as_ref(), page.to_path())
+                .xana_err(WebErrorKind::HandlebarsInitFailed)?;
         }
+        backend.register_helper("percent", Box::new(PercentHelper));
 
         Ok(Self { backend })
     }
@@ -67,5 +73,27 @@ impl HbsPage {
             // Self::Browse_Tor => "html",
             _ => "hbs",
         }
+    }
+}
+
+/// avoid annoying string-ifying in Rust with our typesafe structs
+#[derive(Clone, Copy)]
+struct PercentHelper;
+
+impl HelperDef for PercentHelper {
+    fn call<'reg: 'rc, 'rc>(
+        &self,
+        h: &Helper,
+        _: &Handlebars,
+        _: &Context,
+        _rc: &mut RenderContext,
+        out: &mut dyn Output,
+    ) -> HelperResult {
+        let param_raw = h.param(0).unwrap();
+        let Some(param) = param_raw.value().as_f64() else {
+            return Err(RenderErrorReason::Other("PercentHelper param is not float".into()).into());
+        };
+        out.write_fmt(format_args!("%{param:.1}"))?;
+        Ok(())
     }
 }

@@ -1,11 +1,12 @@
-use crate::ModelJournalId;
 use crate::api::api_hd::components_get;
 use crate::api::assert_test_database;
 use crate::api::common::SQL_PLACEHOLDER_MAX;
+use crate::err::StorDieselErrorKind;
 use crate::models::enum_types::ModelJournalTypeName;
 use crate::path_const::PathConst;
 use crate::schema_temp::{FAST_HD_COMPONENTS_CREATE, FAST_HD_COMPONENTS_TRUNCATE};
 use crate::{HD_PATH_DEPTH, HdPathDiesel};
+use crate::{ModelJournalId, StorDieselError};
 use crate::{StorDieselResult, StorTransaction, schema, schema_temp};
 use crate::{storapi_row_count, storapi_variables_get_str};
 use diesel::RunQueryDsl;
@@ -18,7 +19,7 @@ use std::fmt::Write;
 use std::path::Path;
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{info, trace};
-use xana_commons_rs::{BasicWatch, CommaJoiner, LOCALE, SimpleIoMap, SpaceJoiner};
+use xana_commons_rs::{BasicWatch, CommaJoiner, CrashErrKind, LOCALE, SimpleIoMap, SpaceJoiner};
 
 pub fn storapi_hd_tree_push(
     conn: &mut StorTransaction,
@@ -118,7 +119,8 @@ fn build_paths_mega_query(
 
         // total_inserted  +=
         conn.inner().batch_execute(&query_values)?;
-        total_inserted += usize::try_from(storapi_row_count(conn)?)?;
+        total_inserted += usize::try_from(storapi_row_count(conn)?)
+            .map_err(StorDieselErrorKind::UnknownRowCount.err_map())?;
 
         i += 1;
     }
@@ -155,7 +157,9 @@ fn build_paths_infile(
         content[content_len - 1] = ROW_SEP;
     }
     let import_path = IMPORT_COMPONENTS_PATH.as_ref();
-    std::fs::write(import_path, &content).map_io_err(import_path)?;
+    std::fs::write(import_path, &content)
+        .map_io_err(import_path)
+        .map_err(StorDieselErrorKind::LoadInfileFailed.err_map())?;
     info!("wrote to {} in {watch}", import_path.display());
 
     let import_path = import_path.canonicalize().unwrap();

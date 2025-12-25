@@ -1,12 +1,14 @@
-use crate::err::{WebError, WebErrorKind, WebErrorMeta};
+use crate::err::{WebError, WebErrorKind};
 use aelita_xrn::defs::address::XrnAddr;
 use aelita_xrn::defs::common::SubXrn;
+use aelita_xrn::err::LibxrnError;
 use axum::extract::{FromRequestParts, Path};
 use axum::http::request::Parts;
 use serde::de::StdError;
 use std::fmt::Debug;
 use std::str::FromStr;
 use xana_commons_rs::tracing_re::{trace, warn};
+use xana_commons_rs::{AsMeta, CrashErrKind, IntoXanaErr, ResultXanaMap};
 
 /// Axum extractor to parse xrn directly from the path
 pub struct XrnFromUrl<T>(pub T)
@@ -26,16 +28,14 @@ where
 impl<S, T> FromRequestParts<S> for XrnFromUrl<T>
 where
     S: Send + Sync,
-    T: TryFrom<XrnAddr> + SubXrn + Debug,
-    <T as TryFrom<XrnAddr>>::Error: std::fmt::Debug + StdError,
-    Box<WebError>: From<<T as TryFrom<XrnAddr>>::Error>,
+    T: TryFrom<XrnAddr, Error = Box<LibxrnError>> + SubXrn + Debug,
 {
     type Rejection = Box<WebError>;
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         let Path(xrn_value) = Path::<String>::from_request_parts(parts, _state)
             .await
-            .map_err(|e| WebErrorMeta::AxumReject(e).build_message("missing xrn parameter"))?;
+            .xana_err(WebErrorKind::PathXrnMissingPath)?;
 
         let best_addr = XrnAddr::new(T::atype(), xrn_value);
 
@@ -46,7 +46,8 @@ where
         if prefix_sep != "/" {
             return Err(WebErrorKind::InvalidUri.build());
         }
-        let raw_addr = XrnAddr::from_str(&addr_raw)?;
+        let raw_addr =
+            XrnAddr::from_str(&addr_raw).map_err(WebErrorKind::XrnParseFailed.xana_map())?;
         if best_addr.atype() != raw_addr.atype() {
             return Err(WebErrorKind::InvalidXrnTypeForRoute.build_message(format!(
                 "expected {} got {}",
@@ -56,7 +57,7 @@ where
         }
 
         trace!("building addr with {}", best_addr);
-        let result = T::try_from(best_addr)?;
+        let result = T::try_from(best_addr).map_err(WebErrorKind::XrnParseFailed.xana_map())?;
         Ok(XrnFromUrl(result))
     }
 }

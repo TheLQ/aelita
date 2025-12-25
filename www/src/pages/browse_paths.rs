@@ -13,7 +13,7 @@ pub async fn handle_browse_paths_root() -> impl IntoResponse {
 }
 
 pub async fn handle_browse_paths(
-    State(state): State<WState<'_>>,
+    State(state): State<WState>,
     Path(path_raw): Path<String>,
 ) -> WebResult<BasicResponse> {
     let path = std::path::Path::new(&path_raw).to_path_buf();
@@ -28,11 +28,7 @@ pub async fn handle_browse_paths(
     render_html(state, path, children)
 }
 
-fn render_html(
-    state: WState<'_>,
-    root: PathBuf,
-    children: Vec<String>,
-) -> WebResult<BasicResponse> {
+fn render_html(state: WState, root: PathBuf, children: Vec<String>) -> WebResult<BasicResponse> {
     #[derive(Serialize)]
     struct PathEntry {
         href: String,

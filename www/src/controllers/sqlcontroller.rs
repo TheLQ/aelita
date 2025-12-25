@@ -1,10 +1,11 @@
-use crate::err::WebResult;
+use crate::err::{WebErrorKind, WebResult};
 use aelita_stor_diesel::load_db_url_from_env;
 use aelita_stor_diesel::{PermaStore, StorTransaction};
 use aelita_stor_diesel::{StorDieselResult, apply_stor_instrument};
 use deadpool_diesel::mysql::{Hook, Manager, Pool};
 use std::time::SystemTime;
 use xana_commons_rs::tracing_re::{info, trace};
+use xana_commons_rs::{CrashErrKind, ResultXanaMap};
 
 pub struct SqlController {
     pool: Pool,
@@ -34,13 +35,18 @@ impl SqlController {
         F: FnOnce(&mut StorTransaction) -> StorDieselResult<R> + Send + 'static,
         R: Send + 'static,
     {
-        let conn = self.pool.get().await?;
+        // [deadpool_diesel::PoolError]
+        let conn = self.pool.get().await.xana_err(WebErrorKind::StorError)?;
         let result = conn
             .interact(|conn| {
                 //
                 StorTransaction::new_transaction(&basic_cause("www"), conn, inner)
             })
-            .await??;
+            .await
+            // [deadpool_diesel::InteractError]
+            .xana_err(WebErrorKind::StorError)?
+            // Transaction [aelita_stor_diesel::StorDieselError]
+            .map_err(WebErrorKind::StorError.xana_map())?;
         Ok(result)
     }
 }
