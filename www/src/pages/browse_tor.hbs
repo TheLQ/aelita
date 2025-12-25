@@ -1,11 +1,11 @@
 {{#> base_html}}
     <div class=".container .is-max-desktop">
         <form id="search-form">
-            <search class="field">
-                <label class="label" for="search-box">Name</label>
-                <div class="control">
+            <search class="field has-addons">
+                <label class="label is-medium" for="search-box">Torrents</label>
+                <div class="control is-expanded">
                     <input
-                            class="input"
+                            class="input is-medium is-fullwidth"
                             id="search-box"
                             name="search-box-name"
                             type="search"
@@ -13,7 +13,9 @@
                     />
                 </div>
                 <!-- class="input" -->
-                <button class="button" type="submit">Search</button>
+                <div class="control">
+                    <button class="button is-medium" type="submit">Search</button>
+                </div>
             </search>
         </form>
         <div id="message"></div>

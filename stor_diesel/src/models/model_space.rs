@@ -94,9 +94,7 @@ where
         let xrn_type_raw = NamedRow::get::<diesel::sql_types::Text, String>(row, "child_type1")?;
         let xrn_type = XrnType::from_str(&xrn_type_raw)?;
         if xrn_type != XrnType::Path {
-            return Err(Box::new(
-                StorDieselErrorKind::NotPathXrn.build_message(xrn_type),
-            ));
+            return Err(StorDieselErrorKind::NotPathXrn.build_message(xrn_type));
         }
 
         let path_type_raw = NamedRow::get::<diesel::sql_types::Text, String>(row, "child_type2")?;
