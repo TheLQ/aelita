@@ -18,6 +18,7 @@ pub enum WebErrorKind {
     XrnParseFailed,
     //
     PathXrnMissingPath,
+    PathXrnNotEqualDatabase,
     //
     UnsupportedXrnRoute,
     //

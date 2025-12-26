@@ -1,16 +1,21 @@
 use crate::controllers::handlebars::HbsPage;
 use crate::controllers::state::WState;
-use crate::err::{WebError, WebErrorCause, WebResult};
+use crate::err::{WebError, WebErrorCause, WebErrorKind, WebResult};
 use crate::server::convert_xrn::XrnFromUrl;
 use crate::server::util::{BasicResponse, pretty_basic_page};
 use aelita_stor_diesel::err::StorDieselErrorKind;
-use aelita_stor_diesel::storapi_hd_list_children;
-use aelita_xrn::defs::path_xrn::PathXrn;
+use aelita_stor_diesel::{
+    HdPathAssociation, ModelFileTreeId, PathRow, StorIdType, storapi_hd_get_path_by_id,
+    storapi_hd_list_children_by_id, storapi_hd_list_children_by_path,
+};
+use aelita_xrn::defs::address::{XrnAddr, XrnAddrRef};
+use aelita_xrn::defs::path_xrn::{PathXrn, PathXrnType};
 use axum::body::Body;
 use axum::extract::State;
 use axum::http::StatusCode;
 use serde::Serialize;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use xana_commons_rs::CrashErrKind;
 
 pub async fn handle_xrn_path(
     State(state): State<WState>,
@@ -20,25 +25,21 @@ pub async fn handle_xrn_path(
 }
 
 async fn _handle_xrn_path(state: WState, xrn: PathXrn) -> WebResult<BasicResponse> {
-    let path = xrn.path();
-    let path = if let Some(path) = path {
-        path.to_path_buf()
-    } else {
-        todo!()
-    };
-
-    let path_clone = path.clone();
-    let children = state
+    let tree_id = ModelFileTreeId::from_xrn(&xrn);
+    let xrn_path = xrn.path().to_path_buf();
+    let children_raw = state
         .sqlfs
         .transact({
             move |conn| {
-                //
-                storapi_hd_list_children(conn, path_clone)
+                // validate input xrn
+                let (path_rows, db_path) = storapi_hd_get_path_by_id(conn, tree_id)?;
+                let children = storapi_hd_list_children_by_id(conn, tree_id)?;
+                Ok((path_rows, db_path, children))
             }
         })
         .await;
 
-    if let Err(e) = &children
+    if let Err(e) = &children_raw
         && let Some(cause) = &e.xana_err().cause
         && let WebErrorCause::StorDieselError(StorDieselErrorKind::UnknownComponent) = cause
     {
@@ -48,14 +49,31 @@ async fn _handle_xrn_path(state: WState, xrn: PathXrn) -> WebResult<BasicRespons
             Body::from(pretty_basic_page("404 Path component(s) not found", xrn)),
         ));
     }
-    match children {
-        Err(e) => Err(e)?,
-        // xrn.path().unwrap()
-        Ok(children) => render_html(state, &path, children),
+    let (path_rows, db_path, children) = children_raw?;
+    if db_path != xrn_path {
+        return Err(WebErrorKind::PathXrnNotEqualDatabase.build_message(format!(
+            "input {} database {}",
+            xrn_path.display(),
+            db_path.display()
+        )));
     }
+
+    // render_html(state, xrn, path_rows, children)
 }
 
-fn render_html(state: WState, root: &Path, children: Vec<String>) -> WebResult<BasicResponse> {
+fn render_html(
+    state: WState,
+    xrn: PathXrn,
+    path_rows: Vec<PathRow>,
+    children: Vec<HdPathAssociation>,
+) -> WebResult<BasicResponse> {
+    let mut breadcrumbs = Vec::new();
+    for i in 0..breadcrumbs.len() {
+        let path: PathBuf = path_rows[0..(i + 1)].iter().map(|v| v.component).collect();
+        let id = path_rows[i].tree_id;
+        breadcrumbs.push(PathXrn::new(PathXrnType::Fs, path, id.inner_id()))
+    }
+
     #[derive(Serialize)]
     struct PathEntry {
         xrn: PathXrn,
@@ -65,20 +83,15 @@ fn render_html(state: WState, root: &Path, children: Vec<String>) -> WebResult<B
     struct HtmlProps {
         children: Vec<PathEntry>,
         root_title: String,
-        parent_xrn: Option<PathXrn>,
+        breadcrumbs: Vec<XrnAddr>,
     }
-    let is_root_xrn = root.to_str().unwrap() == "/";
     let props = HtmlProps {
-        root_title: root.to_str().unwrap().to_string(),
-        parent_xrn: if is_root_xrn {
-            None
-        } else {
-            Some(PathXrn::from_path(root.parent().unwrap()))
-        },
+        root_title: xrn.to_string(),
+        breadcrumbs,
         children: children
             .into_iter()
             .map(|name| PathEntry {
-                xrn: PathXrn::from_path(root.join(&name)),
+                xrn: name.component_id,
                 name,
             })
             .collect(),

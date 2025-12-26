@@ -2,7 +2,7 @@ use crate::controllers::handlebars::HbsPage;
 use crate::controllers::state::WState;
 use crate::err::WebResult;
 use crate::server::util::BasicResponse;
-use aelita_stor_diesel::storapi_hd_list_children;
+use aelita_stor_diesel::storapi_hd_list_children_by_path;
 use axum::extract::{Path, State};
 use axum::response::{IntoResponse, Redirect};
 use serde::Serialize;
@@ -21,7 +21,7 @@ pub async fn handle_browse_paths(
         .sqlfs
         .transact({
             let path = path.clone();
-            move |conn| storapi_hd_list_children(conn, path)
+            move |conn| storapi_hd_list_children_by_path(conn, path)
         })
         .await?;
 

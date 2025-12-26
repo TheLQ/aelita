@@ -7,6 +7,7 @@ pub enum XrnErrorKind {
     InvalidLower,
     EmptyUpper,
     EmptyAfterUpper,
+    UnexpectedType,
     //
     AddrInvalidType,
     AddrEmptyAfterType,
@@ -30,9 +31,7 @@ xana_commons_rs::crash_builder!(
 #[cfg(test)]
 pub mod test {
     use crate::defs::address::XrnAddr;
-    use crate::defs::path_xrn::PathXrn;
-    use crate::err::{LibxrnError, LibxrnResult, XrnErrorKind};
-    use xana_commons_rs::XanaError;
+    use crate::err::{LibxrnResult, XrnErrorKind};
 
     pub fn assert_err_kind(res: LibxrnResult<XrnAddr>, expected_kind: XrnErrorKind) {
         match res {

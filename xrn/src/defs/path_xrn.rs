@@ -1,17 +1,16 @@
-use crate::defs::address::{XrnAddr, XrnMerge, XrnType};
-use crate::defs::common::XrnTypeImpl;
-use crate::err::{LibxrnError, XrnErrorKind};
-use serde::{Serialize, Serializer};
-use std::fmt::Formatter;
+use crate::defs::address::{XrnAddr, XrnAddrRef, XrnMerge, XrnType};
+use crate::defs::common::{SubXrnImpl, XrnSubTypeImpl, XrnTypeImpl, check_expected_type};
+use crate::err::LibxrnError;
+use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
-use xana_commons_rs::CrashErrKind;
+use std::str::FromStr;
 
 pub(super) const TREE_PREFIX_STR: &str = "/__tree";
 
-#[derive(Debug)]
-pub struct PathXrn<'x>(&'x XrnAddr);
+#[derive(Debug, Clone)]
+pub struct PathXrn(XrnAddr);
 
-impl<'x> PathXrn<'x> {
+impl PathXrn {
     pub fn new(ptype: PathXrnType, path: PathBuf, tree_id: u32) -> XrnAddr {
         XrnAddr(
             XrnMerge::Path(ptype),
@@ -37,7 +36,53 @@ impl<'x> PathXrn<'x> {
     // }
 
     pub fn path(&self) -> &Path {
-        Path::new(self.0.value())
+        Path::new(self.value())
+    }
+}
+
+impl XrnAddrRef for PathXrn {
+    fn addr_ref(&self) -> &XrnAddr {
+        &self.0
+    }
+}
+
+impl SubXrnImpl for PathXrn {
+    const UPPER: XrnType = XrnType::Path;
+    type SubXrnType = PathXrnType;
+
+    fn sub_type(&self) -> Self::SubXrnType {
+        let XrnMerge::Path(kind) = self.addr_ref().merge() else {
+            panic!("wut")
+        };
+        kind
+    }
+}
+
+impl TryFrom<XrnAddr> for PathXrn {
+    type Error = Box<LibxrnError>;
+    fn try_from(addr: XrnAddr) -> Result<Self, Self::Error> {
+        check_expected_type(Self::UPPER, &addr)?;
+        Ok(Self(addr))
+    }
+}
+
+impl FromStr for PathXrn {
+    type Err = Box<LibxrnError>;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let addr = XrnAddr::from_str(s)?;
+        addr.try_into()
+    }
+}
+
+impl From<PathXrn> for XrnAddr {
+    fn from(value: PathXrn) -> Self {
+        value.0
+    }
+}
+
+impl Display for PathXrn {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        XrnAddr::fmt(&self.0, f)
     }
 }
 
@@ -60,14 +105,15 @@ pub enum PathXrnType {
 
 impl XrnTypeImpl for PathXrnType {}
 
+impl XrnSubTypeImpl for PathXrnType {}
+
 #[cfg(test)]
 mod tests {
-    use crate::defs::address::{XrnAddr, XrnMerge, XrnType};
-    use crate::defs::path_xrn::{PathXrn, PathXrnType};
+    use crate::defs::address::{XrnAddr, XrnAddrRef, XrnMerge};
+    use crate::defs::path_xrn::PathXrnType;
     use crate::err::test::assert_err_kind;
     use crate::err::{LibxrnResult, XrnErrorKind};
     use aelita_commons::log_init;
-    use std::path::Path;
     use std::str::FromStr;
     use xana_commons_rs::PrettyUnwrap;
 

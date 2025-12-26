@@ -1,4 +1,6 @@
-use crate::defs::address::{XrnAddr, XrnType};
+use crate::defs::address::{XrnAddr, XrnAddrRef, XrnType};
+use crate::err::{LibxrnResult, XrnErrorKind};
+use xana_commons_rs::CrashErrKind;
 use xana_commons_rs::tracing_re::trace;
 
 pub trait XrnTypeImpl
@@ -28,5 +30,22 @@ where
             .iter()
             .filter_map(|ty| ty.is_starts_with(value))
             .next()
+    }
+}
+
+pub trait XrnSubTypeImpl: XrnTypeImpl {}
+
+pub trait SubXrnImpl: XrnAddrRef {
+    const UPPER: XrnType;
+    type SubXrnType: XrnSubTypeImpl;
+
+    fn sub_type(&self) -> Self::SubXrnType;
+}
+
+pub fn check_expected_type(upper: XrnType, addr: &XrnAddr) -> LibxrnResult<()> {
+    if addr.merge().to_type() != upper {
+        Err(XrnErrorKind::UnexpectedType.build_message(format!("expected {upper} got {addr}")))
+    } else {
+        Ok(())
     }
 }

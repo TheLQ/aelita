@@ -2,31 +2,41 @@ use crate::defs::common::XrnTypeImpl;
 use crate::defs::path_xrn::{PathXrnType, TREE_PREFIX_STR};
 use crate::defs::space_xrn::SpaceXrnType;
 use crate::err::{LibxrnError, XrnErrorKind};
-use serde::de::{Error, Visitor};
+use serde::de::Error;
 use serde::{Deserialize, Deserializer};
-use std::fmt::{Display, Formatter};
+use std::fmt::Display;
 use std::str::FromStr;
 use xana_commons_rs::CrashErrKind;
 
 /// xrn:project:1000000
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct XrnAddr(pub XrnMerge, pub u32, pub String);
 
 impl XrnAddr {
     pub fn new(atype: XrnMerge, id: u32, value: impl Into<String>) -> Self {
         Self(atype, id, value.into())
     }
+}
 
-    pub fn merge(&self) -> XrnMerge {
-        self.0
+pub trait XrnAddrRef: FromStr<Err = Box<LibxrnError>> {
+    fn addr_ref(&self) -> &XrnAddr;
+
+    fn merge(&self) -> XrnMerge {
+        self.addr_ref().0
     }
 
-    pub fn id(&self) -> u32 {
-        self.1
+    fn id(&self) -> u32 {
+        self.addr_ref().1
     }
 
-    pub fn value(&self) -> &str {
-        &self.2
+    fn value(&self) -> &str {
+        &self.addr_ref().2
+    }
+}
+
+impl XrnAddrRef for XrnAddr {
+    fn addr_ref(&self) -> &XrnAddr {
+        self
     }
 }
 
@@ -126,6 +136,22 @@ pub enum XrnMerge {
     Path(PathXrnType),
 }
 
+impl XrnMerge {
+    pub fn types_as_str(&self) -> (&str, &str) {
+        match self {
+            Self::Space(sub) => (self.as_ref(), sub.as_ref()),
+            Self::Path(sub) => (self.as_ref(), sub.as_ref()),
+        }
+    }
+
+    pub fn to_type(&self) -> XrnType {
+        match self {
+            Self::Space(_) => XrnType::Space,
+            Self::Path(_) => XrnType::Path,
+        }
+    }
+}
+
 #[derive(
     Clone,
     Copy,
@@ -157,9 +183,8 @@ impl<'de> Deserialize<'de> for XrnAddr {
 
 #[cfg(test)]
 mod test {
-    use crate::defs::address::{XrnAddr, XrnMerge, XrnType};
+    use crate::defs::address::{XrnAddr, XrnAddrRef, XrnMerge, XrnType};
     use crate::defs::space_xrn::SpaceXrnType;
-    use crate::err::LibxrnResult;
     use std::str::FromStr;
     use xana_commons_rs::PrettyUnwrap;
 

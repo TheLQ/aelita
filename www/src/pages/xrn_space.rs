@@ -6,6 +6,7 @@ use crate::server::util::BasicResponse;
 use aelita_stor_diesel::ModelSpaceId;
 use aelita_stor_diesel::storapi_journal_get_created;
 use aelita_stor_diesel::storapi_space_get;
+use aelita_xrn::defs::common::SubXrnImpl;
 use aelita_xrn::defs::space_xrn::{SpaceXrn, SpaceXrnType};
 use axum::extract::State;
 use serde::Serialize;
@@ -21,7 +22,7 @@ pub async fn handle_xrn_space(
 
 async fn render_html(state: WState, xrn: SpaceXrn) -> WebResult<BasicResponse> {
     #[allow(unreachable_patterns)]
-    match xrn.stype() {
+    match xrn.sub_type() {
         SpaceXrnType::Simple => render_simple(state, xrn).await,
         ptype => Err(WebErrorKind::UnsupportedXrnRoute.build_message(ptype.as_ref())),
     }
