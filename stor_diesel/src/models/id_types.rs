@@ -1,3 +1,5 @@
+use aelita_xrn::defs::address::XrnAddrRef;
+use aelita_xrn::defs::path_xrn::PathXrn;
 use aelita_xrn::defs::space_xrn::SpaceXrn;
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
@@ -92,6 +94,12 @@ id_type!(ModelFileTreeId);
 
 impl ModelSpaceId {
     pub fn from_project_xrn(xrn: &SpaceXrn) -> Self {
+        Self(xrn.id())
+    }
+}
+
+impl ModelFileTreeId {
+    pub fn from_xrn(xrn: &PathXrn) -> Self {
         Self(xrn.id())
     }
 }

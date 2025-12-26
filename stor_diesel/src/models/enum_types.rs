@@ -1,7 +1,7 @@
 use crate::models::common::parse_type_checked;
 use crate::schema::sql_types::{
-    JournalImmutableJournalTypeEnum, SpaceOwnedChildType1Enum, SpaceOwnedChildType2Enum,
-    Tor1TorrentsStateEnum,
+    Hd1RootsRtypeEnum, JournalImmutableJournalTypeEnum, SpaceOwnedChildType1Enum,
+    SpaceOwnedChildType2Enum, Tor1TorrentsStateEnum,
 };
 use aelita_xrn::defs::address::XrnType;
 use diesel::backend::Backend;
@@ -59,6 +59,28 @@ pub enum ModelJournalTypeName {
     NData1,
 }
 enum_value!(JournalImmutableJournalTypeEnum -> ModelJournalTypeName);
+
+#[derive(
+    Debug,
+    Hash,
+    Eq,
+    PartialEq,
+    Clone,
+    diesel::expression::AsExpression,
+    diesel::deserialize::FromSqlRow,
+    strum::EnumString,
+    strum::AsRefStr,
+    strum::VariantArray,
+    strum::Display,
+)]
+#[diesel(sql_type = Hd1RootsRtypeEnum)]
+pub enum ModelHdRoot {
+    ZfsDataset,
+    Project,
+    Movie,
+    Episodes,
+}
+enum_value!(Hd1RootsRtypeEnum -> ModelHdRoot);
 
 #[derive(
     Debug,

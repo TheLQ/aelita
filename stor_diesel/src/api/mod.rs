@@ -3,6 +3,7 @@ pub mod api_hd_mut;
 pub mod api_hd_roots_mut;
 pub mod api_journal;
 pub mod api_space;
+pub mod api_space_mut;
 pub mod api_tor;
 pub mod api_tor_mut;
 pub mod api_variables;

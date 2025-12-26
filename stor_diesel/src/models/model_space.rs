@@ -3,7 +3,7 @@ use crate::err::StorDieselErrorKind;
 use crate::models::common::parse_type_checked;
 use crate::models::enum_types::AnyEnumToText;
 use crate::models::id_types::{ModelJournalId, ModelSpaceId};
-use aelita_xrn::defs::address::XrnType;
+use aelita_xrn::defs::address::{XrnAddr, XrnAddrRef, XrnType};
 use aelita_xrn::defs::path_xrn::{PathXrn, PathXrnType};
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
@@ -48,63 +48,62 @@ pub struct ModelSpaceOwned {
 #[derive(Insertable, HasQuery, diesel::QueryableByName, Debug)]
 #[diesel(table_name = crate::schema::space_owned)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
-pub struct ModelSpaceXrn {
+pub struct XrnAsOwnedTable {
     pub child_type1: AnyEnumToText,
     pub child_type2: AnyEnumToText,
     pub child_id: u32,
 }
 
-impl TryFrom<PathXrn> for ModelSpaceXrn {
-    type Error = Box<StorDieselError>;
-
-    fn try_from(value: PathXrn) -> Result<Self, Self::Error> {
-        let Some(child_id) = value.tree_id() else {
-            return Err(StorDieselErrorKind::PathXrnRequiresId.build());
-        };
-        Ok(Self {
-            child_type1: AnyEnumToText::new(XrnType::Path.as_ref()),
-            child_type2: AnyEnumToText::new(value.ptype().as_ref()),
+impl<X: Into<XrnAddr>> From<X> for XrnAsOwnedTable {
+    fn from(value: X) -> Self {
+        let value = value.into();
+        let child_id = value.id();
+        let merge = value.merge();
+        let (upper, lower) = merge.types_as_str();
+        Self {
+            child_type1: AnyEnumToText::new(upper),
+            child_type2: AnyEnumToText::new(lower),
             child_id,
-        })
+        }
     }
 }
 
 /// Magic Xrn Parser struct
-#[derive(Debug)]
-pub struct XrnDiesel(PathXrn);
-
-impl From<PathXrn> for XrnDiesel {
-    fn from(value: PathXrn) -> Self {
-        Self(value)
-    }
-}
-
-impl From<XrnDiesel> for PathXrn {
-    fn from(value: XrnDiesel) -> Self {
-        value.0
-    }
-}
-
-impl<DB: Backend> QueryableByName<DB> for XrnDiesel
-where
-    String: FromSql<diesel::sql_types::Text, DB>,
-    u32: FromSql<Unsigned<diesel::sql_types::Integer>, DB>,
-{
-    fn build<'a>(row: &impl NamedRow<'a, DB>) -> diesel::deserialize::Result<Self> {
-        let xrn_type_raw = NamedRow::get::<diesel::sql_types::Text, String>(row, "child_type1")?;
-        let xrn_type = XrnType::from_str(&xrn_type_raw)?;
-        if xrn_type != XrnType::Path {
-            return Err(StorDieselErrorKind::NotPathXrn.build_message(xrn_type));
-        }
-
-        let path_type_raw = NamedRow::get::<diesel::sql_types::Text, String>(row, "child_type2")?;
-        let path_type = PathXrnType::from_str(&path_type_raw)?;
-
-        let path_id = NamedRow::get::<Unsigned<diesel::sql_types::Integer>, u32>(row, "child_id")?;
-
-        Ok(Self(PathXrn::new_id(path_type, path_id)))
-    }
-}
+// #[derive(Debug)]
+// pub struct XrnDiesel(PathXrn);
+//
+// impl From<PathXrn> for XrnDiesel {
+//     fn from(value: PathXrn) -> Self {
+//         Self(value)
+//     }
+// }
+//
+// impl From<XrnDiesel> for PathXrn {
+//     fn from(value: XrnDiesel) -> Self {
+//         value.0
+//     }
+// }
+//
+// impl<DB: Backend> QueryableByName<DB> for XrnDiesel
+// where
+//     String: FromSql<diesel::sql_types::Text, DB>,
+//     u32: FromSql<Unsigned<diesel::sql_types::Integer>, DB>,
+// {
+//     fn build<'a>(row: &impl NamedRow<'a, DB>) -> diesel::deserialize::Result<Self> {
+//         let xrn_type_raw = NamedRow::get::<diesel::sql_types::Text, String>(row, "child_type1")?;
+//         let xrn_type = XrnType::from_str(&xrn_type_raw)?;
+//         if xrn_type != XrnType::Path {
+//             return Err(StorDieselErrorKind::NotPathXrn.build_message(xrn_type));
+//         }
+//
+//         let path_type_raw = NamedRow::get::<diesel::sql_types::Text, String>(row, "child_type2")?;
+//         let path_type = PathXrnType::from_str(&path_type_raw)?;
+//
+//         let path_id = NamedRow::get::<Unsigned<diesel::sql_types::Integer>, u32>(row, "child_id")?;
+//
+//         Ok(Self(PathXrn::new_id(path_type, path_id)))
+//     }
+// }
 
 // impl TryFrom<&XrnDiesel> for PathXrn {
 //     type Error = &'static str;

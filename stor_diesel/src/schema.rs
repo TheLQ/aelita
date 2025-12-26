@@ -3,6 +3,10 @@
 pub mod sql_types {
     #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
     #[diesel(mysql_type(name = "Enum"))]
+    pub struct Hd1RootsRtypeEnum;
+
+    #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
+    #[diesel(mysql_type(name = "Enum"))]
     pub struct JournalImmutableJournalTypeEnum;
 
     #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
@@ -68,6 +72,21 @@ diesel::table! {
         hd_id -> Unsigned<Integer>,
         #[max_length = 50]
         tor_hash -> Binary,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::Hd1RootsRtypeEnum;
+
+    hd1_roots (space_id) {
+        space_id -> Unsigned<Integer>,
+        #[max_length = 0]
+        rtype -> Hd1RootsRtypeEnum,
+        path_primary -> Unsigned<Integer>,
+        path_backup -> Nullable<Unsigned<Integer>>,
+        ref_primary -> Nullable<Unsigned<Integer>>,
+        ref_backup -> Nullable<Unsigned<Integer>>,
     }
 }
 
@@ -173,6 +192,7 @@ diesel::table! {
 
 diesel::joinable!(hd1_galleries -> hd1_sites (hd_site_id));
 diesel::joinable!(hd1_galleries -> journal_immutable (journal_id));
+diesel::joinable!(hd1_roots -> space_names (space_id));
 diesel::joinable!(hd1_sites -> journal_immutable (journal_id));
 diesel::joinable!(journal_immutable_data -> journal_immutable (journal_id));
 diesel::joinable!(space_names -> journal_immutable (journal_id));
@@ -186,6 +206,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     hd1_files_parents_bak,
     hd1_files_paths,
     hd1_galleries,
+    hd1_roots,
     hd1_sites,
     journal_immutable,
     journal_immutable_data,

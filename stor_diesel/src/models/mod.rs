@@ -4,6 +4,7 @@ pub mod diesel_wrappers; // should be internal only
 pub(crate) mod enum_types; // should be internal only
 pub(crate) mod id_types;
 pub mod model_hd;
+pub mod model_hd_roots;
 pub mod model_journal;
 pub mod model_space;
 pub mod model_tor;

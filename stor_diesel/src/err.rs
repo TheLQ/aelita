@@ -12,6 +12,7 @@ pub enum StorDieselErrorKind {
     NotPathXrn,
     UnknownType,
     //
+    DatabaseConnectionFailed,
     ExecuteError,
     ResultLen,
     LoadInfileFailed,

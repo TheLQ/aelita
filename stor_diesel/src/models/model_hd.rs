@@ -1,5 +1,6 @@
-use crate::StorDieselResult;
 use crate::err::StorDieselErrorKind;
+use crate::{ModelFileTreeId, StorDieselResult};
+use diesel::QueryableByName;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ffi::OsStr;
@@ -33,6 +34,14 @@ pub struct NewHdPathAssociation {
 pub struct NewHdPathAssociationRoot {
     pub component_id: u32,
     pub tree_depth: u32,
+}
+
+#[derive(QueryableByName)]
+pub struct PathRow {
+    #[diesel(sql_type = diesel::sql_types::Unsigned<diesel::sql_types::Integer>)]
+    pub tree_id: ModelFileTreeId,
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    pub component: String,
 }
 
 #[derive(diesel::HasQuery, diesel::Insertable, Serialize, Deserialize)]

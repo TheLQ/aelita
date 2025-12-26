@@ -4,7 +4,7 @@ use crate::connection::StorTransaction;
 use crate::err::StorDieselResult;
 use crate::models::id_types::{ModelSpaceId, StorIdType};
 use crate::models::model_space::{ModelSpaceName, ModelSpaceOwned, NewModelSpaceName};
-use crate::{ModelSpaceXrn, schema};
+use crate::{XrnAsOwnedTable, schema};
 use diesel::prelude::*;
 use diesel::{HasQuery, QueryDsl, RunQueryDsl, dsl};
 use std::ops::Range;

@@ -1,8 +1,8 @@
 use aelita_commons::log_init;
 use aelita_stor_diesel::{
-    ModelJournalId, ModelSpaceOwned, ModelSpaceXrn, NewModelSpaceName, PermaStore,
-    StorDieselResult, StorIdType, StorTransaction, establish_connection,
-    establish_connection_or_panic, storapi_reset_space, storapi_space_new, storapi_space_owned_new,
+    ModelJournalId, ModelSpaceOwned, NewModelSpaceName, PermaStore, StorDieselResult, StorIdType,
+    StorTransaction, XrnAsOwnedTable, establish_connection, establish_connection_or_panic,
+    storapi_reset_space, storapi_space_new, storapi_space_owned_new,
 };
 use aelita_xrn::defs::path_xrn::{PathXrn, PathXrnType};
 use std::process::ExitCode;
@@ -41,7 +41,7 @@ fn generate(conn: &mut StorTransaction) -> StorDieselResult<()> {
                 space_id,
                 description: Some("fdf".into()),
             },
-            ModelSpaceXrn::try_from(some_path_xrn)?,
+            XrnAsOwnedTable::try_from(some_path_xrn)?,
         )],
     )?;
 
