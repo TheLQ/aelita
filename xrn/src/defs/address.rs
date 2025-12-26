@@ -1,4 +1,6 @@
 use crate::defs::common::XrnTypeImpl;
+use crate::defs::path_xrn::{PathXrnType, TREE_PREFIX_STR};
+use crate::defs::space_xrn::SpaceXrnType;
 use crate::err::{LibxrnError, XrnErrorKind};
 use serde::de::{Error, Visitor};
 use serde::{Deserialize, Deserializer};
@@ -8,31 +10,49 @@ use xana_commons_rs::CrashErrKind;
 
 /// xrn:project:1000000
 #[derive(Debug)]
-pub struct XrnAddr {
-    atype: XrnType,
-    value: String,
-}
+pub struct XrnAddr(pub XrnMerge, pub u32, pub String);
 
 impl XrnAddr {
-    pub fn new(atype: XrnType, value: impl Into<String>) -> Self {
-        Self {
-            atype,
-            value: value.into(),
-        }
+    pub fn new(atype: XrnMerge, id: u32, value: impl Into<String>) -> Self {
+        Self(atype, id, value.into())
     }
 
-    pub fn atype(&self) -> XrnType {
-        self.atype
+    pub fn merge(&self) -> XrnMerge {
+        self.0
+    }
+
+    pub fn id(&self) -> u32 {
+        self.1
     }
 
     pub fn value(&self) -> &str {
-        &self.value
+        &self.2
     }
 }
 
 impl Display for XrnAddr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "xrn:{}{}", self.atype.as_ref(), self.value)
+        let mut standard_format = |upper, lower| {
+            write!(f, "xrn:{}:{}:{}", upper, lower, self.id())?;
+            let value = self.value();
+            if !value.is_empty() {
+                write!(f, ":{value}")?;
+            }
+            Ok(())
+        };
+        match self.merge() {
+            upper @ XrnMerge::Path(lower) => {
+                write!(
+                    f,
+                    "xrn:{}:{}{}{TREE_PREFIX_STR}{}",
+                    upper.as_ref(),
+                    lower.as_ref(),
+                    self.value(),
+                    self.id()
+                )
+            }
+            upper @ XrnMerge::Space(lower) => standard_format(upper.as_ref(), lower.as_ref()),
+        }
     }
 }
 
@@ -41,19 +61,69 @@ impl FromStr for XrnAddr {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let remain = match s.split_at_checked(3) {
             Some(("xrn", remain)) => remain,
-            _ => return Err(XrnErrorKind::AddrPrefix.build_message(s)),
+            _ => return Err(XrnErrorKind::InvalidPrefix.build_message(s)),
         };
 
-        let (atype, remain) = match XrnType::split_type(remain) {
-            None => return Err(XrnErrorKind::AddrInvalidType.build_message(s)),
-            Some((_, "")) => return Err(XrnErrorKind::PathEmptyValue.build_message(s)),
+        let (upper, remain) = match XrnType::split_type(remain) {
+            None => return Err(XrnErrorKind::InvalidUpper.build_message(s)),
             Some(v) => v,
         };
-        Ok(XrnAddr {
-            atype,
-            value: remain.to_string(),
-        })
+        match upper {
+            XrnType::Space => match SpaceXrnType::split_type(remain) {
+                None => Err(XrnErrorKind::AddrInvalidType.build_message(s)),
+                Some((v, remain)) => {
+                    let (sep, remain) = match remain.split_at_checked(1) {
+                        None => return Err(XrnErrorKind::AddrMissingPreIdSep.build_message(s)),
+                        Some(v) => v,
+                    };
+                    if sep != ":" {
+                        return Err(XrnErrorKind::AddrInvalidPreIdSep.build_message(s));
+                    }
+
+                    let Some(id_end) = remain.as_bytes().iter().position(|v| *v == b':') else {
+                        return Err(XrnErrorKind::AddrMissingPreValueSep.build_message(s));
+                    };
+                    let (id_raw, remain) = remain.split_at(id_end);
+                    let id = id_raw.parse::<u32>().map_err(
+                        XrnErrorKind::AddrIdNotANumber
+                            .err_message_fn_map(|| format!("input '{id_raw}'")),
+                    )?;
+
+                    Ok(Self(XrnMerge::Space(v), id, remain[1/*sep*/..].to_string()))
+                }
+            },
+            XrnType::Path => match PathXrnType::split_type(remain) {
+                None => Err(XrnErrorKind::PathInvalidType.build_message(s)),
+                Some((v, remain)) => {
+                    let Some(id_pos) = remain.rfind(TREE_PREFIX_STR) else {
+                        return Err(XrnErrorKind::PathMissingTreePrefix.build_message(s));
+                    };
+                    let (remain, tree_part) = remain.split_at(id_pos);
+                    let id_str = &tree_part[TREE_PREFIX_STR.len()..];
+                    let id = id_str.parse::<u32>().map_err(
+                        XrnErrorKind::PathTreeIdNotANumber.err_message_fn_map(|| {
+                            format!("input '{id_str}' from part '{tree_part}' - {s}")
+                        }),
+                    )?;
+                    Ok(Self(XrnMerge::Path(v), id, remain.to_string()))
+                }
+            },
+        }
     }
+}
+
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    strum::AsRefStr,
+    //
+)]
+#[strum(serialize_all = "lowercase")]
+pub enum XrnMerge {
+    Space(SpaceXrnType),
+    Path(PathXrnType),
 }
 
 #[derive(
@@ -73,62 +143,41 @@ pub enum XrnType {
     Path,
 }
 
-impl XrnTypeImpl<'_> for XrnType {}
-
-struct XrnAddrVisitor;
-
-impl Visitor<'_> for XrnAddrVisitor {
-    type Value = XrnAddr;
-
-    fn expecting(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "xrn address")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        XrnAddr::from_str(v).map_err(|e| E::custom(format!("xrnaddr_serde {}", e)))
-    }
-}
+impl XrnTypeImpl for XrnType {}
 
 impl<'de> Deserialize<'de> for XrnAddr {
     fn deserialize<D>(deserializer: D) -> Result<XrnAddr, D::Error>
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_string(XrnAddrVisitor)
+        let raw = <&str>::deserialize(deserializer)?;
+        XrnAddr::from_str(raw).map_err(|e| D::Error::custom(format!("xrnaddr_serde {}", e)))
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::defs::address::{XrnAddr, XrnType};
+    use crate::defs::address::{XrnAddr, XrnMerge, XrnType};
+    use crate::defs::space_xrn::SpaceXrnType;
     use crate::err::LibxrnResult;
     use std::str::FromStr;
+    use xana_commons_rs::PrettyUnwrap;
 
     #[test]
     fn enum_test() {
         assert_eq!(XrnType::Space.as_ref(), "space");
 
-        let addr = XrnAddr::new(XrnType::Space, ":page/123");
-        assert_eq!(addr.to_string(), "xrn:space:page/123")
+        let addr = XrnAddr::new(XrnMerge::Space(SpaceXrnType::Simple), 123, "proj");
+        assert_eq!(addr.to_string(), "xrn:space:simple:123:proj")
     }
 
     #[test]
-    fn parse_test() -> LibxrnResult<()> {
-        let addr_raw = "xrn:space:page/123";
-        let addr = XrnAddr::from_str(addr_raw)?;
-        assert_eq!(addr.atype(), XrnType::Space);
-        assert_eq!(addr.value(), ":page/123");
-        assert_eq!(addr.to_string(), addr_raw);
-
-        let addr_raw = "xrn:path/page/123";
-        let addr = XrnAddr::from_str(addr_raw)?;
-        assert_eq!(addr.atype(), XrnType::Path);
-        assert_eq!(addr.value(), "/page/123");
-        assert_eq!(addr.to_string(), addr_raw);
-
-        Ok(())
+    fn parse_test() {
+        let raw = "xrn:space:simple:123:proj";
+        let addr = XrnAddr::from_str(raw).pretty_unwrap();
+        assert_eq!(addr.merge(), XrnMerge::Space(SpaceXrnType::Simple));
+        assert_eq!(addr.id(), 123);
+        assert_eq!(addr.value(), "proj");
+        assert_eq!(addr.to_string(), raw);
     }
 }
