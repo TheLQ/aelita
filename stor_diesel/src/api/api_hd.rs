@@ -283,7 +283,7 @@ fn hd_list_children_paths(
 
 pub(super) fn components_get(
     conn: &mut StorTransaction,
-    components_unique_input: &[&str],
+    components_unique_input: &[impl AsRef<str>],
 ) -> StorDieselResult<HashMap<String, u32>> {
     let watch = BasicWatch::start();
     let lookup_vec: Vec<(Vec<u8>, u32)> = schema_temp::fast_hd_components::table

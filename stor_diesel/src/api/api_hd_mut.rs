@@ -1,11 +1,15 @@
 use crate::api::api_hd::components_get;
+use crate::api::api_hd_paths::HdAssociationsBuilder;
 use crate::api::assert_test_database;
 use crate::api::common::SQL_PLACEHOLDER_MAX;
 use crate::err::StorDieselErrorKind;
 use crate::models::enum_types::ModelJournalTypeName;
 use crate::path_const::PathConst;
 use crate::schema_temp::{FAST_HD_COMPONENTS_CREATE, FAST_HD_COMPONENTS_TRUNCATE};
-use crate::{HD_PATH_DEPTH, HdPathDiesel};
+use crate::{
+    CompressedPaths, HD_PATH_DEPTH, HdPathAssociation, HdPathDiesel, ModelFileTreeId,
+    NewHdPathAssociation, StorIdType, storapi_journal_get, storapi_journal_get_data,
+};
 use crate::{ModelJournalId, StorDieselError};
 use crate::{StorDieselResult, StorTransaction, schema, schema_temp};
 use crate::{storapi_row_count, storapi_variables_get_str};
@@ -13,37 +17,26 @@ use diesel::RunQueryDsl;
 use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
 use fxhash::FxHashSet;
-use std::collections::HashMap;
+use indexmap::IndexSet;
+use itertools::Itertools;
+use std::collections::{HashMap, LinkedList};
 use std::ffi::OsStr;
 use std::fmt::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use xana_commons_rs::num_format_re::ToFormattedString;
-use xana_commons_rs::tracing_re::{info, trace};
+use xana_commons_rs::tracing_re::{debug, info, trace};
 use xana_commons_rs::{BasicWatch, CommaJoiner, CrashErrKind, LOCALE, SimpleIoMap, SpaceJoiner};
 
 pub fn storapi_hd_tree_push(
     conn: &mut StorTransaction,
-    paths: &[impl AsRef<Path>],
+    compressed: CompressedPaths,
 ) -> StorDieselResult<()> {
-    trace!("unique-ifying...");
-    let watch = BasicWatch::start();
-    let components_unique_os: FxHashSet<&OsStr> =
-        paths.iter().flat_map(|v| v.as_ref().iter()).collect();
-    let components_unique = components_unique_os
-        .into_iter()
-        .map(|v| v.to_str().unwrap())
-        .collect::<Vec<_>>();
-    trace!(
-        "Build {} components_unique in {watch}",
-        components_unique.len()
-    );
-
     // diesel::sql_query("SET autocommit=0").execute(conn.inner())?;
     let autocommit = storapi_variables_get_str(conn.inner(), "autocommit")?;
     info!("autocommit is {autocommit}");
 
-    components_update(conn, components_unique.as_slice())?;
-    let component_to_id = components_get(conn, components_unique.as_slice())?;
+    components_update(conn, compressed.parts())?;
+    let component_to_id = components_get(conn, compressed.parts())?;
 
     // push_associations_simple(conn, paths, component_to_id)?;
     // push_associations_fancy(conn, paths, &component_to_id)?;
@@ -51,7 +44,11 @@ pub fn storapi_hd_tree_push(
     diesel::sql_query("TRUNCATE TABLE `hd1_files_paths`").execute(conn.inner())?;
 
     // build_paths_mega_query(conn, paths, &component_to_id)?;
-    build_paths_infile(conn, paths, &component_to_id)?;
+    build_paths_infile(
+        conn,
+        &Vec::<PathBuf>::new(), /*compressed.iter_paths()*/
+        &component_to_id,
+    )?;
 
     push_associations_fancy_insert(conn)?;
 
@@ -194,7 +191,21 @@ fn build_paths_infile(
 
 pub fn storapi_rebuild_parents(conn: &mut StorTransaction) -> StorDieselResult<()> {
     diesel::sql_query("TRUNCATE TABLE `hd1_files_parents`").execute(conn.inner())?;
-    push_associations_fancy_insert(conn)?;
+
+    // push_associations_fancy_insert(conn)?;
+    let watch = BasicWatch::start();
+    let compressed_paths_raw = storapi_journal_get_data(conn, ModelJournalId::new(21))?;
+    debug!(
+        "loaded {} MB in {watch}",
+        (compressed_paths_raw.as_inner().len() / 1000 / 1000).to_formatted_string(&LOCALE)
+    );
+    let compressed_paths: CompressedPaths = compressed_paths_raw.deserialize_postcard().unwrap();
+
+    components_update(conn, compressed_paths.parts())?;
+    let component_to_id = components_get(conn, compressed_paths.parts())?;
+
+    HdAssociationsBuilder::build(conn, compressed_paths, &component_to_id)?;
+
     Ok(())
 }
 
@@ -266,7 +277,7 @@ fn push_associations_fancy_insert(conn: &mut StorTransaction) -> StorDieselResul
 
 fn components_update(
     conn: &mut StorTransaction,
-    components_unique_input: &[&str],
+    components_unique_input: &[impl AsRef<str>],
 ) -> StorDieselResult<()> {
     // SQL cache of our millions of components
     diesel::sql_query(FAST_HD_COMPONENTS_CREATE).execute(conn.inner())?;
@@ -276,7 +287,7 @@ fn components_update(
     let expected_length = components_unique_input.len();
     let components_unique = components_unique_input
         .iter()
-        .map(|v| schema_temp::fast_hd_components::component.eq(v.as_bytes()))
+        .map(|v| schema_temp::fast_hd_components::component.eq(v.as_ref().as_bytes()))
         .collect::<Vec<_>>();
     let mut total_rows = 0;
     let chunks = components_unique.chunks(SQL_PLACEHOLDER_MAX);
@@ -297,21 +308,21 @@ fn components_update(
     assert_eq!(total_rows, expected_length);
 
     let watch = BasicWatch::start();
-    let rows = diesel::sql_query(
-        "INSERT IGNORE INTO `hd1_files_components` (component) \
-        SELECT component FROM `fast_hd_components`",
-    )
-    // ON DUPLICATE KEY UPDATE `hd1_files_tree`.component = `hd1_files_tree`.component
-    .execute(conn.inner())?;
+    // let rows = diesel::sql_query(
+    //     "INSERT IGNORE INTO `hd1_files_components` (component) \
+    //     SELECT component FROM `fast_hd_components`",
+    // )
+    // // ON DUPLICATE KEY UPDATE `hd1_files_tree`.component = `hd1_files_tree`.component
+    // .execute(conn.inner())?;
     // :-(
     // let rows = diesel::insert_into(schema::hd1_files_tree::table)
     //     .values(schema::hd1_files_tree::table.as_sql())
     //     .execute(conn.inner())?;
-    info!(
-        "added {} ({:.1}?) components in {watch}",
-        rows.to_formatted_string(&LOCALE),
-        rows / components_unique_input.len() * 100
-    );
+    // info!(
+    //     "added {} ({:.1}?) components in {watch}",
+    //     rows.to_formatted_string(&LOCALE),
+    //     rows / components_unique_input.len() * 100
+    // );
 
     Ok(())
 }

@@ -9,7 +9,7 @@ use xana_commons_rs::CrashErrKind;
 
 pub const HD_PATH_DEPTH: usize = 11;
 
-#[derive(diesel::HasQuery, Serialize, Deserialize)]
+#[derive(diesel::HasQuery, diesel::QueryableByName, Serialize, Deserialize)]
 #[diesel(table_name = crate::schema::hd1_files_parents)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct HdPathAssociation {
@@ -19,13 +19,50 @@ pub struct HdPathAssociation {
     pub tree_depth: u32,
 }
 
-#[derive(diesel::Insertable, Serialize, Deserialize, Eq, PartialEq, Hash)]
+impl HdPathAssociation {
+    pub fn from_partial(
+        NewHdPathAssociation {
+            component_id,
+            parent_id,
+            tree_depth,
+        }: NewHdPathAssociation,
+        tree_id: u32,
+    ) -> Self {
+        Self {
+            tree_id,
+            component_id,
+            parent_id,
+            tree_depth,
+        }
+    }
+}
+
+#[derive(
+    diesel::HasQuery, diesel::Insertable, Serialize, Deserialize, Eq, PartialEq, Hash, Debug,
+)]
 #[diesel(table_name = crate::schema::hd1_files_parents)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct NewHdPathAssociation {
     pub component_id: u32,
-    pub parent_id: u32,
+    pub parent_id: Option<u32>,
     pub tree_depth: u32,
+}
+
+impl NewHdPathAssociation {
+    pub fn from_full_ref(
+        HdPathAssociation {
+            tree_id: _,
+            component_id,
+            parent_id,
+            tree_depth,
+        }: &HdPathAssociation,
+    ) -> NewHdPathAssociation {
+        NewHdPathAssociation {
+            component_id: *component_id,
+            parent_id: *parent_id,
+            tree_depth: *tree_depth,
+        }
+    }
 }
 
 #[derive(diesel::Insertable, Serialize, Deserialize, Eq, PartialEq, Hash)]

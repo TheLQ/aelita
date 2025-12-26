@@ -89,6 +89,10 @@ impl CompressedPaths {
     pub fn parts(&self) -> &[String] {
         self.parts.as_slice()
     }
+
+    pub fn inner(&self) -> (&[String], &[Vec<u32>]) {
+        (&self.parts, &self.indexed_paths)
+    }
 }
 
 #[cfg(test)]

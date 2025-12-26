@@ -1,5 +1,6 @@
 pub mod api_hd;
 pub mod api_hd_mut;
+pub mod api_hd_paths;
 pub mod api_hd_roots_mut;
 pub mod api_journal;
 pub mod api_space;

@@ -5,7 +5,7 @@ use crate::models::id_types::{ModelJournalId, StorIdType};
 use crate::models::model_journal::{
     ModelJournalImmutable, NewModelJournalImmutable, NewModelJournalImmutableDiesel,
 };
-use crate::{ModelJournalImmutableDiesel, schema};
+use crate::{ModelJournalImmutableDiesel, RawDieselBytes, schema};
 use chrono::NaiveDateTime;
 use diesel::dsl;
 use diesel::prelude::*;
@@ -106,6 +106,17 @@ pub fn storapi_journal_list(
 ) -> StorDieselResult<Vec<ModelJournalImmutableDiesel>> {
     ModelJournalImmutableDiesel::query()
         .get_results(conn.inner())
+        .map_err(Into::into)
+}
+
+pub fn storapi_journal_get_data(
+    conn: &mut StorTransaction,
+    journal_id: ModelJournalId,
+) -> StorDieselResult<RawDieselBytes> {
+    schema::journal_immutable_data::table
+        .select(schema::journal_immutable_data::data)
+        .filter(schema::journal_immutable_data::journal_id.eq(journal_id))
+        .first(conn.inner())
         .map_err(Into::into)
 }
 

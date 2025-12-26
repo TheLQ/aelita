@@ -1,7 +1,7 @@
 #![feature(error_generic_member_access)]
 #![feature(iterator_try_collect)]
-#![feature(array_as_slice)]
 #![feature(slice_pattern)]
+#![feature(vec_into_chunks)]
 
 mod api;
 mod connection;
