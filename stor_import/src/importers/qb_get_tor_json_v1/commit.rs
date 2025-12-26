@@ -1,4 +1,4 @@
-use crate::err::StorImportResult;
+use crate::err::{StorImportErrorKind, StorImportResult};
 use crate::importers::qb_get_tor_json_v1::defs::ImportQbMetadata;
 use aelita_stor_diesel::ModelJournalImmutable;
 use aelita_stor_diesel::ModelJournalTypeName;
@@ -8,6 +8,7 @@ use aelita_stor_diesel::{ModelTorrentsDiesel, ModelTorrentsMeta, ModelTorrentsQB
 use aelita_stor_diesel::{storapi_tor_torrents_push, storapi_tor_torrents_update_status_batch};
 use xana_commons_rs::bencode_torrent_re::HashExtractorAs;
 use xana_commons_rs::tracing_re::info;
+use xana_commons_rs::{CrashErrKind, ResultXanaMap};
 
 pub fn storcommit_torrents(
     conn: &mut StorTransaction,
@@ -15,7 +16,11 @@ pub fn storcommit_torrents(
 ) -> StorImportResult<()> {
     assert_eq!(row.journal_type, ModelJournalTypeName::QbGetTorJson1);
 
-    let metadata: ImportQbMetadata = row.metadata.unwrap().deserialize_json()?;
+    let metadata: ImportQbMetadata = row
+        .metadata
+        .unwrap()
+        .deserialize_json()
+        .map_err(|(msg, e)| StorImportErrorKind::InvalidQbMetadata.build_err_message(e, msg))?;
     info!("meta {metadata:?}");
 
     // let meta = row.data;
@@ -23,7 +28,10 @@ pub fn storcommit_torrents(
     // meta_str.truncate(3999);
     // info!("{}", meta_str);
 
-    let local_tors: Vec<ModelTorrentsQBittorrent> = row.data.deserialize_json()?;
+    let local_tors: Vec<ModelTorrentsQBittorrent> = row
+        .data
+        .deserialize_json()
+        .map_err(|(msg, e)| StorImportErrorKind::InvalidQbTorrents.build_err_message(e, msg))?;
     // let local_tors = local_tors_raw.as_tor_lookup_by_hash();
 
     let db_tors_raw =

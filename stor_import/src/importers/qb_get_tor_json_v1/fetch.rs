@@ -76,16 +76,20 @@ async fn fetch_async_host(host: ModelQbHost) -> StorImportResult<(ModelQbHost, B
             fqdn: host.address.clone(),
             is_https: false,
         }
-        .build()?;
+        .build()
+        .map_err(|e| StorImportErrorKind::QbInit.reqwest_pio(e))?;
         info!("get_torrents {}", host.gui_name());
 
-        client.auth().await?;
+        client
+            .auth()
+            .await
+            .map_err(|e| StorImportErrorKind::QbAuth.qbit(e))?;
 
         client
             .get_torrents_raw(None)
             .await
             .map(|bytes| (host, bytes))
-            .map_err(Into::into)
+            .map_err(|e| StorImportErrorKind::BadQbGetTorrents.reqwest_pio(e))
     })
     .await
 }
