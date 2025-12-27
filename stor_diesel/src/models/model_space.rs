@@ -1,16 +1,8 @@
-use crate::err::StorDieselErrorKind;
-use crate::models::common::parse_type_checked;
 use crate::models::enum_types::AnyEnumToText;
 use crate::models::id_types::{ModelJournalId, ModelSpaceId};
 use aelita_xrn::defs::address::{XrnAddr, XrnAddrRef};
-use diesel::backend::Backend;
-use diesel::deserialize::FromSql;
-use diesel::serialize::{Output, ToSql};
-use diesel::sql_types::Binary;
 use diesel::{HasQuery, Insertable};
 use std::fmt::Debug;
-use std::str::FromStr;
-use xana_commons_rs::CrashErrKind;
 
 #[derive(HasQuery, Debug)]
 #[diesel(table_name = crate::schema::space_names)]
@@ -65,7 +57,7 @@ impl<X: Into<XrnAddr>> From<X> for XrnAsOwnedTable {
     }
 }
 
-/// Magic Xrn Parser struct
+// Magic Xrn Parser struct
 // #[derive(Debug)]
 // pub struct XrnDiesel(PathXrn);
 //
@@ -116,59 +108,3 @@ impl<X: Into<XrnAddr>> From<X> for XrnAsOwnedTable {
 //         }
 //     }
 // }
-
-#[derive(Debug)]
-pub struct SumType<Left, Right> {
-    left: Option<Left>,
-    right: Option<Right>,
-}
-
-impl<Left, Right> SumType<Left, Right> {
-    fn new(left: Option<Left>, right: Option<Right>) -> Self {
-        Self { left, right }
-    }
-}
-
-impl<Left, Right, Db> FromSql<Binary, Db> for SumType<Left, Right>
-where
-    Db: Backend,
-    Left: Debug + FromStr<Err = strum::ParseError>,
-    Right: Debug + FromStr<Err = strum::ParseError>,
-    *const [u8]: FromSql<Binary, Db>,
-{
-    fn from_sql(bytes: Db::RawValue<'_>) -> diesel::deserialize::Result<Self> {
-        let raw_type = <Vec<u8> as FromSql<Binary, Db>>::from_sql(bytes)?;
-
-        if let Ok(left) = parse_type_checked::<Left>(&raw_type) {
-            Ok(Self {
-                left: Some(left),
-                right: None,
-            })
-        } else if let Ok(right) = parse_type_checked::<Right>(&raw_type) {
-            Ok(Self {
-                left: None,
-                right: Some(right),
-            })
-        } else {
-            let str_type = str::from_utf8(&raw_type).unwrap_or("UNKNOWN");
-            Err(StorDieselErrorKind::UnknownType.build_message(str_type))
-        }
-    }
-}
-
-impl<Left, Right, Db> ToSql<Binary, Db> for SumType<Left, Right>
-where
-    Db: Backend,
-    Left: Debug + AsRef<str>,
-    Right: Debug + AsRef<str>,
-    [u8]: ToSql<Binary, Db>,
-{
-    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Db>) -> diesel::serialize::Result {
-        let str_type = match (&self.left, &self.right) {
-            (Some(left), None) => left.as_ref(),
-            (None, Some(right)) => right.as_ref(),
-            _ => panic!("SumType can only be one of two types"),
-        };
-        <[u8] as ToSql<Binary, Db>>::to_sql(str_type.as_bytes(), out)
-    }
-}

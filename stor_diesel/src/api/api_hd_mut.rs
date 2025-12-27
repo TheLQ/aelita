@@ -79,7 +79,7 @@ fn components_update(
     );
     assert_eq!(total_rows, expected_length);
 
-    let watch = BasicWatch::start();
+    // let watch = BasicWatch::start();
     // let rows = diesel::sql_query(
     //     "INSERT IGNORE INTO `hd1_files_components` (component) \
     //     SELECT component FROM `fast_hd_components`",

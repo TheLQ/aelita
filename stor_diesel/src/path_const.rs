@@ -32,5 +32,6 @@ mod tests {
     fn test() {
         const SUPER: PathConst = PathConst("super");
         let name = SUPER.to_path_buf().to_str().unwrap().to_string();
+        println!("{name}")
     }
 }

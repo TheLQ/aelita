@@ -5,7 +5,7 @@ use std::os::unix::prelude::OsStrExt;
 use std::path::Path;
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::trace;
-use xana_commons_rs::{BasicWatch, CommaJoiner, LOCALE, SpaceJoiner};
+use xana_commons_rs::{BasicWatch, LOCALE, SpaceJoiner};
 
 fn push_associations_fancy_insert(conn: &mut StorTransaction) -> StorDieselResult<()> {
     let watch = BasicWatch::start();
@@ -18,11 +18,11 @@ fn push_associations_fancy_insert(conn: &mut StorTransaction) -> StorDieselResul
     trace!("inital inserted {total_inserted}");
 
     for comp_i in 1..(HD_PATH_DEPTH - 1) {
-        let next_comp_i = comp_i + 1;
+        // let next_comp_i = comp_i + 1;
         let prev_comp_i = comp_i - 1;
-        let p_cols = (0..=comp_i)
-            .map(|i| format!("p{i}"))
-            .collect::<CommaJoiner>();
+        // let p_cols = (0..=comp_i)
+        //     .map(|i| format!("p{i}"))
+        //     .collect::<CommaJoiner>();
         let joins = (1..comp_i)
             .map(|i| {
                 format!(

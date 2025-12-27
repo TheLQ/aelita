@@ -49,58 +49,6 @@ pub fn storapi_journal_immutable_push_single(
     Ok(journal_id)
 }
 
-#[cfg(feature = "nope")]
-pub fn storapi_journal_immutable_push(
-    conn: &mut StorTransaction,
-    values_raw: impl IntoIterator<Item = NewModelJournalImmutable>,
-) -> StorDieselResult<Vec<ModelJournalId>> {
-    let max_id: Option<ModelSpaceId> = schema::journal_immutable::table
-        .select(dsl::max(schema::journal_immutable::journal_id))
-        .get_result(conn.inner())?;
-
-    let values = values_raw
-        .into_iter()
-        .map(
-            |NewModelJournalImmutable {
-                 journal_type,
-                 data,
-                 metadata,
-                 cause_xrn,
-                 cause_description,
-             }| NewModelJournalImmutableDiesel {
-                journal_type,
-                data,
-                metadata,
-                committed: false,
-                cause_xrn,
-                cause_description,
-            },
-        )
-        .collect::<Vec<_>>();
-    let watch = BasicWatch::start();
-    let values_len = values.len();
-    trace!("inserting {values_len} journal entries...");
-    let res = diesel::insert_into(schema::journal_immutable::table)
-        .values(&values)
-        .execute(conn.inner());
-    check_insert_num_rows(res, values_len)?;
-    debug!("inserted {values_len} journal entries in {watch}");
-
-    if let Some(max_id) = max_id {
-        let res = schema::journal_immutable::table
-            .select(schema::journal_immutable::journal_id)
-            .filter(schema::journal_immutable::journal_id.gt(max_id))
-            .get_results(conn.inner())?;
-        assert_eq!(res.len(), values_len);
-        Ok(res)
-    } else {
-        schema::journal_immutable::table
-            .select(schema::journal_immutable::journal_id)
-            .get_results(conn.inner())
-            .map_err(Into::into)
-    }
-}
-
 pub fn storapi_journal_list(
     conn: &mut StorTransaction,
 ) -> StorDieselResult<Vec<ModelJournalImmutableDiesel>> {

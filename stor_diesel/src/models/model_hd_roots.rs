@@ -1,4 +1,4 @@
-use crate::{ModelHdRoot, ModelSpaceId, NewModelSpaceName};
+use crate::{ModelHdRoot, ModelSpaceId};
 
 #[derive(diesel::HasQuery, diesel::Insertable)]
 #[diesel(table_name = crate::schema::hd1_roots)]
@@ -13,9 +13,4 @@ pub struct HdRoot {
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct NewHdRoot {
     pub rtype: ModelHdRoot,
-}
-
-pub struct NewHdRootBuilder {
-    space: NewModelSpaceName,
-    root: NewHdRoot,
 }

@@ -184,7 +184,6 @@ mod test {
             let children = storapi_hd_list_children_by_path(conn, format!("/{top_2}"))?;
             info!("{top_2} {}", children.join(", "));
             panic!("??");
-            Ok(())
         })
     }
 }

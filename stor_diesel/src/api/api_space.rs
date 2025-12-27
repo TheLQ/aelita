@@ -1,7 +1,7 @@
 use crate::api::assert_test_database;
 use crate::connection::StorTransaction;
 use crate::err::StorDieselResult;
-use crate::models::id_types::{ModelSpaceId, StorIdType};
+use crate::models::id_types::ModelSpaceId;
 use crate::models::model_space::{ModelSpaceName, ModelSpaceOwned};
 use crate::schema;
 use diesel::prelude::*;
