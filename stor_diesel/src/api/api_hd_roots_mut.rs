@@ -1,8 +1,8 @@
 use crate::api::api_space_mut::storapi_space_new;
 use crate::api::common::check_insert_num_rows;
-use crate::models::model_hd_roots::{NewHdRoot, NewHdRootBuilder};
-use crate::{ModelHdRoot, ModelJournalId, ModelSpaceId, NewModelSpaceName, schema};
-use crate::{StorDieselError, StorDieselResult, StorTransaction};
+use crate::models::model_hd_roots::NewHdRoot;
+use crate::{ModelSpaceId, NewModelSpaceName, schema};
+use crate::{StorDieselResult, StorTransaction};
 use diesel::{ExpressionMethods, RunQueryDsl};
 
 pub fn storapi_hdroots_push(

@@ -2,9 +2,8 @@ use crate::api::common::check_insert_num_rows;
 use crate::err::StorDieselErrorKind;
 use crate::{
     CompressedPaths, HdPathAssociation, NewHdPathAssociation, StorDieselResult, StorTransaction,
-    schema, storapi_hd_tree_push,
 };
-use diesel::{HasQuery, RunQueryDsl, dsl};
+use diesel::{HasQuery, RunQueryDsl};
 use itertools::Itertools;
 use rayon::iter::ParallelIterator;
 use rayon::prelude::IntoParallelIterator;
@@ -177,10 +176,7 @@ impl<'t, 'e> HdAssociationsBuilder<'t, 'e> {
         Ok(())
     }
 
-    fn upsert_associations(
-        &mut self,
-        mut input: Vec<NewHdPathAssociation>,
-    ) -> StorDieselResult<()> {
+    fn upsert_associations(&mut self, input: Vec<NewHdPathAssociation>) -> StorDieselResult<()> {
         assert!(!input.is_empty());
         // let mut query_builder = "\
         //     SELECT p.tree_id, p.component_id, p.parent_id, p.tree_depth \

@@ -1,5 +1,4 @@
-use crate::{ModelFileTreeId, ModelHdRoot, ModelSpaceId, NewModelSpaceName};
-use serde::{Deserialize, Serialize};
+use crate::{ModelHdRoot, ModelSpaceId, NewModelSpaceName};
 
 #[derive(diesel::HasQuery, diesel::Insertable)]
 #[diesel(table_name = crate::schema::hd1_roots)]

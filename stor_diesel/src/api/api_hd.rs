@@ -1,23 +1,11 @@
-use crate::api::common::SQL_PLACEHOLDER_MAX;
-use crate::err::StorDieselErrorKind;
-use crate::models::model_hd::HD_PATH_DEPTH;
-use crate::{
-    HdPathAssociation, ModelFileTreeId, ModelSpaceId, NewHdPathAssociation,
-    NewHdPathAssociationRoot, PathRow, path_components,
-};
 use crate::{StorDieselResult, StorTransaction};
 use crate::{schema, schema_temp};
 use diesel::RunQueryDsl;
 use diesel::prelude::*;
-use diesel::sql_types::{Binary, Unsigned};
-use itertools::Itertools;
-use std::collections::{HashMap, HashSet};
-use std::os::unix::prelude::OsStrExt;
-use std::path::{Path, PathBuf};
-use xana_commons_rs::CrashErrKind;
+use std::collections::HashMap;
 use xana_commons_rs::num_format_re::ToFormattedString;
-use xana_commons_rs::tracing_re::{info, trace};
-use xana_commons_rs::{BasicWatch, LOCALE, SpaceJoiner};
+use xana_commons_rs::tracing_re::info;
+use xana_commons_rs::{BasicWatch, LOCALE};
 
 // pub fn storapi_hd_get_by_id(
 //     conn: &mut StorTransaction,

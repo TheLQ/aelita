@@ -2,7 +2,6 @@ use crate::err::StorDieselErrorKind;
 use crate::path_const::PathConst;
 use crate::{HdPathDiesel, StorDieselResult, StorTransaction, storapi_row_count};
 use diesel::connection::SimpleConnection;
-use diesel::prelude::*;
 use std::collections::HashMap;
 use std::fmt::Write;
 use std::path::Path;

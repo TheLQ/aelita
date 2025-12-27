@@ -1,5 +1,3 @@
-use crate::err::StorDieselErrorKind;
-use crate::{StorDieselError, StorDieselResult};
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
 use diesel::mysql::{Mysql, MysqlValue};

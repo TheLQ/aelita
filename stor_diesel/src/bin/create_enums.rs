@@ -3,12 +3,9 @@ extern crate core;
 use aelita_commons::log_init;
 use aelita_stor_diesel::err::StorDieselErrorKind;
 use aelita_stor_diesel::{
-    ModelHdRoot, ModelJournalTypeName, PermaStore, StorDieselError, StorDieselResult,
+    ModelHdRoot, PermaStore, StorDieselError, StorDieselResult,
     StorTransaction, establish_connection,
 };
-use aelita_xrn::defs::address::XrnType;
-use aelita_xrn::defs::path_xrn::PathXrnType;
-use aelita_xrn::defs::space_xrn::SpaceXrnType;
 use diesel::RunQueryDsl;
 use std::process::ExitCode;
 use strum::VariantArray;

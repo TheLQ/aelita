@@ -4,7 +4,7 @@ use crate::{
     StorTransaction, XrnAsOwnedTable, schema,
 };
 use diesel::prelude::*;
-use diesel::{RunQueryDsl, dsl};
+use diesel::RunQueryDsl;
 
 pub fn storapi_space_new(
     conn: &mut StorTransaction,

@@ -3,23 +3,16 @@ use crate::api::api_hd::components_get;
 use crate::api::assert_test_database;
 use crate::api::common::SQL_PLACEHOLDER_MAX;
 use crate::api::hd_path::HdAssociationsBuilder;
-use crate::err::StorDieselErrorKind;
 use crate::models::enum_types::ModelJournalTypeName;
-use crate::path_const::PathConst;
 use crate::schema_temp::{FAST_HD_COMPONENTS_CREATE, FAST_HD_COMPONENTS_TRUNCATE};
 use crate::storapi_variables_get_str;
-use crate::{
-    CompressedPaths, HD_PATH_DEPTH, HdPathAssociation, HdPathDiesel, ModelFileTreeId,
-    NewHdPathAssociation, StorIdType, storapi_journal_get, storapi_journal_get_data,
-};
+use crate::{CompressedPaths, StorIdType, storapi_journal_get_data};
 use crate::{StorDieselResult, StorTransaction, schema, schema_temp};
 use diesel::RunQueryDsl;
 use diesel::prelude::*;
-use std::collections::LinkedList;
-use std::path::PathBuf;
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{debug, info, trace};
-use xana_commons_rs::{BasicWatch, LOCALE, SimpleIoMap, SpaceJoiner};
+use xana_commons_rs::{BasicWatch, LOCALE};
 
 pub fn storapi_hd_tree_push(
     conn: &mut StorTransaction,
