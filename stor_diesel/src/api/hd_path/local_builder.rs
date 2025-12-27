@@ -4,14 +4,12 @@ use crate::{
     CompressedPaths, HdPathAssociation, NewHdPathAssociation, StorDieselResult, StorTransaction,
     schema, storapi_hd_tree_push,
 };
-use diesel::{HasQuery, QueryDsl, RunQueryDsl, associations, dsl};
-use indexmap::IndexSet;
+use diesel::{HasQuery, RunQueryDsl, dsl};
 use itertools::Itertools;
 use rayon::iter::ParallelIterator;
 use rayon::prelude::IntoParallelIterator;
 use std::collections::{HashMap, HashSet};
 use xana_commons_rs::num_format_re::ToFormattedString;
-use xana_commons_rs::qbittorrent_re::TorrentState::error;
 use xana_commons_rs::tracing_re::{debug, error, info, trace};
 use xana_commons_rs::{BasicWatch, CommaJoiner, CrashErrKind, LOCALE};
 

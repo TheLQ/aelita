@@ -1,7 +1,7 @@
 use crate::api::api_hd::components_get;
-use crate::api::api_hd_paths::HdAssociationsBuilder;
 use crate::api::assert_test_database;
 use crate::api::common::SQL_PLACEHOLDER_MAX;
+use crate::api::hd_path::HdAssociationsBuilder;
 use crate::err::StorDieselErrorKind;
 use crate::models::enum_types::ModelJournalTypeName;
 use crate::path_const::PathConst;
