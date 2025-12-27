@@ -1,13 +1,18 @@
+use crate::api::api_hd::storapi_hd_components_with;
 use crate::err::StorDieselErrorKind;
-use crate::{ModelFileTreeId, PathRow, StorDieselResult, StorTransaction, path_components, schema};
+use crate::{
+    HdPathDieselDyn, ModelFileTreeId, PathRow, StorDieselResult, StorIdType, StorTransaction,
+    path_components, schema,
+};
 use diesel::prelude::*;
 use diesel::sql_types::Unsigned;
 use diesel::{QueryableByName, RunQueryDsl};
+use itertools::Itertools;
 use std::collections::HashMap;
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use xana_commons_rs::tracing_re::trace;
-use xana_commons_rs::{CrashErrKind, SpaceJoiner};
+use xana_commons_rs::{CommaJoiner, CrashErrKind, SpaceJoiner};
 
 pub fn storapi_hd_get_path_by_id(
     conn: &mut StorTransaction,
@@ -56,8 +61,61 @@ pub fn storapi_hd_get_path_by_id(
 pub fn storapi_hd_get_path_by_path(
     conn: &mut StorTransaction,
     path: impl AsRef<Path>,
-) -> StorDieselResult<Vec<String>> {
-    todo!()
+) -> StorDieselResult<Vec<ModelFileTreeId>> {
+    let path = path.as_ref();
+    let components_str = path_components(path, |v| v.to_str().unwrap())?;
+    let components_len = components_str.len();
+
+    if components_str.is_empty() {
+        // we can't get the root component. all root's chuldren are null
+        return Err(StorDieselErrorKind::EmptyPath.build());
+    }
+
+    let components_to_id = storapi_hd_components_with(conn, &components_str)?
+        .into_iter()
+        .collect::<HashMap<String, _>>();
+    let mut query_components = components_str
+        .iter()
+        .map(|v| components_to_id.get(*v).unwrap())
+        .collect::<Vec<_>>();
+
+    let select_cols = (0..components_len)
+        .map(|i| format!("parents{i}.tree_id AS p{i}"))
+        .collect::<CommaJoiner>();
+    let joins = (1..components_len)
+        .map(|i| {
+            format!(
+                "INNER JOIN hd1_files_parents parents{i} ON \
+                    parents{i}.tree_depth = {i} AND \
+                    parents{i}.component_id = ? AND \
+                    parents{i}.parent_id = parents{}.tree_id ",
+                prev_i = i - 1
+            )
+        })
+        .collect::<SpaceJoiner>();
+
+    let raw_query = format!(
+        "SELECT {select_cols} \
+        FROM `hd1_files_parents` parents0 \
+        {joins} \
+        WHERE \
+            parents0.tree_depth = 0 AND \
+            parents0.component_id = ? AND \
+            parents0.parent_id IS NULL \
+        "
+    );
+
+    let mut query = diesel::sql_query(raw_query).into_boxed();
+    query_components.rotate_left(1); // first is last
+    for i in query_components {
+        query = query.bind::<Unsigned<diesel::sql_types::Integer>, _>(i)
+    }
+    let row = query.get_result::<HdPathDieselDyn>(conn.inner())?;
+    Ok(row
+        .components
+        .into_iter()
+        .map(ModelFileTreeId::new)
+        .collect())
 }
 
 pub fn storapi_hd_list_children_by_id(
@@ -169,11 +227,14 @@ pub fn storapi_hd_list_children_by_path(
 mod test {
     use crate::StorDieselResult;
     use crate::api::common::test::sql_test;
-    use crate::api::hd_path::tree_queries::storapi_hd_list_children_by_path;
+    use crate::api::hd_path::tree_queries::{
+        storapi_hd_get_path_by_path, storapi_hd_list_children_by_path,
+    };
+    use xana_commons_rs::PrettyUnwrap;
     use xana_commons_rs::tracing_re::info;
 
     #[test]
-    fn get_result() -> StorDieselResult<()> {
+    fn get_result() {
         sql_test(|conn| {
             let top_1 = "mnt";
             let top_2 = "hug24";
@@ -183,7 +244,11 @@ mod test {
             info!("{top_1} {}", children.join(", "));
             let children = storapi_hd_list_children_by_path(conn, format!("/{top_2}"))?;
             info!("{top_2} {}", children.join(", "));
+
+            let res = storapi_hd_get_path_by_path(conn, "").pretty_unwrap();
+
             panic!("??");
         })
+        .pretty_unwrap()
     }
 }

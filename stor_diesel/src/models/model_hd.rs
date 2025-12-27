@@ -1,6 +1,10 @@
 use crate::err::StorDieselErrorKind;
 use crate::{ModelFileTreeId, StorDieselResult};
-use diesel::QueryableByName;
+use diesel::backend::Backend;
+use diesel::deserialize::FromSql;
+use diesel::row::{Field, NamedRow, Row};
+use diesel::sql_types::{Integer, Unsigned};
+use diesel::{QueryableByName, deserialize};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ffi::OsStr;
@@ -67,14 +71,6 @@ impl NewHdPathAssociation {
     }
 }
 
-#[derive(diesel::Insertable, Serialize, Deserialize, Eq, PartialEq, Hash)]
-#[diesel(table_name = crate::schema::hd1_files_parents)]
-#[diesel(check_for_backend(diesel::mysql::Mysql))]
-pub struct NewHdPathAssociationRoot {
-    pub tree_depth: u32,
-    pub component_id: u32,
-}
-
 #[derive(QueryableByName)]
 pub struct PathRow {
     #[diesel(sql_type = diesel::sql_types::Unsigned<diesel::sql_types::Integer>)]
@@ -83,7 +79,45 @@ pub struct PathRow {
     pub component: String,
 }
 
-#[derive(diesel::HasQuery, diesel::Insertable, Serialize, Deserialize)]
+pub struct HdPathDieselDyn {
+    pub components: Vec<u32>,
+}
+
+impl<DB: Backend> QueryableByName<DB> for HdPathDieselDyn
+where
+    u32: FromSql<Unsigned<Integer>, DB>,
+{
+    fn build<'a>(row: &impl NamedRow<'a, DB>) -> diesel::deserialize::Result<Self> {
+        let mut new = Self {
+            components: Vec::new(),
+        };
+        for i in 0.. {
+            let col_name = &format!("p{i}");
+            if let Some(next) = try_get::<DB, Unsigned<Integer>, u32>(row, col_name)? {
+                new.components.push(next)
+            } else {
+                break;
+            }
+        }
+        Ok(new)
+    }
+}
+
+fn try_get<'s, DB: Backend, ST, T>(
+    row: &impl NamedRow<'s, DB>,
+    column_name: &str,
+) -> deserialize::Result<Option<T>>
+where
+    T: FromSql<ST, DB>,
+{
+    let Some(field) = Row::get(row, column_name) else {
+        return Ok(None);
+    };
+
+    Ok(Some(T::from_nullable_sql(field.value())?))
+}
+
+#[derive(diesel::HasQuery, diesel::Insertable, diesel::QueryableByName, Serialize, Deserialize)]
 #[diesel(table_name = crate::schema::hd1_files_paths)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct HdPathDiesel {

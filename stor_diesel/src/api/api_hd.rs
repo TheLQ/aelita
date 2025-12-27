@@ -42,3 +42,18 @@ pub(super) fn components_get(
 
     Ok(lookup_map)
 }
+
+pub fn storapi_hd_components_with(
+    conn: &mut StorTransaction,
+    input: &[impl AsRef<str>],
+) -> StorDieselResult<HashMap<String, u32>> {
+    let filter: Vec<&[u8]> = input.iter().map(|v| v.as_ref().as_bytes()).collect();
+
+    let rows: Vec<(u32, Vec<u8>)> = schema::hd1_files_components::table
+        .filter(schema::hd1_files_components::component.eq_any(filter))
+        .get_results::<(u32, Vec<u8>)>(conn.inner())?;
+    Ok(rows
+        .into_iter()
+        .map(|(i, comp)| (String::from_utf8(comp).unwrap(), i))
+        .collect())
+}
