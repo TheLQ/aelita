@@ -14,25 +14,25 @@ pub const HD_PATH_DEPTH: usize = 11;
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct HdPathAssociation {
     pub tree_id: u32,
+    pub tree_depth: u32,
     pub component_id: u32,
     pub parent_id: Option<u32>,
-    pub tree_depth: u32,
 }
 
 impl HdPathAssociation {
     pub fn from_partial(
         NewHdPathAssociation {
+            tree_depth,
             component_id,
             parent_id,
-            tree_depth,
         }: NewHdPathAssociation,
         tree_id: u32,
     ) -> Self {
         Self {
             tree_id,
+            tree_depth,
             component_id,
             parent_id,
-            tree_depth,
         }
     }
 }
@@ -43,24 +43,24 @@ impl HdPathAssociation {
 #[diesel(table_name = crate::schema::hd1_files_parents)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct NewHdPathAssociation {
+    pub tree_depth: u32,
     pub component_id: u32,
     pub parent_id: Option<u32>,
-    pub tree_depth: u32,
 }
 
 impl NewHdPathAssociation {
     pub fn from_full_ref(
         HdPathAssociation {
             tree_id: _,
+            tree_depth,
             component_id,
             parent_id,
-            tree_depth,
         }: &HdPathAssociation,
     ) -> NewHdPathAssociation {
         NewHdPathAssociation {
             component_id: *component_id,
-            parent_id: *parent_id,
             tree_depth: *tree_depth,
+            parent_id: *parent_id,
         }
     }
 }
@@ -69,8 +69,8 @@ impl NewHdPathAssociation {
 #[diesel(table_name = crate::schema::hd1_files_parents)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct NewHdPathAssociationRoot {
-    pub component_id: u32,
     pub tree_depth: u32,
+    pub component_id: u32,
 }
 
 #[derive(QueryableByName)]
