@@ -9,7 +9,9 @@ use xana_commons_rs::CrashErrKind;
 
 pub const HD_PATH_DEPTH: usize = 11;
 
-#[derive(diesel::HasQuery, diesel::QueryableByName, Serialize, Deserialize)]
+#[derive(
+    diesel::HasQuery, diesel::QueryableByName, diesel::Insertable, Serialize, Deserialize, Debug,
+)]
 #[diesel(table_name = crate::schema::hd1_files_parents)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct HdPathAssociation {

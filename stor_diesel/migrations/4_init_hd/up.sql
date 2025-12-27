@@ -32,12 +32,14 @@ CREATE TABLE IF NOT EXISTS `hd1_files_components`
 
 CREATE TABLE IF NOT EXISTS `hd1_files_parents`
 (
-    `tree_id`      INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tree_id`      INTEGER UNSIGNED NOT NULL,
     `tree_depth`   INTEGER UNSIGNED NOT NULL,
     `component_id` INTEGER UNSIGNED NOT NULL,
     `parent_id`    INTEGER UNSIGNED,
     PRIMARY KEY (`tree_id`),
-    UNIQUE KEY `glob_unique` (`tree_depth`, `parent_id`, `component_id`)
+    UNIQUE KEY `glob_unique` (`tree_depth`, `parent_id`, `component_id`),
+    CONSTRAINT `fk_hd1_files_parents_components`
+        FOREIGN KEY (`component_id`) REFERENCES `hd1_files_components` (`id`)
 );
 # create unique index if not exist `glob_unique`  on `hd1_files_parents` (`tree_depth`, `parent_id`, `component_id`);
 # create index `parents` on `hd1_files_parents` (`parent_id`);
@@ -77,3 +79,15 @@ CREATE TABLE IF NOT EXISTS `hd1_files_paths`
 # create index `i6` on `hd1_files_paths` (`p6`);
 # create index `i7` on `hd1_files_paths` (`p7`);
 show create table `hd1_files_paths`;
+
+CREATE TABLE `hd1_roots`
+(
+    `space_id` INTEGER UNSIGNED NOT NULL,
+    `rtype`    ENUM ('')        NOT NULL,
+    PRIMARY KEY (`space_id`),
+    CONSTRAINT `fk_hd1_roots_space`
+        FOREIGN KEY (`space_id`) REFERENCES `space_names` (`space_id`)
+);
+ALTER TABLE `hd1_roots`
+    MODIFY `rtype`
+        ENUM ('ZfsDataset', 'Project')

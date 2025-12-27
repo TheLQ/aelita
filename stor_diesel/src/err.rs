@@ -15,6 +15,7 @@ pub enum StorDieselErrorKind {
     DatabaseConnectionFailed,
     ExecuteError,
     ResultLen,
+    HdPathsInsertLen,
     LoadInfileFailed,
     UnexpectedJournalIdForDatabase,
     UnknownComponent,
