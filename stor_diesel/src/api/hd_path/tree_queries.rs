@@ -1,0 +1,190 @@
+use crate::err::StorDieselErrorKind;
+use crate::{ModelFileTreeId, PathRow, StorDieselResult, StorTransaction, path_components, schema};
+use diesel::prelude::*;
+use diesel::sql_types::Unsigned;
+use diesel::{QueryableByName, RunQueryDsl};
+use std::collections::HashMap;
+use std::os::unix::ffi::OsStrExt;
+use std::path::{Path, PathBuf};
+use xana_commons_rs::tracing_re::trace;
+use xana_commons_rs::{CrashErrKind, SpaceJoiner};
+
+pub fn storapi_hd_get_path_by_id(
+    conn: &mut StorTransaction,
+    id: ModelFileTreeId,
+) -> StorDieselResult<(Vec<PathRow>, PathBuf)> {
+    // todo can the second query be written to only select and join the last row?
+    let raw_query = "\
+        WITH RECURSIVE path_parts (tree_id, parent_id, comp_id, depth)
+           as
+           (SELECT parents.tree_id,
+                   parents.parent_id,
+                   parents.component_id,
+                   parents.tree_depth
+            FROM `hd1_files_parents` parents
+            WHERE parents.tree_id = ?
+
+            UNION ALL
+
+            SELECT parents.tree_id,
+                   parents.parent_id,
+                   parents.component_id,
+                   parents.tree_depth
+            FROM path_parts
+                     INNER JOIN `hd1_files_parents` parents
+                                ON parents.tree_id = path_parts.parent_id
+                                    AND parents.tree_depth =
+                                        path_parts.depth - 1
+            WHERE path_parts.depth >= 0)
+        SELECT path_parts.tree_id, comp.component
+        FROM path_parts
+        INNER JOIN hd1_files_components comp on comp.id = path_parts.comp_id
+        ORDER BY path_parts.depth DESC";
+    let raw_query = raw_query.replace("\n", "");
+
+    let rows: Vec<PathRow> = diesel::sql_query(raw_query)
+        .bind::<Unsigned<diesel::sql_types::Integer>, _>(id)
+        .get_results(conn.inner())?;
+    let path: PathBuf = ["/"]
+        .into_iter()
+        .chain(rows.iter().map(|v| v.component.as_ref()))
+        .collect();
+
+    Ok((rows, path))
+}
+
+pub fn storapi_hd_get_path_by_path(
+    conn: &mut StorTransaction,
+    path: impl AsRef<Path>,
+) -> StorDieselResult<Vec<String>> {
+    todo!()
+}
+
+pub fn storapi_hd_list_children_by_id(
+    conn: &mut StorTransaction,
+    parent_id: ModelFileTreeId,
+) -> StorDieselResult<Vec<PathRow>> {
+    // Ok(schema::hd1_files_parents::table
+    //     .inner_join(schema::hd1_files_components::table)
+    //     .select((
+    //         schema::hd1_files_parents::tree_id,
+    //         schema::hd1_files_components::component,
+    //     ))
+    //     .filter(schema::hd1_files_parents::parent_id.eq(parent_id))
+    //     .get_results(conn.inner())?)
+    Ok(Vec::new())
+}
+
+pub fn storapi_hd_list_children_by_path(
+    conn: &mut StorTransaction,
+    path: impl AsRef<Path>,
+) -> StorDieselResult<Vec<String>> {
+    let path = path.as_ref();
+
+    let path_components_bytes = path_components(path, |c| c.as_bytes())?;
+    let path_components_str = path_components(path, |c| c.to_str().unwrap())?;
+    let selected_column = path_components_bytes.len();
+
+    let components_to_id_vec: Vec<(Vec<u8>, u32)> = schema::hd1_files_components::table
+        .select((
+            schema::hd1_files_components::component,
+            schema::hd1_files_components::id,
+        ))
+        .filter(schema::hd1_files_components::component.eq_any(&path_components_bytes))
+        .get_results(conn.inner())?;
+    let components_to_id = components_to_id_vec
+        .into_iter()
+        .map(|(k, v)| (String::from_utf8(k).unwrap(), v))
+        .collect::<HashMap<_, _>>();
+    if components_to_id.len() != path_components_str.len() {
+        let mut missing = path_components_str.clone();
+        missing.retain(|v| !components_to_id.contains_key(*v));
+        return Err(StorDieselErrorKind::UnknownComponent.build_message(format!(
+            "{} total {}",
+            missing.join(","),
+            missing.len()
+        )));
+    }
+
+    #[derive(QueryableByName)]
+    struct PathResult {
+        #[diesel(sql_type = diesel::sql_types::Text)]
+        component: String,
+    }
+
+    let rows: Vec<PathResult>;
+    if path_components_bytes.is_empty() {
+        trace!("listing root");
+        let query_builder = format!(
+            //
+            "SELECT DISTINCT \
+            comp{selected_column}.component \
+            FROM hd1_files_parents parents0 \
+            INNER JOIN hd1_files_components comp{selected_column} ON comp{selected_column}.id = parents{selected_column}.component_id \
+            WHERE \
+                parents0.tree_depth = 0 AND \
+                parents0.parent_id IS NULL"
+        );
+        rows = diesel::sql_query(query_builder).load::<PathResult>(conn.inner())?;
+    } else {
+        let prev_selected_column = selected_column - 1;
+        trace!("listing {} components", path_components_bytes.len());
+        let joins = (1..selected_column)
+            .map(|i| {
+                format!(
+                    "INNER JOIN hd1_files_parents parents{i} ON \
+                    parents{i}.tree_depth = {i} AND \
+                    parents{i}.component_id = {comp_id} AND \
+                    parents{i}.parent_id = parents{prev_i}.tree_id",
+                    comp_id = components_to_id[path_components_str[i]],
+                    prev_i = i - 1
+                )
+            })
+            .collect::<SpaceJoiner>();
+        let query_builder = format!(
+            //
+            "SELECT DISTINCT \
+        comp.component \
+        FROM hd1_files_parents parents0 \
+        {joins} \
+        INNER JOIN hd1_files_parents parents{selected_column} ON \
+            parents{selected_column}.tree_depth = {selected_column} AND \
+            parents{selected_column}.parent_id = parents{prev_selected_column}.tree_id \
+        INNER JOIN hd1_files_components comp ON comp.id = parents{selected_column}.component_id \
+        WHERE \
+            parents0.tree_depth = 0 AND \
+            parents0.component_id = {comp_id} AND \
+            parents0.parent_id IS NULL \
+        LIMIT 500",
+            comp_id = components_to_id[path_components_str[0]]
+        );
+        rows = diesel::sql_query(query_builder).load::<PathResult>(conn.inner())?;
+    }
+
+    let res = rows.into_iter().map(|v| v.component).collect();
+    Ok(res)
+}
+
+#[cfg(test)]
+mod test {
+    use crate::StorDieselResult;
+    use crate::api::common::test::sql_test;
+    use crate::api::hd_path::tree_queries::storapi_hd_list_children_by_path;
+    use xana_commons_rs::tracing_re::info;
+
+    #[test]
+    fn get_result() -> StorDieselResult<()> {
+        sql_test(|conn| {
+            let top_1 = "mnt";
+            let top_2 = "hug24";
+            let children = storapi_hd_list_children_by_path(conn, "/")?;
+            info!("top {}", children.join(", "));
+            let children = storapi_hd_list_children_by_path(conn, format!("/{top_1}"))?;
+            info!("{top_1} {}", children.join(", "));
+            let children = storapi_hd_list_children_by_path(conn, format!("/{top_2}"))?;
+            info!("{top_2} {}", children.join(", "));
+            panic!("??");
+            Ok(())
+        })
+    }
+}

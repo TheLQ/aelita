@@ -45,3 +45,31 @@ struct CreateResult {
     #[diesel(sql_type = Text)]
     create_table: String,
 }
+
+// pub struct ChunkyQuerySlice<'c, V, const CHUNK: usize>(&'c [V]);
+//
+// impl<'c, V, const CHUNK: usize> ChunkyQuerySlice<'c, V, CHUNK> {}
+//
+// impl<'c, V: 'c, const CHUNK: usize> IntoIterator for ChunkyQuerySlice<'c, V, CHUNK> {
+//     type Item = V;
+//     type IntoIter = std::slice::Iter<'c, V>;
+//
+//     fn into_iter(self) -> Self::IntoIter {
+//         self.0.iter()
+//     }
+// }
+
+#[cfg(test)]
+pub mod test {
+    use crate::{PermaStore, StorDieselResult, StorTransaction, establish_connection};
+    use aelita_commons::log_init;
+
+    pub fn sql_test(
+        inner: impl Fn(&mut StorTransaction) -> StorDieselResult<()>,
+    ) -> StorDieselResult<()> {
+        log_init();
+        let conn = &mut establish_connection(PermaStore::AelitaNull).expect("bad conn");
+        StorTransaction::new_transaction("test", conn, inner)?;
+        Ok(())
+    }
+}
