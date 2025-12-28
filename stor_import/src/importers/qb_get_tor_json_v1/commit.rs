@@ -6,9 +6,9 @@ use aelita_stor_diesel::StorTransaction;
 use aelita_stor_diesel::storapi_tor_torrents_list_by_hash;
 use aelita_stor_diesel::{ModelTorrentsDiesel, ModelTorrentsMeta, ModelTorrentsQBittorrent};
 use aelita_stor_diesel::{storapi_tor_torrents_push, storapi_tor_torrents_update_status_batch};
+use xana_commons_rs::CrashErrKind;
 use xana_commons_rs::bencode_torrent_re::HashExtractorAs;
 use xana_commons_rs::tracing_re::info;
-use xana_commons_rs::{CrashErrKind, ResultXanaMap};
 
 pub fn storcommit_torrents(
     conn: &mut StorTransaction,

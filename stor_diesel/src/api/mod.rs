@@ -10,4 +10,4 @@ pub mod api_variables;
 mod common;
 pub mod hd_path;
 
-pub use common::{assert_test_database, show_create_table};
+pub use common::{assert_packet_size_huge_enough, assert_test_database, show_create_table};

@@ -8,9 +8,6 @@ mod importers;
 mod util;
 
 pub use importers::{
-    n_data_v1::{
-        commit::storcommit_hd,
-        fetch::{COMPRESSEDD_CACHE, storfetch_ndata},
-    },
+    n_data_v1::{commit::storcommit_hd, fetch::storfetch_paths_from_disk},
     qb_get_tor_json_v1::{commit::storcommit_torrents, fetch::storfetch_torrents},
 };

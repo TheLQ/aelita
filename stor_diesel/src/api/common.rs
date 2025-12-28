@@ -1,5 +1,6 @@
 use crate::connection::{StorConnection, StorTransaction};
 use crate::err::{StorDieselErrorKind, StorDieselResult};
+use crate::storapi_variables_get;
 use diesel::sql_types::{Integer, Text, Unsigned};
 use diesel::{QueryResult, QueryableByName, RunQueryDsl, dsl};
 use xana_commons_rs::CrashErrKind;
@@ -23,6 +24,22 @@ pub fn assert_test_database(conn: &mut StorTransaction) -> QueryResult<()> {
     info!("database name: {}", db_name);
     assert_eq!(db_name, "aelita_null");
     Ok(())
+}
+
+pub fn assert_packet_size_huge_enough(conn: &mut StorConnection) -> StorDieselResult<()> {
+    let max_packet_size = storapi_variables_get(conn, "max_allowed_packet")?;
+    if max_packet_size < /*100 MiB*/100 * 1024 * 1024 {
+        panic!(
+            "too small packet size {max_packet_size} = {} MiB",
+            max_packet_size / 1024 / 1024
+        );
+    } else {
+        info!(
+            "small packet size {max_packet_size} = {} MiB",
+            max_packet_size / 1024 / 1024
+        );
+        Ok(())
+    }
 }
 
 pub fn mysql_last_id(conn: &mut StorConnection) -> QueryResult<u32> {

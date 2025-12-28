@@ -1,28 +1,74 @@
-use crate::err::StorImportResult;
-use aelita_stor_diesel::ModelJournalTypeName;
+use crate::err::{StorImportErrorKind, StorImportResult};
 use aelita_stor_diesel::NewModelJournalImmutable;
 use aelita_stor_diesel::StorTransaction;
 use aelita_stor_diesel::path_const::PathConst;
 use aelita_stor_diesel::storapi_journal_immutable_push_single;
+use aelita_stor_diesel::{CompressedPathNested, ModelJournalTypeName};
 use aelita_stor_diesel::{CompressedPaths, RawDieselBytes};
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 use std::thread;
-use xana_commons_rs::tracing_re::{error, info};
-use xana_commons_rs::{BasicWatch, ResultXanaMap, SimpleIoMap, read_dirs_recursive_better};
+use xana_commons_rs::num_format_re::ToFormattedString;
+use xana_commons_rs::tracing_re::{error, info, warn};
+use xana_commons_rs::{
+    BasicWatch, CrashErrKind, LOCALE, ResultXanaMap, ScanFileType, ScanFileTypeWithPath,
+    SimpleIoMap, read_dirs_recursive_better,
+};
 
 static ROOTS: LazyLock<Vec<String>> = LazyLock::new(|| {
     let path = Path::new("local_data/ndata_roots.txt");
     let raw = std::fs::read_to_string(path).map_io_err(path).unwrap();
     raw.split('\n').map(|s| s.to_string()).collect()
 });
-pub const COMPRESSEDD_CACHE: PathConst = PathConst("compressed_paths.cache.json");
+pub const COMPRESSED_CACHE: PathConst = PathConst("compressed_paths.cache.json");
 
-pub fn paths_load() -> Vec<PathBuf> {
+pub fn storfetch_paths_from_cache(conn: &mut StorTransaction) {
+    todo!()
+}
+
+pub fn storfetch_paths_from_disk(
+    conn: &mut StorTransaction,
+    roots: &[impl AsRef<Path>],
+) -> StorImportResult<()> {
+    let scans = scan_disk(roots);
+    let raw_size: usize = scans
+        .iter()
+        .map(|v| {
+            let path = v.path();
+            path.as_os_str().len()
+        })
+        .sum();
+
+    let compressed = CompressedPathNested::from_scan(scans);
+    info!("starting serialize");
+    let encoded_diesel = RawDieselBytes::serialize_postcard(&compressed)
+        .map_err(StorImportErrorKind::InvalidCompressedPaths.err_map())?;
+    let encoded = encoded_diesel.as_inner();
+    let encoded_size: usize = encoded.len();
+
+    let saved_bytes = raw_size as isize - encoded_size as isize;
+    let saved_percent = ((raw_size as f64 - encoded_size as f64) / raw_size as f64) * 100.0;
+    info!(
+        "encoded {} raw {} saved {} reduction {saved_percent:.1}%",
+        encoded_size.to_formatted_string(&LOCALE),
+        raw_size.to_formatted_string(&LOCALE),
+        saved_bytes.to_formatted_string(&LOCALE)
+    );
+
+    std::fs::write(COMPRESSED_CACHE, &encoded)
+        .map_io_err(COMPRESSED_CACHE)
+        .xana_err(StorImportErrorKind::InvalidCompressedPaths)?;
+    info!("wrote to {}", COMPRESSED_CACHE.display());
+
+    insert_compressed_encoded(conn, encoded_diesel)
+    // todo!()
+}
+
+fn scan_disk(roots: &[impl AsRef<Path>]) -> Vec<ScanFileTypeWithPath> {
     let total_watch = BasicWatch::start();
     let mut handles = Vec::new();
-    for root in ROOTS.iter() {
-        let root = Path::new(root).to_path_buf();
+    for root in roots.iter() {
+        let root = root.as_ref().to_path_buf();
         info!("scanning {}...", root.display());
         let handle = thread::Builder::new()
             .name(format!(
@@ -62,37 +108,21 @@ pub fn paths_load() -> Vec<PathBuf> {
     res_ok
 }
 
-fn paths_compressed() -> StorImportResult<(CompressedPaths, Vec<u8>)> {
-    let paths_raw = paths_load();
-    let compressed =
-        CompressedPaths::from_paths(&paths_raw).map_err(StorDieselError::query_fail)?;
-    let encoded_diesel = RawDieselBytes::serialize_postcard(&compressed)?;
-    let encoded = encoded_diesel.as_inner();
-
-    let raw_size: usize = paths_raw.iter().map(|v| v.to_str().unwrap().len()).sum();
-    let encoded_size: usize = encoded.len();
-
-    let saved_bytes = raw_size as isize - encoded_size as isize;
-    let saved_percent = (encoded_size as f64 / raw_size as f64) * 100.0;
-    info!(
-        "encoded {} raw {} raw {} reduction {saved_percent:.1}%",
-        encoded_size.to_formatted_string(&LOCALE),
-        raw_size.to_formatted_string(&LOCALE),
-        saved_bytes.to_formatted_string(&LOCALE)
-    );
-
-    let cache = Path::new("compressed_paths.cache.json");
-    std::fs::write(cache, &encoded).map_io_err(cache)?;
-    info!("wrote to {}", cache.display());
-
-    Ok((compressed, encoded_diesel.into_inner()))
+fn insert_compressed(
+    conn: &mut StorTransaction,
+    compressed: CompressedPaths,
+) -> StorImportResult<()> {
+    // let compressed_encoded = std::fs::read(COMPRESSEDD_CACHE).map_io_err(COMPRESSEDD_CACHE)?;
+    // let data = RawDieselBytes(compressed_encoded);
+    let data = RawDieselBytes::serialize_postcard(&compressed)
+        .xana_err(StorImportErrorKind::InvalidCompressedPaths)?;
+    insert_compressed_encoded(conn, data)
 }
 
-pub fn storfetch_ndata(conn: &mut StorTransaction) -> StorImportResult<()> {
-    let (_compressed, compressed_encoded) = paths_compressed()?;
-    // let compressed_encoded = std::fs::read(COMPRESSEDD_CACHE).map_io_err(COMPRESSEDD_CACHE)?;
-    let data = RawDieselBytes(compressed_encoded);
-
+fn insert_compressed_encoded(
+    conn: &mut StorTransaction,
+    data: RawDieselBytes,
+) -> StorImportResult<()> {
     let journal_id = storapi_journal_immutable_push_single(
         conn,
         NewModelJournalImmutable {

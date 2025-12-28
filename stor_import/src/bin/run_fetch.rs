@@ -1,8 +1,8 @@
 #![feature(iterator_try_collect)]
 
 use aelita_commons::log_init;
-use aelita_stor_diesel::storapi_variables_get;
 use aelita_stor_diesel::{PermaStore, StorTransaction, establish_connection_or_panic};
+use aelita_stor_diesel::{assert_packet_size_huge_enough, storapi_variables_get};
 use aelita_stor_import::err::{StorImportError, StorImportResult};
 use aelita_stor_import::storfetch_ndata;
 use std::process::ExitCode;
@@ -22,19 +22,7 @@ fn main() -> ExitCode {
 
 async fn run() -> StorImportResult<()> {
     let mut conn = establish_connection_or_panic(PermaStore::AelitaNull);
-
-    let max_packet_size = storapi_variables_get(&mut conn, "max_allowed_packet")?;
-    if max_packet_size < /*100 MiB*/100 * 1024 * 1024 {
-        panic!(
-            "too small packet size {max_packet_size} = {} MiB",
-            max_packet_size / 1024 / 1024
-        );
-    } else {
-        info!(
-            "small packet size {max_packet_size} = {} MiB",
-            max_packet_size / 1024 / 1024
-        );
-    }
+    assert_packet_size_huge_enough(&mut conn);
 
     StorTransaction::new_transaction("cli-import", &mut conn, |conn| {
         storfetch_ndata(conn)?;

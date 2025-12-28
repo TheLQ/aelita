@@ -3,7 +3,7 @@ use aelita_stor_diesel::err::StorDieselErrorKind;
 use xana_commons_rs::CrashErr;
 use xana_commons_rs::qbittorrent_re::QbitError;
 use xana_commons_rs::scraper_re::{PIoReqwestError, PReqwestError};
-use xana_commons_rs::{CrashErrKind, MyBacktrace, crash_builder};
+use xana_commons_rs::{CrashErrKind, crash_builder};
 
 pub type StorImportResult<T> = Result<T, Box<StorImportError>>;
 
