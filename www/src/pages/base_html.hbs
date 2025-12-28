@@ -48,7 +48,9 @@
 </div>
 
 <div id="wrapper">
-    {{> @partial-block }}
+    {{#with body}}
+        {{> @partial-block }}
+    {{/with}}
 </div>
 
 <div class="section" id="eof">
