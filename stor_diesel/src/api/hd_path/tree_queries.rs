@@ -15,6 +15,8 @@ use std::path::{Path, PathBuf};
 use xana_commons_rs::tracing_re::{info, trace};
 use xana_commons_rs::{CommaJoiner, CrashErrKind, SpaceJoiner};
 
+const LIMIT_CHILDREN_SIZE: u64 = 1000;
+
 pub fn storapi_hd_get_path_by_id(
     conn: &mut StorTransaction,
     id: ModelFileTreeId,
@@ -175,15 +177,18 @@ pub fn storapi_hd_list_children_by_id(
     //     })
     //     .collect())
 
-    let raw_query = "SELECT p.tree_id, p.tree_depth, p.component_id, p.parent_id, comp.component \
+    let raw_query = format!(
+        "SELECT p.tree_id, p.tree_depth, p.component_id, p.parent_id, comp.component \
     FROM `hd1_files_parents` initial_p \
     INNER JOIN `hd1_files_parents` p ON
         p.parent_id = initial_p.tree_id AND
         p.tree_depth = initial_p.tree_depth + 1
     INNER JOIN `hd1_files_components` comp ON
         comp.id = p.component_id
-    WHERE \
-        initial_p.tree_id = ?";
+    WHERE
+        initial_p.tree_id = ?
+    LIMIT {LIMIT_CHILDREN_SIZE}"
+    );
     let query = diesel::sql_query(raw_query)
         .bind::<diesel::sql_types::Unsigned<diesel::sql_types::Integer>, _>(parent_id);
 
@@ -266,7 +271,7 @@ pub fn storapi_hd_list_children_by_path(
             parents0.tree_depth = 0 AND \
             parents0.component_id = {comp_id} AND \
             parents0.parent_id IS NULL \
-        LIMIT 500",
+        LIMIT {LIMIT_CHILDREN_SIZE}",
             comp_id = components_to_id[path_components_str[0]]
         );
         rows = diesel::sql_query(query_builder).load::<PathResult>(conn.inner())?;
