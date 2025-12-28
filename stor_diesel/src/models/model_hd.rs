@@ -1,5 +1,6 @@
 use crate::err::StorDieselErrorKind;
 use crate::{ModelFileTreeId, StorDieselResult};
+use crate::{RawDieselBytes, schema};
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
 use diesel::row::{Field, NamedRow, Row};
@@ -16,7 +17,7 @@ pub const HD_PATH_DEPTH: usize = 11;
 #[derive(
     diesel::HasQuery, diesel::QueryableByName, diesel::Insertable, Serialize, Deserialize, Debug,
 )]
-#[diesel(table_name = crate::schema::hd1_files_parents)]
+#[diesel(table_name = schema::hd1_files_parents)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct HdPathAssociation {
     pub tree_id: u32,
@@ -46,7 +47,7 @@ impl HdPathAssociation {
 #[derive(
     diesel::HasQuery, diesel::Insertable, Serialize, Deserialize, Eq, PartialEq, Hash, Debug,
 )]
-#[diesel(table_name = crate::schema::hd1_files_parents)]
+#[diesel(table_name = schema::hd1_files_parents)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct NewHdPathAssociation {
     pub tree_depth: u32,
@@ -71,12 +72,16 @@ impl NewHdPathAssociation {
     }
 }
 
+// #[derive(QueryableByName, diesel::Selectable)]
 #[derive(QueryableByName)]
+// #[diesel(table_name = schema::hd1_files_components)]
+// #[diesel(base_query = schema::hd1_files_parents::table.inner_join(schema::hd1_files_components::table))]
+#[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct PathRow {
-    #[diesel(sql_type = diesel::sql_types::Unsigned<diesel::sql_types::Integer>)]
-    pub tree_id: ModelFileTreeId,
-    #[diesel(sql_type = diesel::sql_types::Text)]
-    pub component: String,
+    #[diesel(embed)]
+    pub association: HdPathAssociation,
+    #[diesel(sql_type = diesel::sql_types::Binary)]
+    pub component: Vec<u8>,
 }
 
 pub struct HdPathDieselDyn {
@@ -118,7 +123,7 @@ where
 }
 
 #[derive(diesel::HasQuery, diesel::Insertable, diesel::QueryableByName, Serialize, Deserialize)]
-#[diesel(table_name = crate::schema::hd1_files_paths)]
+#[diesel(table_name = schema::hd1_files_paths)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct HdPathDiesel {
     p0: Option<u32>,

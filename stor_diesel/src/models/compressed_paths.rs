@@ -1,6 +1,9 @@
+use crate::StorDieselResult;
+use crate::err::StorDieselErrorKind;
 use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
 use std::path::{Component, Path, PathBuf};
+use xana_commons_rs::CrashErrKind;
 
 #[derive(Debug)]
 struct CompressedPathsBuilder {
@@ -15,7 +18,7 @@ impl CompressedPathsBuilder {
         }
     }
 
-    fn push_path(&mut self, path: &Path) -> Result<(), String> {
+    fn push_path(&mut self, path: &Path) -> StorDieselResult<()> {
         let mut indexed_path = Vec::new();
 
         let mut components = path.components();
@@ -24,14 +27,20 @@ impl CompressedPathsBuilder {
             Some(Component::RootDir) => {
                 // expected
             }
-            Some(bad) => return Err(format!("unknown root {bad:?}")),
-            None => return Err("path empty?".into()),
+            Some(bad) => {
+                return Err(StorDieselErrorKind::CompressedPathNotRoot
+                    .build_message(format!("unknown root {bad:?}")));
+            }
+            None => return Err(StorDieselErrorKind::CompressedPathEmpty.build()),
         }
 
         for (i, next) in components.enumerate() {
             let part = match next {
                 Component::Normal(part) => part.to_str().unwrap(),
-                bad => return Err(format!("unknown {bad:?} at {i}")),
+                bad => {
+                    return Err(StorDieselErrorKind::CompressedUnknownComponent
+                        .build_message(format!("unknown {bad:?} at {i} in {}", path.display())));
+                }
             };
 
             match self.parts.get_index_of(part) {
@@ -68,7 +77,9 @@ pub struct CompressedPaths {
 }
 
 impl CompressedPaths {
-    pub fn from_paths(paths: impl IntoIterator<Item = impl AsRef<Path>>) -> Result<Self, String> {
+    pub fn from_paths(
+        paths: impl IntoIterator<Item = impl AsRef<Path>>,
+    ) -> StorDieselResult<CompressedPaths> {
         let mut builder = CompressedPathsBuilder::new();
         for path in paths {
             let path = path.as_ref();

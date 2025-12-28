@@ -23,6 +23,10 @@ pub enum StorDieselErrorKind {
     UnknownRowCount,
     UnknownVariant,
     ZeroUncommittedJournals,
+    //
+    CompressedPathNotRoot,
+    CompressedPathEmpty,
+    CompressedUnknownComponent,
 }
 
 crash_builder!(

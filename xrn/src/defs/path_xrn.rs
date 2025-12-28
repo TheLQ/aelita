@@ -19,6 +19,11 @@ impl PathXrn {
         )
     }
 
+    // todo how often is this?
+    // pub fn new_no_path(ptype: PathXrnType, tree_id: u32) -> XrnAddr {
+    //     XrnAddr(XrnMerge::Path(ptype), tree_id, String::new())
+    // }
+
     // pub fn from_components(comp: &[String]) -> Self {
     //     let mut path = PathBuf::from("/");
     //     path.extend(comp);

@@ -20,7 +20,6 @@ where
     Xrn: SubXrnImpl,
 {
     pub fn into_inner(self) -> Xrn {
-        warn!("decoded into {:?}", self.0);
         self.0
     }
 }

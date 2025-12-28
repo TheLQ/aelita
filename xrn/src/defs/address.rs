@@ -3,7 +3,7 @@ use crate::defs::path_xrn::{PathXrnType, TREE_PREFIX_STR};
 use crate::defs::space_xrn::SpaceXrnType;
 use crate::err::{LibxrnError, XrnErrorKind};
 use serde::de::Error;
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::Display;
 use std::str::FromStr;
 use xana_commons_rs::CrashErrKind;
@@ -121,6 +121,25 @@ impl FromStr for XrnAddr {
         }
     }
 }
+
+impl Serialize for XrnAddr {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.to_string().serialize(serializer)
+    }
+}
+
+// impl Deserialize for XrnAddr {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: Deserializer<'de>,
+//     {
+//         let raw = String::deserialize(deserializer)?;
+//
+//     }
+// }
 
 #[derive(
     Clone,

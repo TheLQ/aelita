@@ -1,20 +1,19 @@
 use crate::controllers::handlebars::HbsPage;
 use crate::controllers::state::WState;
-use crate::err::{WebError, WebErrorCause, WebErrorKind, WebResult};
+use crate::err::{WebErrorCause, WebErrorKind, WebResult};
 use crate::server::convert_xrn::XrnFromUrl;
 use crate::server::util::{BasicResponse, pretty_basic_page};
 use aelita_stor_diesel::err::StorDieselErrorKind;
 use aelita_stor_diesel::{
-    HdPathAssociation, ModelFileTreeId, PathRow, StorIdType, storapi_hd_get_path_by_id,
-    storapi_hd_list_children_by_id, storapi_hd_list_children_by_path,
+    ModelFileTreeId, PathRow, storapi_hd_get_path_by_id, storapi_hd_list_children_by_id,
 };
-use aelita_xrn::defs::address::{XrnAddr, XrnAddrRef};
+use aelita_xrn::defs::address::XrnAddr;
 use aelita_xrn::defs::path_xrn::{PathXrn, PathXrnType};
 use axum::body::Body;
 use axum::extract::State;
 use axum::http::StatusCode;
 use serde::Serialize;
-use std::path::{Path, PathBuf};
+use std::path::{Component, PathBuf};
 use xana_commons_rs::CrashErrKind;
 
 pub async fn handle_xrn_path(
@@ -31,7 +30,6 @@ async fn _handle_xrn_path(state: WState, xrn: PathXrn) -> WebResult<BasicRespons
         .sqlfs
         .transact({
             move |conn| {
-                // validate input xrn
                 let (path_rows, db_path) = storapi_hd_get_path_by_id(conn, tree_id)?;
                 let children = storapi_hd_list_children_by_id(conn, tree_id)?;
                 Ok((path_rows, db_path, children))
@@ -58,25 +56,40 @@ async fn _handle_xrn_path(state: WState, xrn: PathXrn) -> WebResult<BasicRespons
         )));
     }
 
-    // render_html(state, xrn, path_rows, children)
+    render_html(state, xrn, path_rows, children)
 }
 
 fn render_html(
     state: WState,
     xrn: PathXrn,
     path_rows: Vec<PathRow>,
-    children: Vec<HdPathAssociation>,
+    children: Vec<PathRow>,
 ) -> WebResult<BasicResponse> {
     let mut breadcrumbs = Vec::new();
-    for i in 0..breadcrumbs.len() {
-        let path: PathBuf = path_rows[0..(i + 1)].iter().map(|v| v.component).collect();
-        let id = path_rows[i].tree_id;
-        breadcrumbs.push(PathXrn::new(PathXrnType::Fs, path, id.inner_id()))
+    let path = xrn.path();
+    for (i, row) in path_rows.iter().enumerate() {
+        let mut path_iter = path.components();
+        assert_eq!(path_iter.next(), Some(Component::RootDir));
+        let partial_path: PathBuf = ["/"]
+            .into_iter()
+            .chain(
+                path_rows
+                    .iter()
+                    .take(i)
+                    .map(|v| str::from_utf8(&v.component).unwrap()),
+            )
+            .collect();
+
+        breadcrumbs.push(PathXrn::new(
+            PathXrnType::Fs,
+            partial_path,
+            row.association.tree_id,
+        ))
     }
 
     #[derive(Serialize)]
     struct PathEntry {
-        xrn: PathXrn,
+        xrn: XrnAddr,
         name: String,
     }
     #[derive(Serialize)]
@@ -90,9 +103,16 @@ fn render_html(
         breadcrumbs,
         children: children
             .into_iter()
-            .map(|name| PathEntry {
-                xrn: name.component_id,
-                name,
+            .map(|row| {
+                let comp_name = str::from_utf8(&row.component).unwrap();
+                PathEntry {
+                    xrn: PathXrn::new(
+                        PathXrnType::Fs,
+                        path.join(comp_name),
+                        row.association.tree_id,
+                    ),
+                    name: comp_name.to_string(),
+                }
             })
             .collect(),
     };

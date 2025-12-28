@@ -1,5 +1,5 @@
 use crate::ModelJournalId;
-use crate::api::api_hd::components_get;
+use crate::api::api_hd::components_get_from_fast;
 use crate::api::assert_test_database;
 use crate::api::common::SQL_PLACEHOLDER_MAX;
 use crate::api::hd_path::HdAssociationsBuilder;
@@ -23,7 +23,7 @@ pub fn storapi_hd_tree_push(
     info!("autocommit is {autocommit}");
 
     components_update(conn, compressed.parts())?;
-    let component_to_id = components_get(conn, compressed.parts())?;
+    let component_to_id = components_get_from_fast(conn, compressed.parts())?;
     HdAssociationsBuilder::build(conn, compressed, &component_to_id)?;
 
     Ok(())

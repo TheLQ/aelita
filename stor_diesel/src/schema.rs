@@ -81,12 +81,8 @@ diesel::table! {
 
     hd1_roots (space_id) {
         space_id -> Unsigned<Integer>,
-        #[max_length = 0]
+        #[max_length = 10]
         rtype -> Hd1RootsRtypeEnum,
-        path_primary -> Unsigned<Integer>,
-        path_backup -> Nullable<Unsigned<Integer>>,
-        ref_primary -> Nullable<Unsigned<Integer>>,
-        ref_backup -> Nullable<Unsigned<Integer>>,
     }
 }
 
@@ -145,7 +141,7 @@ diesel::table! {
         space_id -> Unsigned<Integer>,
         #[max_length = 5]
         child_type1 -> SpaceOwnedChildType1Enum,
-        #[max_length = 6]
+        #[max_length = 5]
         child_type2 -> SpaceOwnedChildType2Enum,
         child_id -> Unsigned<Integer>,
         description -> Nullable<Text>,
@@ -190,6 +186,7 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(hd1_files_parents -> hd1_files_components (component_id));
 diesel::joinable!(hd1_galleries -> hd1_sites (hd_site_id));
 diesel::joinable!(hd1_galleries -> journal_immutable (journal_id));
 diesel::joinable!(hd1_roots -> space_names (space_id));

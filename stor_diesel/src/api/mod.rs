@@ -8,6 +8,6 @@ pub mod api_tor;
 pub mod api_tor_mut;
 pub mod api_variables;
 mod common;
-mod hd_path;
+pub mod hd_path;
 
 pub use common::{assert_test_database, show_create_table};
