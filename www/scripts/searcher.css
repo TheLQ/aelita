@@ -28,3 +28,7 @@
 #search-results {
     --bulma-table-cell-padding: 0.1em 0.5em
 }
+
+#error_backtrace {
+    width: auto;
+}

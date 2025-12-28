@@ -59,11 +59,14 @@ impl IntoResponse for Box<WebError> {
     fn into_response(self) -> Response {
         let pretty = pretty_format_error(&*self);
         error!("Status 500 {}", pretty);
-        let body = pretty_basic_page("500", format!("<pre>{}</pre>", html_escape(&pretty)));
+        let body = pretty_basic_page(
+            "500",
+            format!("<pre id='error_backtrace'>{}</pre>", html_escape(&pretty)),
+        );
 
         BasicResponse(
             StatusCode::INTERNAL_SERVER_ERROR,
-            mime::HTML,
+            mime::TEXT_HTML_UTF_8,
             Body::from(body),
         )
         .into_response()

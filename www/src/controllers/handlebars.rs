@@ -21,7 +21,11 @@ impl WState {
 
     pub fn render_page(&self, page: HbsPage, data: impl Serialize) -> WebResult<BasicResponse> {
         let body = self.render_page_string(page, data)?;
-        Ok(BasicResponse(StatusCode::OK, mime::HTML, Body::from(body)))
+        Ok(BasicResponse(
+            StatusCode::OK,
+            mime::TEXT_HTML,
+            Body::from(body),
+        ))
     }
 }
 pub struct HandlebarsController<'h> {

@@ -20,14 +20,31 @@ fn is_value_contains_html(value: &HeaderValue) -> bool {
     value.contains("text/html")
 }
 
-pub const CSS_HTML: &str =
-    "<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css'>";
-
 pub fn pretty_basic_page(title: impl Display, body: impl Display) -> String {
-    format!("{CSS_HTML}<section class='section'><h1 class='title'>{title}</h1>{body}")
+    // {CSS_HTML}
+    // <meta name="viewport" content="width=device-width, initial-scale=1">
+    // <section class='section'>
+    format!(
+        r#"<!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="utf-8">
+
+            <title>{title}</title>
+            <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css'>
+            <link rel="stylesheet" href="/scripts/searcher.css">
+        </head>
+        <body>
+
+            <h1 class='title'>{title}</h1>
+            {body}
+
+        </body>
+        </html>"#
+    )
 }
 
-pub struct BasicResponse(pub StatusCode, pub mime::Name<'static>, pub Body);
+pub struct BasicResponse(pub StatusCode, pub mime::Mime, pub Body);
 
 impl IntoResponse for BasicResponse {
     fn into_response(self) -> Response {

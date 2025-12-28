@@ -106,7 +106,8 @@ impl FromStr for XrnAddr {
                 None => Err(XrnErrorKind::PathInvalidType.build_message(s)),
                 Some((v, remain)) => {
                     let Some(id_pos) = remain.rfind(TREE_PREFIX_STR) else {
-                        return Err(XrnErrorKind::PathMissingTreePrefix.build_message(s));
+                        return Err(XrnErrorKind::PathMissingTreePrefix
+                            .build_message(format!("'{remain}' in {s}")));
                     };
                     let (remain, tree_part) = remain.split_at(id_pos);
                     let id_str = &tree_part[TREE_PREFIX_STR.len()..];

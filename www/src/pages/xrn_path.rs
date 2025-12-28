@@ -43,7 +43,7 @@ async fn _handle_xrn_path(state: WState, xrn: PathXrn) -> WebResult<BasicRespons
     {
         return Ok(BasicResponse(
             StatusCode::OK,
-            mime::HTML,
+            mime::TEXT_HTML,
             Body::from(pretty_basic_page("404 Path component(s) not found", xrn)),
         ));
     }
@@ -72,12 +72,7 @@ fn render_html(
         assert_eq!(path_iter.next(), Some(Component::RootDir));
         let partial_path: PathBuf = ["/"]
             .into_iter()
-            .chain(
-                path_rows
-                    .iter()
-                    .take(i)
-                    .map(|v| str::from_utf8(&v.component).unwrap()),
-            )
+            .chain(path_rows.iter().take(i).map(|v| v.component.as_str()))
             .collect();
 
         breadcrumbs.push(PathXrn::new(
@@ -104,7 +99,7 @@ fn render_html(
         children: children
             .into_iter()
             .map(|row| {
-                let comp_name = str::from_utf8(&row.component).unwrap();
+                let comp_name = row.component.as_str();
                 PathEntry {
                     xrn: PathXrn::new(
                         PathXrnType::Fs,

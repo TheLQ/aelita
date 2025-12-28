@@ -42,7 +42,11 @@ async fn render_search_json(state: WState, query: &str) -> WebResult<BasicRespon
         .await?;
 
     let json = serde_json::to_string(&children).xana_err(WebErrorKind::SerdeToJsonResponse)?;
-    Ok(BasicResponse(StatusCode::OK, mime::JSON, Body::from(json)))
+    Ok(BasicResponse(
+        StatusCode::OK,
+        mime::APPLICATION_JSON,
+        Body::from(json),
+    ))
 }
 
 async fn render_search_count(state: WState, query: &str) -> WebResult<BasicResponse> {
@@ -58,7 +62,7 @@ async fn render_search_count(state: WState, query: &str) -> WebResult<BasicRespo
         .await?;
     Ok(BasicResponse(
         StatusCode::OK,
-        mime::PLAIN,
+        mime::TEXT_PLAIN_UTF_8,
         Body::from(children.to_string()),
     ))
 }
