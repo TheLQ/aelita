@@ -2,6 +2,7 @@ use crate::api::common::check_insert_num_rows;
 use crate::err::StorDieselErrorKind;
 use crate::{
     CompressedPaths, HdPathAssociation, NewHdPathAssociation, StorDieselResult, StorTransaction,
+    schema,
 };
 use diesel::{HasQuery, RunQueryDsl};
 use itertools::Itertools;
@@ -31,22 +32,23 @@ impl<'t, 'e> HdAssociationsBuilder<'t, 'e> {
         let watch = BasicWatch::start();
         // dump the entire associations table
         let mut associations = HdPathAssociation::query().get_results(conn.inner())?;
+        // associations.insert(
+        //     0,
+        //     HdPathAssociation {
+        //         tree_id: u32::MAX - 100,
+        //         component_id: u32::MAX - 100,
+        //         parent_id: None,
+        //         tree_depth: u32::MAX - 100,
+        //     },
+        // );
+
         // umm
-        associations.insert(
-            0,
-            HdPathAssociation {
-                tree_id: u32::MAX,
-                component_id: u32::MAX,
-                parent_id: None,
-                tree_depth: u32::MAX,
-            },
-        );
-        for (i, association) in associations.iter().enumerate() {
-            if i != 0 {
-                assert_eq!(i, association.tree_id as usize);
-            }
-        }
-        let next_id = u32::try_from(associations.len() - 1).unwrap();
+        // for (i, association) in associations.iter().enumerate() {
+        //     if i != 0 {
+        //         assert_eq!(i, association.tree_id as usize);
+        //     }
+        // }
+        let next_id = u32::try_from(associations.len()).unwrap();
 
         let mut builder = Self {
             conn,
@@ -80,7 +82,7 @@ impl<'t, 'e> HdAssociationsBuilder<'t, 'e> {
 
         let mut remain = Default::default();
         std::mem::swap(&mut self.remain, &mut remain);
-        let (remain, queued_keys_joined): (Vec<_>, Vec<_>) = remain
+        let (remain, queued_keys_joined): (Vec<_>, HashSet<_>) = remain
             .into_par_iter()
             .filter_map(|mut v| {
                 let mut queued_keys = Vec::new();
@@ -106,7 +108,6 @@ impl<'t, 'e> HdAssociationsBuilder<'t, 'e> {
                     if let Some(existing) = self.key_to_associations.get(&key) {
                         v.resolved_associations.push(*existing);
                         v.path_by_comp_id_reversed.pop();
-                        v.next_depth += 1;
                     } else {
                         queued_keys.push(key);
                         break;
@@ -121,6 +122,7 @@ impl<'t, 'e> HdAssociationsBuilder<'t, 'e> {
                 }
             })
             .unzip();
+        trace!("remain retain check in {watch}");
         self.remain = remain;
         let queued_keys = queued_keys_joined
             .into_iter()
@@ -176,79 +178,79 @@ impl<'t, 'e> HdAssociationsBuilder<'t, 'e> {
         Ok(())
     }
 
-    fn upsert_associations(&mut self, input: Vec<NewHdPathAssociation>) -> StorDieselResult<()> {
-        assert!(!input.is_empty());
-        // let mut query_builder = "\
-        //     SELECT p.tree_id, p.component_id, p.parent_id, p.tree_depth \
-        //     FROM `hd1_files_parents` p \
-        //     WHERE "
-        //     .to_string();
-        //
-        // for NewHdPathAssociation {
-        //     component_id,
-        //     parent_id,
-        //     tree_depth,
-        // } in &input
-        // {
-        //     query_builder.push_str(&format!(
-        //         "(component_id={component_id} AND tree_depth={tree_depth} AND parent_id{})OR",
-        //         if let Some(parent_id) = parent_id {
-        //             format!("={parent_id}")
-        //         } else {
-        //             " IS NULL".to_string()
-        //         }
-        //     ));
-        // }
-        // query_builder.truncate(query_builder.len() - 2);
-        // let rows =
-        //     diesel::sql_query(query_builder).get_results::<HdPathAssociation>(self.conn.inner())?;
-
-        // for v in rows {
-        //     let pos = input.iter().position(
-        //         |NewHdPathAssociation {
-        //              component_id,
-        //              parent_id,
-        //              tree_depth,
-        //          }| {
-        //             v.component_id == *component_id
-        //                 && v.parent_id == *parent_id
-        //                 && v.tree_depth == *tree_depth
-        //         },
-        //     );
-        //     if let Some(pos) = pos {
-        //         input.remove(pos);
-        //     }
-        // }
-
-        // input.retain(
-        //     |NewHdPathAssociation {
-        //          component_id,
-        //          parent_id,
-        //          tree_depth,
-        //      }| {
-        //         rows.iter()
-        //             .filter(|v| {
-        //                 v.component_id == *component_id
-        //                     && v.parent_id == *parent_id
-        //                     && v.tree_depth == *tree_depth
-        //             })
-        //             .next()
-        //             .is_none()
-        //     },
-        // );
-
-        // fake insert new input
-        for new in input {
-            let index = self.associations.len();
-            let assoc = HdPathAssociation::from_partial(new, self.next_id);
-            self.next_id += 1;
-            self.key_to_associations
-                .insert(NewHdPathAssociation::from_full_ref(&assoc), index);
-            self.associations.push(assoc);
-        }
-
-        Ok(())
-    }
+    // fn upsert_associations(&mut self, input: Vec<NewHdPathAssociation>) -> StorDieselResult<()> {
+    //     assert!(!input.is_empty());
+    //     // let mut query_builder = "\
+    //     //     SELECT p.tree_id, p.component_id, p.parent_id, p.tree_depth \
+    //     //     FROM `hd1_files_parents` p \
+    //     //     WHERE "
+    //     //     .to_string();
+    //     //
+    //     // for NewHdPathAssociation {
+    //     //     component_id,
+    //     //     parent_id,
+    //     //     tree_depth,
+    //     // } in &input
+    //     // {
+    //     //     query_builder.push_str(&format!(
+    //     //         "(component_id={component_id} AND tree_depth={tree_depth} AND parent_id{})OR",
+    //     //         if let Some(parent_id) = parent_id {
+    //     //             format!("={parent_id}")
+    //     //         } else {
+    //     //             " IS NULL".to_string()
+    //     //         }
+    //     //     ));
+    //     // }
+    //     // query_builder.truncate(query_builder.len() - 2);
+    //     // let rows =
+    //     //     diesel::sql_query(query_builder).get_results::<HdPathAssociation>(self.conn.inner())?;
+    //
+    //     // for v in rows {
+    //     //     let pos = input.iter().position(
+    //     //         |NewHdPathAssociation {
+    //     //              component_id,
+    //     //              parent_id,
+    //     //              tree_depth,
+    //     //          }| {
+    //     //             v.component_id == *component_id
+    //     //                 && v.parent_id == *parent_id
+    //     //                 && v.tree_depth == *tree_depth
+    //     //         },
+    //     //     );
+    //     //     if let Some(pos) = pos {
+    //     //         input.remove(pos);
+    //     //     }
+    //     // }
+    //
+    //     // input.retain(
+    //     //     |NewHdPathAssociation {
+    //     //          component_id,
+    //     //          parent_id,
+    //     //          tree_depth,
+    //     //      }| {
+    //     //         rows.iter()
+    //     //             .filter(|v| {
+    //     //                 v.component_id == *component_id
+    //     //                     && v.parent_id == *parent_id
+    //     //                     && v.tree_depth == *tree_depth
+    //     //             })
+    //     //             .next()
+    //     //             .is_none()
+    //     //     },
+    //     // );
+    //
+    //     // fake insert new input
+    //     for new in input {
+    //         let index = self.associations.len();
+    //         let assoc = HdPathAssociation::from_partial(new, self.next_id);
+    //         self.next_id += 1;
+    //         self.key_to_associations
+    //             .insert(NewHdPathAssociation::from_full_ref(&assoc), index);
+    //         self.associations.push(assoc);
+    //     }
+    //
+    //     Ok(())
+    // }
 
     fn insert(mut self) -> StorDieselResult<()> {
         let new = self
@@ -348,7 +350,6 @@ fn build_remaining(
         remaining_components.push(RemainingPath {
             resolved_associations: Vec::new(),
             path_by_comp_id_reversed: path_by_comp_id,
-            next_depth: 0,
         });
     }
     info!(
@@ -361,5 +362,4 @@ fn build_remaining(
 struct RemainingPath {
     resolved_associations: Vec<usize>,
     path_by_comp_id_reversed: Vec<u32>,
-    next_depth: u32,
 }

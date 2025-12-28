@@ -20,9 +20,13 @@ pub const HD_PATH_DEPTH: usize = 11;
 #[diesel(table_name = schema::hd1_files_parents)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct HdPathAssociation {
+    // #[diesel(sql_type = diesel::sql_types::Unsigned<diesel::sql_types::Integer>)]
     pub tree_id: u32,
+    // #[diesel(sql_type = diesel::sql_types::Unsigned<diesel::sql_types::Integer>)]
     pub tree_depth: u32,
+    // #[diesel(sql_type = diesel::sql_types::Unsigned<diesel::sql_types::Integer>)]
     pub component_id: u32,
+    // #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Unsigned<diesel::sql_types::Integer>>)]
     pub parent_id: Option<u32>,
 }
 
@@ -80,8 +84,8 @@ impl NewHdPathAssociation {
 pub struct PathRow {
     #[diesel(embed)]
     pub association: HdPathAssociation,
-    #[diesel(sql_type = diesel::sql_types::Binary)]
-    pub component: Vec<u8>,
+    #[diesel(sql_type = diesel::sql_types::Binary, deserialize_as = RawDieselBytes)]
+    pub component: String,
 }
 
 pub struct HdPathDieselDyn {

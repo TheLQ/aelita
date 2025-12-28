@@ -172,6 +172,12 @@ where
     }
 }
 
+impl From<RawDieselBytes> for String {
+    fn from(value: RawDieselBytes) -> Self {
+        String::from_utf8(value.0).unwrap()
+    }
+}
+
 // impl<DB> QueryableByName<DB> for XrnDiesel
 // where
 //     DB: Backend,

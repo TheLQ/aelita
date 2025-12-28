@@ -1,5 +1,5 @@
 use crate::defs::common::XrnTypeImpl;
-use crate::defs::path_xrn::{PathXrnType, TREE_PREFIX_STR};
+use crate::defs::path_xrn::{PathXrnType, TREE_PREFIX_STR, XRN_PATH_ROOT_ID};
 use crate::defs::space_xrn::SpaceXrnType;
 use crate::err::{LibxrnError, XrnErrorKind};
 use serde::de::Error;
@@ -104,6 +104,11 @@ impl FromStr for XrnAddr {
             },
             XrnType::Path => match PathXrnType::split_type(remain) {
                 None => Err(XrnErrorKind::PathInvalidType.build_message(s)),
+                Some((xtype @ PathXrnType::Fs, path @ "/")) => Ok(Self(
+                    XrnMerge::Path(xtype),
+                    XRN_PATH_ROOT_ID,
+                    path.to_string(),
+                )),
                 Some((v, remain)) => {
                     let Some(id_pos) = remain.rfind(TREE_PREFIX_STR) else {
                         return Err(XrnErrorKind::PathMissingTreePrefix

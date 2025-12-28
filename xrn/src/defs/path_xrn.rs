@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 pub(super) const TREE_PREFIX_STR: &str = "/__tree";
+pub const XRN_PATH_ROOT_ID: u32 = u32::MAX - 166;
 
 #[derive(Debug, Clone)]
 pub struct PathXrn(XrnAddr);

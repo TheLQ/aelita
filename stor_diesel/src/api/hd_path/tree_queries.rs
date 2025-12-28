@@ -1,9 +1,10 @@
 use crate::api::api_hd::storapi_hd_components_with;
 use crate::err::StorDieselErrorKind;
 use crate::{
-    HdPathAssociation, HdPathDieselDyn, ModelFileTreeId, PathRow, StorDieselResult, StorIdType,
-    StorTransaction, components_get_bytes, path_components, schema,
+    HdPathAssociation, HdPathDieselDyn, ModelFileTreeId, PathRow, RawDieselBytes, StorDieselResult,
+    StorIdType, StorTransaction, components_get_bytes, path_components, schema,
 };
+use aelita_xrn::defs::path_xrn::XRN_PATH_ROOT_ID;
 use diesel::prelude::*;
 use diesel::query_dsl::InternalJoinDsl;
 use diesel::sql_types::Unsigned;
@@ -11,17 +12,22 @@ use diesel::{QueryableByName, RunQueryDsl};
 use std::collections::HashMap;
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
-use xana_commons_rs::tracing_re::trace;
+use xana_commons_rs::tracing_re::{info, trace};
 use xana_commons_rs::{CommaJoiner, CrashErrKind, SpaceJoiner};
 
 pub fn storapi_hd_get_path_by_id(
     conn: &mut StorTransaction,
     id: ModelFileTreeId,
 ) -> StorDieselResult<(Vec<PathRow>, PathBuf)> {
+    info!("storapi_hd_get_path_by_id for {id}");
+    if id.inner_id() == XRN_PATH_ROOT_ID {
+        return Ok((Vec::new(), PathBuf::from("/")));
+    }
+
     // todo can the second query be written to only select and join the last row?
     let raw_query = "\
         WITH RECURSIVE
-        path_parts (tree_id, parent_id, comp_id, depth) AS (
+        path_parts (tree_id, parent_id, component_id, tree_depth) AS (
             SELECT
                 parents.tree_id,
                 parents.parent_id,
@@ -40,13 +46,13 @@ pub fn storapi_hd_get_path_by_id(
             FROM path_parts
             INNER JOIN `hd1_files_parents` parents ON
                 parents.tree_id = path_parts.parent_id AND
-                parents.tree_depth = path_parts.depth - 1
-            WHERE path_parts.depth >= 0
+                parents.tree_depth = path_parts.tree_depth - 1
+            WHERE path_parts.tree_depth >= 0
         )
         SELECT path_parts.*, comp.component
         FROM path_parts
-        INNER JOIN hd1_files_components comp on comp.id = path_parts.comp_id
-        ORDER BY path_parts.depth DESC";
+        INNER JOIN hd1_files_components comp on comp.id = path_parts.component_id
+        ORDER BY path_parts.tree_depth ASC";
     let raw_query = raw_query.replace("\n", "");
 
     let rows: Vec<PathRow> = diesel::sql_query(raw_query)
@@ -54,7 +60,7 @@ pub fn storapi_hd_get_path_by_id(
         .get_results(conn.inner())?;
     let path: PathBuf = ["/"]
         .into_iter()
-        .chain(rows.iter().map(|v| str::from_utf8(&v.component).unwrap()))
+        .chain(rows.iter().map(|v| v.component.as_str()))
         .collect();
 
     Ok((rows, path))
@@ -66,22 +72,21 @@ pub fn storapi_hd_get_path_by_path(
 ) -> StorDieselResult<Vec<ModelFileTreeId>> {
     let path = path.as_ref();
     let components_str = path_components(path, |v| v.to_str().unwrap())?;
+    info!(
+        "Load components for path {}",
+        components_str
+            .iter()
+            .map(|v| format!("\"{v}\""))
+            .collect::<CommaJoiner>()
+    );
     let components_len = components_str.len();
-
     if components_str.is_empty() {
         // we can't get the root component. all root's chuldren are null
         return Err(StorDieselErrorKind::EmptyPath.build());
     }
 
-    let components_to_id = storapi_hd_components_with(conn, &components_str)?
-        .into_iter()
-        .collect::<HashMap<String, _>>();
-    let mut query_components = components_str
-        .iter()
-        .map(|v| components_to_id.get(*v).unwrap())
-        .collect::<Vec<_>>();
-
     let select_cols = (0..components_len)
+        // .flat_map(|i| [format!("parents{i}.tree_id AS p{i}"), format!("parents{i}.tree_id AS c{i}")])
         .map(|i| format!("parents{i}.tree_id AS p{i}"))
         .collect::<CommaJoiner>();
     let joins = (1..components_len)
@@ -90,12 +95,11 @@ pub fn storapi_hd_get_path_by_path(
                 "INNER JOIN hd1_files_parents parents{i} ON \
                     parents{i}.tree_depth = {i} AND \
                     parents{i}.component_id = ? AND \
-                    parents{i}.parent_id = parents{}.tree_id ",
+                    parents{i}.parent_id = parents{prev_i}.tree_id ",
                 prev_i = i - 1
             )
         })
         .collect::<SpaceJoiner>();
-
     let raw_query = format!(
         "SELECT {select_cols} \
         FROM `hd1_files_parents` parents0 \
@@ -107,8 +111,16 @@ pub fn storapi_hd_get_path_by_path(
         "
     );
 
+    let components_to_id = storapi_hd_components_with(conn, &components_str)?
+        .into_iter()
+        .collect::<HashMap<String, _>>();
+    let mut query_components = components_str
+        .iter()
+        .map(|v| components_to_id.get(*v).unwrap())
+        .collect::<Vec<_>>();
+
     let mut query = diesel::sql_query(raw_query).into_boxed();
-    query_components.rotate_left(1); // first is last
+    query_components.rotate_left(1); // first component in last where
     for i in query_components {
         query = query.bind::<Unsigned<diesel::sql_types::Integer>, _>(i)
     }
@@ -124,36 +136,60 @@ pub fn storapi_hd_list_children_by_id(
     conn: &mut StorTransaction,
     parent_id: ModelFileTreeId,
 ) -> StorDieselResult<Vec<PathRow>> {
-    let value = schema::hd1_files_parents::table
-        .inner_join(
-            schema::hd1_files_components::table
-                .on(schema::hd1_files_components::id.eq(schema::hd1_files_parents::component_id)),
-        )
-        // .join()
-        .select((
-            schema::hd1_files_parents::tree_id,
-            schema::hd1_files_parents::tree_depth,
-            schema::hd1_files_parents::component_id,
-            schema::hd1_files_parents::parent_id,
-            schema::hd1_files_components::component,
-        ))
-        .filter(schema::hd1_files_parents::parent_id.eq(parent_id))
-        // todo wtf this doesn't work
-        // .get_results::<PathRow>(conn.inner())
-        // .map_err(Into::into)
-        .get_results::<(u32, u32, u32, Option<u32>, Vec<u8>)>(conn.inner())?;
-    Ok(value
-        .into_iter()
-        .map(|v| PathRow {
-            association: HdPathAssociation {
-                tree_id: v.0,
-                tree_depth: v.1,
-                component_id: v.2,
-                parent_id: v.3,
-            },
-            component: v.4,
-        })
-        .collect())
+    info!("storapi_hd_list_children_by_id for {parent_id}");
+
+    // let mut query = schema::hd1_files_parents::table
+    //     .inner_join(
+    //         schema::hd1_files_components::table
+    //             .on(schema::hd1_files_components::id.eq(schema::hd1_files_parents::component_id)),
+    //     )
+    //     .select((
+    //         schema::hd1_files_parents::tree_id,
+    //         schema::hd1_files_parents::tree_depth,
+    //         schema::hd1_files_parents::component_id,
+    //         schema::hd1_files_parents::parent_id,
+    //         schema::hd1_files_components::component,
+    //     ))
+    //     .into_boxed();
+    // if parent_id.inner_id() == XRN_PATH_ROOT_ID {
+    //     query = query
+    //         .filter(schema::hd1_files_parents::parent_id.is_null())
+    //         .filter(schema::hd1_files_parents::tree_depth.eq(0))
+    // } else {
+    //     query = query.filter(schema::hd1_files_parents::parent_id.eq(parent_id))
+    // }
+    // todo wtf this doesn't work
+    // .get_results::<PathRow>(conn.inner())
+    // .map_err(Into::into)
+    // let value = query.get_results::<(u32, u32, u32, Option<u32>, RawDieselBytes)>(conn.inner())?;
+    // Ok(value
+    //     .into_iter()
+    //     .map(|v| PathRow {
+    //         association: HdPathAssociation {
+    //             tree_id: v.0,
+    //             tree_depth: v.1,
+    //             component_id: v.2,
+    //             parent_id: v.3,
+    //         },
+    //         component: v.4.into(),
+    //     })
+    //     .collect())
+
+    let raw_query = "SELECT p.tree_id, p.tree_depth, p.component_id, p.parent_id, comp.component \
+    FROM `hd1_files_parents` initial_p \
+    INNER JOIN `hd1_files_parents` p ON
+        p.parent_id = initial_p.tree_id AND
+        p.tree_depth = initial_p.tree_depth + 1
+    INNER JOIN `hd1_files_components` comp ON
+        comp.id = p.component_id
+    WHERE \
+        initial_p.tree_id = ?";
+    let query = diesel::sql_query(raw_query)
+        .bind::<diesel::sql_types::Unsigned<diesel::sql_types::Integer>, _>(parent_id);
+
+    query
+        .get_results::<PathRow>(conn.inner())
+        .map_err(Into::into)
 }
 
 pub fn storapi_hd_list_children_by_path(

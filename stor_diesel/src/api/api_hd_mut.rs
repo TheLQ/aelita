@@ -30,7 +30,7 @@ pub fn storapi_hd_tree_push(
 }
 
 pub fn storapi_rebuild_parents(conn: &mut StorTransaction) -> StorDieselResult<()> {
-    diesel::sql_query("TRUNCATE TABLE `hd1_files_parents`").execute(conn.inner())?;
+    // diesel::sql_query("TRUNCATE TABLE `hd1_files_parents`").execute(conn.inner())?;
 
     // push_associations_fancy_insert(conn)?;
     let watch = BasicWatch::start();

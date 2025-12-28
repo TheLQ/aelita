@@ -39,9 +39,11 @@ impl<'h> HandlebarsController<'h> {
         backend.set_dev_mode(true);
 
         for page in HbsPage::VARIANTS {
-            backend
-                .register_template_file(page.as_ref(), page.to_path())
-                .xana_err(WebErrorKind::HandlebarsInitFailed)?;
+            if page.has_template() {
+                backend
+                    .register_template_file(page.as_ref(), page.to_path())
+                    .xana_err(WebErrorKind::HandlebarsInitFailed)?;
+            }
         }
         backend.register_helper("percent", Box::new(PercentHelper));
 
@@ -61,6 +63,15 @@ pub enum HbsPage {
     Xrn_Journal,
     Xrn_Path,
     Xrn_Space,
+}
+
+impl HbsPage {
+    fn has_template(&self) -> bool {
+        match self {
+            HbsPage::Browse_Paths => false,
+            _ => true,
+        }
+    }
 }
 
 fn html_dir_path() -> PathBuf {
