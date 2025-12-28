@@ -7,7 +7,7 @@ use std::os::unix::ffi::OsStrExt;
 use std::path::{Component, Path, PathBuf};
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{info, trace, warn};
-use xana_commons_rs::{CrashErrKind, LOCALE, ScanFileType, ScanFileTypeWithPath};
+ use xana_commons_rs::{CrashErrKind, LOCALE, ProgressWidget, ScanFileType, ScanFileTypeWithPath};
 
 #[derive(Serialize)]
 pub struct CompressedPathNested {
@@ -16,14 +16,12 @@ pub struct CompressedPathNested {
 }
 
 impl CompressedPathNested {
-    pub fn from_scan(scans: impl IntoIterator<Item = ScanFileTypeWithPath>) -> Self {
+    pub fn from_scan(scans: Vec<ScanFileTypeWithPath>) -> Self {
         let mut build = CompressedPathNestedBuilder::new();
-        let mut cur_scan = 0;
-        for scan in scans {
-            if cur_scan % 100_000 == 0 {
-                info!("compressing {}", cur_scan.to_formatted_string(&LOCALE))
-            }
-            cur_scan += 1;
+        let total_scans = scans.len();
+        let mut progress = ProgressWidget::new(4096);
+        for (i, scan) in scans.into_iter().enumerate() {
+            progress.log(i, total_scans, |msg| info!("scan import {msg}"));
 
             let (path, stype) = scan.into_parts();
             build.push_path(&path, stype)
@@ -53,6 +51,7 @@ impl CompressedPathNestedBuilder {
             nodes: CompNodeBuilder {
                 name: usize::MAX,
                 node_type: None,
+                children_ids: Vec::new(),
                 children: Vec::new(),
             },
         }
@@ -63,19 +62,57 @@ impl CompressedPathNestedBuilder {
         assert_eq!(comps.next(), Some(Component::RootDir));
 
         self.nodes
-            .add_node_recursive(comps, new_node_type, &mut self.parts, path);
+            // .add_node_recursive(comps, new_node_type, &mut self.parts, path);
+            .add_node_linear(comps, new_node_type, &mut self.parts, path);
     }
 }
 
 struct CompNodeBuilder {
     name: usize,
     node_type: Option<ScanFileType>,
+    children_ids: Vec<usize>,
     children: Vec<CompNodeBuilder>,
 }
 
 impl CompNodeBuilder {
+    pub fn add_node_linear<'c>(
+        &mut self,
+        mut comps: impl Iterator<Item = Component<'c>>,
+        new_node_type: ScanFileType,
+        parts: &mut IndexSet<OsString>,
+        debug_source: &Path,
+    ) {
+        let mut last = self;
+        for comp in comps {
+            let Component::Normal(comp) = comp else {
+                panic!("Valid path {}", debug_source.display())
+            };
+            let comp_index = parts.get_index_of(comp).unwrap_or_else(|| {
+                parts.insert(comp.to_os_string());
+                parts.len() - 1
+            });
+
+            let pos = if let Some(pos) = last.children_ids.iter().rposition(|v| *v == comp_index) {
+                pos
+            } else {
+                last.children_ids.push(comp_index);
+                last.children.push(Self {
+                    name: comp_index,
+                    node_type: None,
+                    children_ids: Vec::new(),
+                    children: Vec::new(),
+                });
+                last.children.len() - 1
+            };
+
+            last = &mut last.children[pos];
+        }
+        last.node_type = Some(new_node_type);
+    }
+
     pub fn add_node_recursive<'c>(
         &mut self,
+
         mut comps: impl Iterator<Item = Component<'c>>,
         new_node_type: ScanFileType,
         parts: &mut IndexSet<OsString>,
@@ -92,17 +129,19 @@ impl CompNodeBuilder {
             parts.len() - 1
         });
 
-        let next_level =
-            if let Some(exist) = self.children.iter_mut().find(|v| v.name == comp_index) {
-                exist
-            } else {
-                self.children.push(Self {
-                    name: comp_index,
-                    node_type: None,
-                    children: Vec::new(),
-                });
-                self.children.last_mut().unwrap()
-            };
+        let next_level = if let Some(pos) = self.children_ids.iter().rposition(|v| *v == comp_index)
+        {
+            &mut self.children[pos]
+        } else {
+            self.children_ids.push(comp_index);
+            self.children.push(Self {
+                name: comp_index,
+                node_type: None,
+                children_ids: Vec::new(),
+                children: Vec::new(),
+            });
+            self.children.last_mut().unwrap()
+        };
 
         let is_last = next_level.add_node_recursive(comps, new_node_type, parts, debug_source);
         if let Some(new_node_type) = is_last {
@@ -125,6 +164,7 @@ impl CompNode {
             name,
             node_type,
             children,
+            children_ids: _,
         }: CompNodeBuilder,
         debug_context: &mut PathBuf,
     ) -> Self {
