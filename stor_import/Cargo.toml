@@ -11,9 +11,8 @@ xana-commons-rs = { workspace = true }
 #
 bytes = { workspace = true }
 tokio = { workspace = true }
-thiserror = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 strum = { workspace = true }
+zstd = { workspace = true }
 #
-indexmap = "2.12.1"

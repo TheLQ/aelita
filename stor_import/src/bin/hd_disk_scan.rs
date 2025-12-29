@@ -3,7 +3,7 @@ use aelita_stor_diesel::{
     PermaStore, StorTransaction, assert_packet_size_huge_enough, establish_connection_or_panic,
 };
 use aelita_stor_import::err::{StorImportError, StorImportResult};
-use aelita_stor_import::storfetch_paths_from_disk;
+use aelita_stor_import::{storfetch_paths_from_cache, storfetch_paths_from_disk};
 use std::process::ExitCode;
 use xana_commons_rs::pretty_main;
 
@@ -19,6 +19,7 @@ fn run() -> StorImportResult<()> {
 
     StorTransaction::new_transaction("cli-import", &mut conn, |conn| {
         storfetch_paths_from_disk(conn, &["/dup18", "/che12"])?;
+        // storfetch_paths_from_cache(conn)?;
         Ok::<_, Box<StorImportError>>(())
     })?;
 

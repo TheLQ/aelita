@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 use std::thread;
 use xana_commons_rs::num_format_re::ToFormattedString;
-use xana_commons_rs::tracing_re::{error, info, warn};
+use xana_commons_rs::tracing_re::{error, info, trace, warn};
 use xana_commons_rs::{
     BasicWatch, CrashErrKind, LOCALE, ResultXanaMap, ScanFileType, ScanFileTypeWithPath,
     SimpleIoMap, read_dirs_recursive_better,
@@ -22,8 +22,12 @@ static ROOTS: LazyLock<Vec<String>> = LazyLock::new(|| {
 });
 pub const COMPRESSED_CACHE: PathConst = PathConst("compressed_paths.cache.json");
 
-pub fn storfetch_paths_from_cache(conn: &mut StorTransaction) {
-    todo!()
+pub fn storfetch_paths_from_cache(conn: &mut StorTransaction) -> StorImportResult<()> {
+    let compressed_bytes = std::fs::read(COMPRESSED_CACHE)
+        .map_io_err(COMPRESSED_CACHE)
+        .xana_err(StorImportErrorKind::InvalidCompressedPaths)?;
+    // insert_compressed_encoded(conn, RawDieselBytes(compressed_bytes))?;
+    Ok(())
 }
 
 pub fn storfetch_paths_from_disk(
@@ -40,10 +44,19 @@ pub fn storfetch_paths_from_disk(
         .sum();
 
     let compressed = CompressedPathNested::from_scan(scans);
-    info!("starting serialize");
-    let encoded_diesel = RawDieselBytes::serialize_postcard(&compressed)
-        .map_err(StorImportErrorKind::InvalidCompressedPaths.err_map())?;
-    let encoded = encoded_diesel.as_inner();
+    let encoded = {
+        let watch = BasicWatch::start();
+        let post = RawDieselBytes::serialize_postcard(&compressed)
+            .map_err(StorImportErrorKind::InvalidCompressedPaths.err_map())?;
+        trace!("Postcard serialized in {watch}");
+
+        let watch = BasicWatch::start();
+        let real = zstd::encode_all(post.as_inner(), 0)
+            .map_io_err("zstd-err")
+            .xana_err(StorImportErrorKind::InvalidCompressedPaths)?;
+        trace!("ZFS serialized in {watch}");
+        real
+    };
     let encoded_size: usize = encoded.len();
 
     let saved_bytes = raw_size as isize - encoded_size as isize;
@@ -60,7 +73,7 @@ pub fn storfetch_paths_from_disk(
         .xana_err(StorImportErrorKind::InvalidCompressedPaths)?;
     info!("wrote to {}", COMPRESSED_CACHE.display());
 
-    insert_compressed_encoded(conn, encoded_diesel)
+    insert_compressed_encoded(conn, RawDieselBytes(encoded))
     // todo!()
 }
 

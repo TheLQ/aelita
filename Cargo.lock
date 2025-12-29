@@ -36,13 +36,12 @@ dependencies = [
  "aelita_commons",
  "aelita_stor_diesel",
  "bytes",
- "indexmap",
  "serde",
  "serde_json",
  "strum",
- "thiserror",
  "tokio",
  "xana-commons-rs",
+ "zstd",
 ]
 
 [[package]]
