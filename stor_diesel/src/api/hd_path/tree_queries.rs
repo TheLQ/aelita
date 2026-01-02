@@ -1,12 +1,10 @@
 use crate::api::api_hd::storapi_hd_components_with;
 use crate::err::StorDieselErrorKind;
 use crate::{
-    HdPathAssociation, HdPathDieselDyn, ModelFileTreeId, PathRow, RawDieselBytes, StorDieselResult,
-    StorIdType, StorTransaction, components_get_bytes, path_components, schema,
+    HdPathDieselDyn, ModelFileTreeId, PathRow, StorDieselResult, StorIdType, StorTransaction,
+    components_get_bytes, path_components,
 };
 use aelita_xrn::defs::path_xrn::XRN_PATH_ROOT_ID;
-use diesel::prelude::*;
-use diesel::query_dsl::InternalJoinDsl;
 use diesel::sql_types::Unsigned;
 use diesel::{QueryableByName, RunQueryDsl};
 use std::collections::HashMap;
@@ -283,7 +281,6 @@ pub fn storapi_hd_list_children_by_path(
 
 #[cfg(test)]
 mod test {
-    use crate::StorDieselResult;
     use crate::api::common::test::sql_test;
     use crate::api::hd_path::tree_queries::{
         storapi_hd_get_path_by_path, storapi_hd_list_children_by_path,

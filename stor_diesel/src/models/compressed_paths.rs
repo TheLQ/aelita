@@ -5,9 +5,8 @@ use rayon::prelude::ParallelSliceMut;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::ffi::{OsStr, OsString};
-use std::ops::ControlFlow;
 use std::path::{Component, Path, PathBuf};
-use xana_commons_rs::tracing_re::{info, trace, warn};
+use xana_commons_rs::tracing_re::{info, trace};
 use xana_commons_rs::{
     CommaJoiner, CrashErrKind, ProgressWidget, ScanFileType, ScanFileTypeWithPath,
 };
@@ -19,7 +18,7 @@ pub struct CompressedPathNested {
 }
 
 impl CompressedPathNested {
-    pub fn from_scan_builder(mut scans: Vec<ScanFileTypeWithPath>) -> CompressedPathNestedBuilder {
+    fn from_scan_builder(mut scans: Vec<ScanFileTypeWithPath>) -> CompressedPathNestedBuilder {
         info!("starting sort");
         scans.par_sort();
 
@@ -43,7 +42,7 @@ impl CompressedPathNested {
     fn from_build(builder: CompressedPathNestedBuilder) -> StorDieselResult<Self> {
         let nodes = (0..builder.nodes.len())
             .into_iter()
-            .map(|i| CompNode::from_builder(&builder, i, &mut PathBuf::from("/")))
+            .map(|i| CompNode::from_builder(&builder, i))
             .try_collect()?;
         Ok(Self {
             parts: builder.parts.into_iter().collect(),
@@ -268,7 +267,7 @@ impl CompNode {
     fn from_builder(
         compressed_builder: &CompressedPathNestedBuilder,
         node_id: usize,
-        debug_context: &mut PathBuf,
+        // debug_context: &mut PathBuf,
     ) -> StorDieselResult<Self> {
         let CompNodeBuilder {
             name_comp_id,

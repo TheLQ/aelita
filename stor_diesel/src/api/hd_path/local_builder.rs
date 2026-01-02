@@ -2,7 +2,6 @@ use crate::api::common::check_insert_num_rows;
 use crate::err::StorDieselErrorKind;
 use crate::{
     CompressedPaths, HdPathAssociation, NewHdPathAssociation, StorDieselResult, StorTransaction,
-    schema,
 };
 use diesel::{HasQuery, RunQueryDsl};
 use itertools::Itertools;

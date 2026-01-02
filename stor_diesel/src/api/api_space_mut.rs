@@ -3,7 +3,6 @@ use crate::{
     ModelSpaceId, ModelSpaceOwned, NewModelSpaceName, StorDieselResult, StorIdType,
     StorTransaction, XrnAsOwnedTable, schema,
 };
-use diesel::prelude::*;
 use diesel::RunQueryDsl;
 
 pub fn storapi_space_new(

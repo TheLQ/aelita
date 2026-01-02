@@ -1,5 +1,5 @@
+use crate::StorDieselResult;
 use crate::err::StorDieselErrorKind;
-use crate::{ModelFileTreeId, StorDieselResult};
 use crate::{RawDieselBytes, schema};
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
