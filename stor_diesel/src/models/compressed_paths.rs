@@ -8,7 +8,9 @@ use std::ffi::{OsStr, OsString};
 use std::ops::ControlFlow;
 use std::path::{Component, Path, PathBuf};
 use xana_commons_rs::tracing_re::{info, trace, warn};
-use xana_commons_rs::{CrashErrKind, ProgressWidget, ScanFileType, ScanFileTypeWithPath};
+use xana_commons_rs::{
+    CommaJoiner, CrashErrKind, ProgressWidget, ScanFileType, ScanFileTypeWithPath,
+};
 
 #[derive(Debug, Serialize)]
 pub struct CompressedPathNested {
@@ -17,7 +19,7 @@ pub struct CompressedPathNested {
 }
 
 impl CompressedPathNested {
-    pub fn from_scan(mut scans: Vec<ScanFileTypeWithPath>) -> StorDieselResult<Self> {
+    pub fn from_scan_builder(mut scans: Vec<ScanFileTypeWithPath>) -> CompressedPathNestedBuilder {
         info!("starting sort");
         scans.par_sort();
 
@@ -31,7 +33,11 @@ impl CompressedPathNested {
             info!("scanning {}", path.display());
             build.push_path(&path, stype)
         }
-        Self::from_build(build)
+        build
+    }
+
+    pub fn from_scan(scans: Vec<ScanFileTypeWithPath>) -> StorDieselResult<Self> {
+        Self::from_build(Self::from_scan_builder(scans))
     }
 
     fn from_build(builder: CompressedPathNestedBuilder) -> StorDieselResult<Self> {
@@ -77,6 +83,15 @@ impl CompressedPathNested {
         }
         path_rev.reverse();
         path_rev
+    }
+
+    pub fn debug_log(&self) {
+        for (i, part) in self.parts.iter().enumerate() {
+            trace!("part {i} | - {}", part.to_str().unwrap());
+        }
+        for (i, node) in self.nodes.iter().enumerate() {
+            trace!("part {i} | - {node:?}");
+        }
     }
 }
 struct CompressedPathNestedBuilder {
@@ -192,7 +207,7 @@ impl CompressedPathNestedBuilder {
     fn path_vec_from_node_id(&self, node_id: usize) -> Vec<&OsString> {
         let mut path_rev = Vec::new();
         let mut next_id = node_id;
-        loop {
+        while next_id != 0 {
             let cur_node = &self.nodes[next_id];
             path_rev.push(&self.parts[cur_node.name_comp_id]);
             next_id = self.find_node_parent(next_id);
@@ -261,7 +276,7 @@ impl CompNode {
             children_indexes,
             delayed_symlink,
         } = &compressed_builder.nodes[node_id];
-        let mut new_node_type = None;
+        let mut symlink_type = None;
         // debug_context.push(&name);
         if let Some(delayed_symlink) = delayed_symlink {
             assert!(node_type.is_none(), "{node_type:?}");
@@ -294,7 +309,7 @@ impl CompNode {
                     };
                 }
                 if let Some(target_node_id) = last_index {
-                    new_node_type = Some(CompNodeType::Symlink { target_node_id })
+                    symlink_type = Some(CompNodeType::Symlink { target_node_id })
                 }
             } else {
                 let cur_path: PathBuf = compressed_builder
@@ -306,7 +321,7 @@ impl CompNode {
                     StorDieselErrorKind::SymlinkResolveFailed.build_message(new_path_raw.display())
                 })?;
                 let ref_id = compressed_builder.path_to_node_id(&new_path)?;
-                new_node_type = Some(CompNodeType::Symlink {
+                symlink_type = Some(CompNodeType::Symlink {
                     target_node_id: ref_id,
                 })
                 // this path should now resolve
@@ -315,30 +330,45 @@ impl CompNode {
         // if debug_context != Path::new("/") {
         //     assert!(debug_context.pop(), "cur {}", debug_context.display());
         // }
-        let res_node_type = if let Some(new_node_type) = new_node_type {
-            new_node_type
-        } else if let Some(node_type) = node_type.clone() {
-            node_type
-        } else {
-            if children_indexes.is_empty() {
-                trace!(
-                    "assuming empty(!!!) dir for id {node_id} path {}",
-                    compressed_builder.pathbuf_from_node_id(node_id).display()
-                );
-                CompNodeType::Dir {
-                    children_node_ids: Vec::new(),
-                }
-            } else {
-                trace!(
-                    "assuming dir with {} children for id {node_id} path {}",
-                    children_indexes.len(),
-                    compressed_builder.pathbuf_from_node_id(node_id).display()
-                );
-                CompNodeType::Dir {
+        let res_node_type = symlink_type
+            .or_else(|| match node_type {
+                // was created empty
+                Some(CompNodeType::Dir { .. }) => Some(CompNodeType::Dir {
                     children_node_ids: children_indexes.clone(),
+                }),
+                None => None,
+                Some(v) => {
+                    assert!(
+                        children_indexes.is_empty(),
+                        "node {node_id} type {v:?} but has {} children",
+                        children_indexes
+                            .iter()
+                            .map(|v| v.to_string())
+                            .collect::<CommaJoiner>()
+                    );
+                    Some(v.clone())
                 }
-            }
-        };
+            })
+            .unwrap_or_else(|| {
+                if children_indexes.is_empty() {
+                    trace!(
+                        "assuming empty(!!!) dir for id {node_id} path {}",
+                        compressed_builder.pathbuf_from_node_id(node_id).display()
+                    );
+                    CompNodeType::Dir {
+                        children_node_ids: Vec::new(),
+                    }
+                } else {
+                    trace!(
+                        "assuming dir with {} children for id {node_id} path {}",
+                        children_indexes.len(),
+                        compressed_builder.pathbuf_from_node_id(node_id).display()
+                    );
+                    CompNodeType::Dir {
+                        children_node_ids: children_indexes.clone(),
+                    }
+                }
+            });
         Ok(Self {
             name_comp_id: *name_comp_id,
             node_type: res_node_type,
@@ -467,47 +497,52 @@ impl<'c> CompressedIterFiles<'c> {
         }
     }
 
-    fn pre_advance(&mut self) -> ControlFlow<()> {
-        let Some(IterStack {
-            node_id,
-            next_child,
-        }) = self.cursor_stack.last().cloned()
-        else {
-            return ControlFlow::Break(());
-        };
+    fn pre_advance(&mut self) -> Option<usize> {
+        loop {
+            let Some(IterStack {
+                node_id,
+                next_child,
+            }) = self.cursor_stack.last().cloned()
+            else {
+                return None;
+            };
 
-        let CompNodeType::Dir { children_node_ids } = &self.backend.nodes[node_id].node_type else {
-            unreachable!("why am I not in a dir?")
-        };
-        if next_child >= children_node_ids.len() {
-            self.cursor_stack.pop();
-            return self.pre_advance();
-        } else {
-            let last = self.cursor_stack.last_mut().unwrap();
-            last.next_child += 1;
-        }
+            let CompNodeType::Dir { children_node_ids } = &self.backend.nodes[node_id].node_type
+            else {
+                unreachable!("why am I not in a dir?")
+            };
+            if next_child >= children_node_ids.len() {
+                self.cursor_stack.pop();
+                trace!("pop {node_id} after EOF");
+                continue;
+            } else {
+                let last = self.cursor_stack.last_mut().unwrap();
+                last.next_child += 1;
+            }
 
-        let child_id = children_node_ids[next_child];
-        match &self.backend.nodes[child_id].node_type {
-            CompNodeType::Dir { .. } => {
-                //
-                self.cursor_stack.push(IterStack {
-                    node_id: child_id,
-                    next_child: 0,
-                });
-                self.pre_advance()
-            }
-            CompNodeType::File => {
-                // found
-                ControlFlow::Continue(())
-            }
-            CompNodeType::Symlink { target_node_id } => {
-                trace!("ignore unsupported symlink {target_node_id}");
-                self.pre_advance()
-            }
-            CompNodeType::BrokenSymlink { raw } => {
-                trace!("ignore unsupported broken symlink {raw}");
-                self.pre_advance()
+            let child_id = children_node_ids[next_child];
+            match &self.backend.nodes[child_id].node_type {
+                CompNodeType::Dir { .. } => {
+                    //
+                    trace!("descend into {child_id}");
+                    self.cursor_stack.push(IterStack {
+                        node_id: child_id,
+                        next_child: 0,
+                    });
+                    continue;
+                }
+                CompNodeType::File => {
+                    // found
+                    return Some(child_id);
+                }
+                CompNodeType::Symlink { target_node_id } => {
+                    trace!("ignore unsupported symlink {target_node_id}");
+                    continue;
+                }
+                CompNodeType::BrokenSymlink { raw } => {
+                    trace!("ignore unsupported broken symlink {raw}");
+                    continue;
+                }
             }
         }
     }
@@ -517,20 +552,8 @@ impl<'c> Iterator for CompressedIterFiles<'c> {
     type Item = Vec<&'c OsStr>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.pre_advance().is_break() {
-            return None;
-        }
-        let IterStack {
-            node_id,
-            next_child,
-        } = self.cursor_stack.last().unwrap();
-        let CompNodeType::Dir { children_node_ids } = &self.backend.nodes[*node_id].node_type
-        else {
-            unreachable!("how??")
-        };
-
-        let next_node = children_node_ids[*next_child];
-        let path = self.backend.path_vec_from_node_id(next_node);
+        let node_id = self.pre_advance()?;
+        let path = self.backend.path_vec_from_node_id(node_id);
         Some(path)
     }
 }
@@ -543,14 +566,37 @@ struct IterStack {
 
 #[cfg(test)]
 mod test {
-    use super::CompressedPathNested;
+    use super::{CompressedPathNested, CompressedPathNestedBuilder};
+    use aelita_commons::log_init;
     use std::ffi::OsStr;
     use std::path::PathBuf;
     use xana_commons_rs::{PrettyUnwrap, ScanFileTypeWithPath};
 
     #[test]
     fn basic() {
-        let compressed = CompressedPathNested::from_scan(vec![
+        log_init();
+
+        let compressed = easy_compressed();
+
+        compressed.debug_log();
+
+        let iter = compressed.iter_path_vecs().collect::<Vec<_>>();
+        assert!(iter.contains(&vec![OsStr::new("head"), OsStr::new("content")]),);
+        assert!(iter.contains(&vec![OsStr::new("nope"), OsStr::new("test")]),);
+        assert!(iter.contains(&vec![OsStr::new("head"), OsStr::new("other")]),);
+    }
+
+    #[test]
+    fn get_path() {
+        let compressed = easy_compressed_builder();
+        assert_eq!(
+            compressed.path_vec_from_node_id(3),
+            vec![OsStr::new("head"), OsStr::new("other")]
+        );
+    }
+
+    fn easy_compressed_builder() -> CompressedPathNestedBuilder {
+        CompressedPathNested::from_scan_builder(vec![
             ScanFileTypeWithPath::File {
                 path: PathBuf::from("/head/content"),
             },
@@ -561,13 +607,9 @@ mod test {
                 path: PathBuf::from("/head/other"),
             },
         ])
-        .pretty_unwrap();
-        // panic!("{compressed:?}");
+    }
 
-        let mut iter = compressed.iter_path_vecs().collect::<Vec<_>>();
-        assert!(iter.contains(&vec![OsStr::new("head"), OsStr::new("content")]));
-        // assert_eq!(iter.next(), Some(Path::new("/nope/test").to_path_buf()));
-        // assert_eq!(iter.next(), Some(Path::new("/head/other").to_path_buf()));
-        // assert_eq!(iter.next(), None);
+    fn easy_compressed() -> CompressedPathNested {
+        CompressedPathNested::from_build(easy_compressed_builder()).pretty_unwrap()
     }
 }
