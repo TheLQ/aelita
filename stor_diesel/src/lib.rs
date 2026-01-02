@@ -2,6 +2,7 @@
 #![feature(iterator_try_collect)]
 #![feature(slice_pattern)]
 #![feature(vec_into_chunks)]
+#![feature(normalize_lexically)]
 
 mod api;
 mod connection;
