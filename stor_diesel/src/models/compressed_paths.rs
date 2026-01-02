@@ -4,20 +4,21 @@ use indexmap::IndexSet;
 use rayon::prelude::ParallelSliceMut;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsString;
+use std::os::unix::prelude::OsStrExt;
 use std::path::{Component, Path, PathBuf};
 use xana_commons_rs::tracing_re::{info, trace};
 use xana_commons_rs::{
     CommaJoiner, CrashErrKind, ProgressWidget, ScanFileType, ScanFileTypeWithPath,
 };
 
-#[derive(Debug, Serialize)]
-pub struct CompressedPathNested {
-    parts: Vec<OsString>,
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CompressedPaths {
+    parts: Vec<Vec<u8>>,
     nodes: Vec<CompNode>,
 }
 
-impl CompressedPathNested {
+impl CompressedPaths {
     fn from_scan_builder(mut scans: Vec<ScanFileTypeWithPath>) -> CompressedPathNestedBuilder {
         info!("starting sort");
         scans.par_sort();
@@ -35,6 +36,10 @@ impl CompressedPathNested {
         build
     }
 
+    pub fn parts(&self) -> &[Vec<u8>] {
+        self.parts.as_slice()
+    }
+
     pub fn from_scan(scans: Vec<ScanFileTypeWithPath>) -> StorDieselResult<Self> {
         Self::from_build(Self::from_scan_builder(scans))
     }
@@ -45,7 +50,11 @@ impl CompressedPathNested {
             .map(|i| CompNode::from_builder(&builder, i))
             .try_collect()?;
         Ok(Self {
-            parts: builder.parts.into_iter().collect(),
+            parts: builder
+                .parts
+                .into_iter()
+                .map(|v| v.as_bytes().to_vec())
+                .collect(),
             nodes,
         })
     }
@@ -69,12 +78,12 @@ impl CompressedPathNested {
     }
 
     // todo generic between builder and main
-    fn path_vec_from_node_id(&self, node_id: usize) -> Vec<&OsStr> {
+    fn path_vec_from_node_id(&self, node_id: usize) -> Vec<&[u8]> {
         let mut path_rev = Vec::new();
         let mut next_id = node_id;
         loop {
             let cur_node = &self.nodes[next_id];
-            path_rev.push(self.parts[cur_node.name_comp_id].as_os_str());
+            path_rev.push(self.parts[cur_node.name_comp_id].as_slice());
             next_id = self.find_node_parent(next_id);
             if next_id == 0 {
                 break;
@@ -86,7 +95,7 @@ impl CompressedPathNested {
 
     pub fn debug_log(&self) {
         for (i, part) in self.parts.iter().enumerate() {
-            trace!("part {i} | - {}", part.to_str().unwrap());
+            trace!("part {i} | - {}", str::from_utf8(part).unwrap());
         }
         for (i, node) in self.nodes.iter().enumerate() {
             trace!("part {i} | - {node:?}");
@@ -379,114 +388,13 @@ struct CachedLookup {
     child_id: usize,
 }
 
-#[derive(Debug)]
-struct CompressedPathsBuilder {
-    parts: IndexSet<String>,
-    indexed_paths: Vec<Vec<u32>>,
-}
-impl CompressedPathsBuilder {
-    fn new() -> Self {
-        Self {
-            parts: IndexSet::new(),
-            indexed_paths: Vec::new(),
-        }
-    }
-
-    fn push_path(&mut self, path: &Path) -> StorDieselResult<()> {
-        let mut indexed_path = Vec::new();
-
-        let mut components = path.components();
-
-        match components.next() {
-            Some(Component::RootDir) => {
-                // expected
-            }
-            Some(bad) => {
-                return Err(StorDieselErrorKind::CompressedPathNotRoot
-                    .build_message(format!("unknown root {bad:?}")));
-            }
-            None => return Err(StorDieselErrorKind::CompressedPathEmpty.build()),
-        }
-
-        for (i, next) in components.enumerate() {
-            let part = match next {
-                Component::Normal(part) => part.to_str().unwrap(),
-                bad => {
-                    return Err(StorDieselErrorKind::CompressedUnknownComponent
-                        .build_message(format!("unknown {bad:?} at {i} in {}", path.display())));
-                }
-            };
-
-            match self.parts.get_index_of(part) {
-                Some(index) => indexed_path.push(u32::try_from(index).unwrap()),
-                None => {
-                    let index = self.parts.len();
-                    self.parts.insert(part.to_string());
-                    indexed_path.push(u32::try_from(index).unwrap());
-                }
-            }
-        }
-
-        self.indexed_paths.push(indexed_path);
-        Ok(())
-    }
-
-    fn build(self) -> CompressedPaths {
-        let Self {
-            parts,
-            indexed_paths,
-        } = self;
-        CompressedPaths {
-            parts: parts.into_iter().collect(),
-            indexed_paths,
-        }
-    }
-}
-
-/// 30 million files saved
-#[derive(Serialize, Deserialize)]
-pub struct CompressedPaths {
-    parts: Vec<String>,
-    indexed_paths: Vec<Vec<u32>>,
-}
-
-impl CompressedPaths {
-    pub fn from_paths(
-        paths: impl IntoIterator<Item = impl AsRef<Path>>,
-    ) -> StorDieselResult<CompressedPaths> {
-        let mut builder = CompressedPathsBuilder::new();
-        for path in paths {
-            let path = path.as_ref();
-            builder.push_path(path)?;
-        }
-        Ok(builder.build())
-    }
-
-    pub fn iter_paths(&self) -> impl Iterator<Item = PathBuf> {
-        self.indexed_paths.iter().map(|indexes| {
-            // make default relative an absolute path
-            let mut root = PathBuf::from("/");
-            root.extend(indexes.iter().map(|i| &self.parts[*i as usize]));
-            root
-        })
-    }
-
-    pub fn parts(&self) -> &[String] {
-        self.parts.as_slice()
-    }
-
-    pub fn inner(&self) -> (&[String], &[Vec<u32>]) {
-        (&self.parts, &self.indexed_paths)
-    }
-}
-
 pub struct CompressedIterFiles<'c> {
-    backend: &'c CompressedPathNested,
+    backend: &'c CompressedPaths,
     cursor_stack: Vec<IterStack>,
 }
 
 impl<'c> CompressedIterFiles<'c> {
-    fn new(backend: &'c CompressedPathNested) -> Self {
+    fn new(backend: &'c CompressedPaths) -> Self {
         Self {
             backend,
             cursor_stack: vec![IterStack {
@@ -548,7 +456,7 @@ impl<'c> CompressedIterFiles<'c> {
 }
 
 impl<'c> Iterator for CompressedIterFiles<'c> {
-    type Item = Vec<&'c OsStr>;
+    type Item = Vec<&'c [u8]>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let node_id = self.pre_advance()?;
@@ -565,7 +473,7 @@ struct IterStack {
 
 #[cfg(test)]
 mod test {
-    use super::{CompressedPathNested, CompressedPathNestedBuilder};
+    use super::{CompressedPathNestedBuilder, CompressedPaths};
     use aelita_commons::log_init;
     use std::ffi::OsStr;
     use std::path::PathBuf;
@@ -580,9 +488,9 @@ mod test {
         compressed.debug_log();
 
         let iter = compressed.iter_path_vecs().collect::<Vec<_>>();
-        assert!(iter.contains(&vec![OsStr::new("head"), OsStr::new("content")]),);
-        assert!(iter.contains(&vec![OsStr::new("nope"), OsStr::new("test")]),);
-        assert!(iter.contains(&vec![OsStr::new("head"), OsStr::new("other")]),);
+        assert!(iter.contains(&vec![b"head", b"content"]),);
+        assert!(iter.contains(&vec![b"nope", b"test"]),);
+        assert!(iter.contains(&vec![b"head", b"other"]),);
     }
 
     #[test]
@@ -595,7 +503,7 @@ mod test {
     }
 
     fn easy_compressed_builder() -> CompressedPathNestedBuilder {
-        CompressedPathNested::from_scan_builder(vec![
+        CompressedPaths::from_scan_builder(vec![
             ScanFileTypeWithPath::File {
                 path: PathBuf::from("/head/content"),
             },
@@ -608,7 +516,7 @@ mod test {
         ])
     }
 
-    fn easy_compressed() -> CompressedPathNested {
-        CompressedPathNested::from_build(easy_compressed_builder()).pretty_unwrap()
+    fn easy_compressed() -> CompressedPaths {
+        CompressedPaths::from_build(easy_compressed_builder()).pretty_unwrap()
     }
 }

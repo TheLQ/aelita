@@ -26,7 +26,7 @@ impl<'t, 'e> HdAssociationsBuilder<'t, 'e> {
     pub fn build(
         conn: &'t mut StorTransaction<'e>,
         compressed_paths: CompressedPaths,
-        component_to_id: &HashMap<String, u32>,
+        component_to_id: &HashMap<Vec<u8>, u32>,
     ) -> StorDieselResult<()> {
         let watch = BasicWatch::start();
         // dump the entire associations table
@@ -332,17 +332,16 @@ impl<'t, 'e> HdAssociationsBuilder<'t, 'e> {
 
 fn build_remaining(
     compressed_paths: CompressedPaths,
-    component_to_id: &HashMap<String, u32>,
+    component_to_id: &HashMap<Vec<u8>, u32>,
 ) -> Vec<RemainingPath> {
     let watch = BasicWatch::start();
     let mut remaining_components: Vec<RemainingPath> = Vec::new();
-    let (indexed_parts, indexed_paths) = compressed_paths.inner();
-    for path in indexed_paths {
+    for path in compressed_paths.iter_path_vecs() {
         let mut path_by_comp_id: Vec<u32> = path
             .iter()
             .map(|v| {
-                let component_str = &indexed_parts[usize::try_from(*v).unwrap()];
-                component_to_id[component_str]
+                // let component_str = &indexed_parts[usize::try_from(*v).unwrap()];
+                component_to_id[*v]
             })
             .collect();
         path_by_comp_id.reverse();

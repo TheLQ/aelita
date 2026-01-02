@@ -44,8 +44,8 @@ pub fn components_get_bytes(
 
 pub fn components_get_from_fast(
     conn: &mut StorTransaction,
-    check_components_unique_input: &[impl AsRef<str>],
-) -> StorDieselResult<HashMap<String, u32>> {
+    check_components_unique_input: &[impl AsRef<[u8]>],
+) -> StorDieselResult<HashMap<Vec<u8>, u32>> {
     let watch = BasicWatch::start();
     let lookup_vec: Vec<(Vec<u8>, u32)> = schema_temp::fast_hd_components::table
         .inner_join(schema::hd1_files_components::table.on(
@@ -58,7 +58,7 @@ pub fn components_get_from_fast(
         .get_results(conn.inner())?;
     let lookup_map = lookup_vec
         .into_iter()
-        .map(|(key, i)| (String::from_utf8(key).unwrap(), i))
+        // .map(|(key, i)| (String::from_utf8(key).unwrap(), i))
         .collect::<HashMap<_, _>>();
     info!(
         "fetched {} rows in {watch}",

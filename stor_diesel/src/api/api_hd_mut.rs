@@ -49,7 +49,7 @@ pub fn storapi_rebuild_parents(conn: &mut StorTransaction) -> StorDieselResult<(
 
 fn components_update(
     conn: &mut StorTransaction,
-    components_unique_input: &[impl AsRef<str>],
+    components_unique_input: &[impl AsRef<[u8]>],
 ) -> StorDieselResult<()> {
     // SQL cache of our millions of components
     diesel::sql_query(FAST_HD_COMPONENTS_CREATE).execute(conn.inner())?;
@@ -59,7 +59,7 @@ fn components_update(
     let expected_length = components_unique_input.len();
     let components_unique = components_unique_input
         .iter()
-        .map(|v| schema_temp::fast_hd_components::component.eq(v.as_ref().as_bytes()))
+        .map(|v| schema_temp::fast_hd_components::component.eq(v.as_ref()))
         .collect::<Vec<_>>();
     let mut total_rows = 0;
     let chunks = components_unique.chunks(SQL_PLACEHOLDER_MAX);
