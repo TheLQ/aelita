@@ -3,16 +3,20 @@ Aelita
 
 [![Aelita](etc/11_aelita_uses_her_smarts.png)](https://codelyoko.fandom.com/wiki/Code_Lyoko)
 
-Filesystem Manager covering millions of torrents, site scrapes, large unique data collections.
-Ask "How would you manage a small https://archive.org, searching opening on your desktop"?
+Data Manager Platform covering millions of torrents, site scrapes, photo catalogs, and any large unique data
+collections.
+Ask "How would you create a small https://archive.org?" managing storage to cataloging to searching to opening on your
+desktop.
 Also ponder how ephemeral information becomes.
 
 ## Concept
 
 ### Vault
 
-The smallest unit is the immutable or versioned `/vault` directory with `./content` optionally from a
-`./source`. May be a single downloaded file, torrent data and source .torrent file, 1 season of a show,
+The smallest filesystem unit is the immutable or versioned `/vault` directory with `./content` from a single
+optionally-provided
+`./source`. May be a single downloaded file and source url.txt file, torrent data and source .torrent file, 1 season of
+a show,
 updating synced photos with no source dir, to entire site rips with maintained site ripping code.
 They can be moved between storage tiers, saved to tape,
 version tracked with integrity checks, and
@@ -40,7 +44,7 @@ Meaning fetching `myapp:8000/list_somedata` journals the entire response
 before commiting the lookup tables. If a field was skipped initially say for time
 it can losslessly be added later.
 
-While none of this is revolutionary, this specific abilities with this stack human browsable in folders
+While none of this is revolutionary, combined and specialized for qbittorrent and ZFS makes a powerful tool that obtains
 
 - A standard unit of disk data. Movable, copyable, and versionable
 - Backend and frontend Platform for vastly different models: videos to photo albums to bookmarks to social media

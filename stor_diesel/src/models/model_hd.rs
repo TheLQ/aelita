@@ -1,5 +1,5 @@
-use crate::StorDieselResult;
 use crate::err::StorDieselErrorKind;
+use crate::{ModelFileCompId, ModelFileTreeId, StorDieselResult};
 use crate::{RawDieselBytes, schema};
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
@@ -21,13 +21,13 @@ pub const HD_PATH_DEPTH: usize = 11;
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct HdPathAssociation {
     // #[diesel(sql_type = diesel::sql_types::Unsigned<diesel::sql_types::Integer>)]
-    pub tree_id: u32,
+    pub tree_id: ModelFileTreeId,
     // #[diesel(sql_type = diesel::sql_types::Unsigned<diesel::sql_types::Integer>)]
     pub tree_depth: u32,
     // #[diesel(sql_type = diesel::sql_types::Unsigned<diesel::sql_types::Integer>)]
-    pub component_id: u32,
+    pub component_id: ModelFileCompId,
     // #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Unsigned<diesel::sql_types::Integer>>)]
-    pub parent_id: Option<u32>,
+    pub parent_id: Option<ModelFileTreeId>,
 }
 
 impl HdPathAssociation {
@@ -37,7 +37,7 @@ impl HdPathAssociation {
             component_id,
             parent_id,
         }: NewHdPathAssociation,
-        tree_id: u32,
+        tree_id: ModelFileTreeId,
     ) -> Self {
         Self {
             tree_id,
@@ -55,8 +55,8 @@ impl HdPathAssociation {
 #[diesel(check_for_backend(diesel::mysql::Mysql))]
 pub struct NewHdPathAssociation {
     pub tree_depth: u32,
-    pub component_id: u32,
-    pub parent_id: Option<u32>,
+    pub component_id: ModelFileCompId,
+    pub parent_id: Option<ModelFileTreeId>,
 }
 
 impl NewHdPathAssociation {

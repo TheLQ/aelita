@@ -1,15 +1,15 @@
-use crate::ModelJournalId;
 use crate::api::api_hd::components_get_from_fast;
 use crate::api::assert_test_database;
 use crate::api::common::SQL_PLACEHOLDER_MAX;
-use crate::api::hd_path::HdAssociationsBuilder;
 use crate::models::enum_types::ModelJournalTypeName;
 use crate::schema_temp::{FAST_HD_COMPONENTS_CREATE, FAST_HD_COMPONENTS_TRUNCATE};
-use crate::storapi_variables_get_str;
 use crate::{CompressedPaths, StorIdType, storapi_journal_get_data};
+use crate::{ModelFileCompId, ModelJournalId};
 use crate::{StorDieselResult, StorTransaction, schema, schema_temp};
+use crate::{build_associations_from_compressed, storapi_variables_get_str};
 use diesel::RunQueryDsl;
 use diesel::prelude::*;
+use std::collections::HashMap;
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{debug, info, trace};
 use xana_commons_rs::{BasicWatch, LOCALE};
@@ -22,9 +22,7 @@ pub fn storapi_hd_tree_push(
     let autocommit = storapi_variables_get_str(conn.inner(), "autocommit")?;
     info!("autocommit is {autocommit}");
 
-    components_update(conn, compressed.parts())?;
-    let component_to_id = components_get_from_fast(conn, compressed.parts())?;
-    HdAssociationsBuilder::build(conn, compressed, &component_to_id)?;
+    build_associations_from_compressed(conn, &compressed)?;
 
     Ok(())
 }
@@ -45,6 +43,14 @@ pub fn storapi_rebuild_parents(conn: &mut StorTransaction) -> StorDieselResult<(
 
     storapi_hd_tree_push(conn, compressed)?;
     Ok(())
+}
+
+pub fn storapi_hd_components_get_or_insert(
+    conn: &mut StorTransaction,
+    components_unique_input: &[impl AsRef<[u8]>],
+) -> StorDieselResult<HashMap<Vec<u8>, ModelFileCompId>> {
+    components_update(conn, components_unique_input)?;
+    components_get_from_fast(conn, components_unique_input)
 }
 
 fn components_update(

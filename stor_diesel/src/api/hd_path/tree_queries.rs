@@ -300,7 +300,7 @@ mod test {
             let children = storapi_hd_list_children_by_path(conn, format!("/{top_2}"))?;
             info!("{top_2} {}", children.join(", "));
 
-            let res = storapi_hd_get_path_by_path(conn, "").pretty_unwrap();
+            storapi_hd_get_path_by_path(conn, "").pretty_unwrap();
 
             panic!("??");
         })

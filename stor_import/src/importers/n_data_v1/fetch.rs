@@ -1,9 +1,9 @@
 use crate::err::{StorImportErrorKind, StorImportResult};
+use aelita_stor_diesel::ModelJournalTypeName;
 use aelita_stor_diesel::NewModelJournalImmutable;
 use aelita_stor_diesel::StorTransaction;
 use aelita_stor_diesel::path_const::PathConst;
 use aelita_stor_diesel::storapi_journal_immutable_push_single;
-use aelita_stor_diesel::{CompressedPathNested, ModelJournalTypeName};
 use aelita_stor_diesel::{CompressedPaths, RawDieselBytes};
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
@@ -43,7 +43,7 @@ pub fn storfetch_paths_from_disk(
         })
         .sum();
 
-    let compressed = CompressedPathNested::from_scan(scans);
+    let compressed = CompressedPaths::from_scan(scans)?;
     let encoded = {
         let watch = BasicWatch::start();
         let post = RawDieselBytes::serialize_postcard(&compressed)

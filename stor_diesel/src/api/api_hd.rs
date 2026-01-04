@@ -45,9 +45,9 @@ pub fn components_get_bytes(
 pub fn components_get_from_fast(
     conn: &mut StorTransaction,
     check_components_unique_input: &[impl AsRef<[u8]>],
-) -> StorDieselResult<HashMap<Vec<u8>, u32>> {
+) -> StorDieselResult<HashMap<Vec<u8>, ModelFileCompId>> {
     let watch = BasicWatch::start();
-    let lookup_vec: Vec<(Vec<u8>, u32)> = schema_temp::fast_hd_components::table
+    let lookup_vec: Vec<(Vec<u8>, ModelFileCompId)> = schema_temp::fast_hd_components::table
         .inner_join(schema::hd1_files_components::table.on(
             schema::hd1_files_components::component.eq(schema_temp::fast_hd_components::component),
         ))

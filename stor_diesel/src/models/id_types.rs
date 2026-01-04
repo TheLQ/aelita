@@ -10,7 +10,13 @@ use std::fmt::{Display, Formatter};
 pub trait StorIdType {
     fn new(inner: u32) -> Self;
 
+    fn new_usize(input: usize) -> Self;
+
     fn inner_id(&self) -> u32;
+
+    fn inner_usize(&self) -> usize {
+        usize::try_from(self.inner_id()).unwrap()
+    }
 }
 
 macro_rules! id_type {
@@ -23,6 +29,9 @@ macro_rules! id_type {
             serde::Deserialize,
             diesel::expression::AsExpression,
             diesel::deserialize::FromSqlRow,
+            PartialEq,
+            Eq,
+            Hash,
         )]
         // PartialEq,
         //             Eq,
@@ -30,11 +39,16 @@ macro_rules! id_type {
         //             Ord,
         #[diesel(sql_type = Unsigned<Integer>)]
         #[serde(transparent)]
+        #[repr(transparent)]
         pub struct $name(u32);
 
         impl StorIdType for $name {
             fn new(inner: u32) -> Self {
                 Self(inner)
+            }
+
+            fn new_usize(input: usize) -> Self {
+                Self(u32::try_from(input).unwrap())
             }
 
             fn inner_id(&self) -> u32 {
@@ -91,6 +105,7 @@ id_type!(ModelJournalId);
 id_type!(ModelSpaceId);
 id_type!(ModelQbHostId);
 id_type!(ModelFileTreeId);
+id_type!(ModelLocalTreeId);
 id_type!(ModelFileCompId);
 
 impl ModelSpaceId {
