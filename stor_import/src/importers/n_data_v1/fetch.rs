@@ -1,18 +1,26 @@
 use crate::err::{StorImportErrorKind, StorImportResult};
+use crate::importers::n_data_v1::path_backup::{ChannelOutSaved, read_input_cache};
 use aelita_stor_diesel::ModelJournalTypeName;
 use aelita_stor_diesel::NewModelJournalImmutable;
 use aelita_stor_diesel::StorTransaction;
+use aelita_stor_diesel::err::StorDieselErrorKind::LoadInfileFailed;
 use aelita_stor_diesel::path_const::PathConst;
 use aelita_stor_diesel::storapi_journal_immutable_push_single;
 use aelita_stor_diesel::{CompressedPaths, RawDieselBytes};
+use serde::{Deserialize, Serialize};
+use std::ffi::{OsStr, OsString};
+use std::fs::{File, OpenOptions};
+use std::io::{BufWriter, Write};
+use std::ops::Range;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 use std::thread;
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{error, info, trace, warn};
 use xana_commons_rs::{
-    BasicWatch, CrashErrKind, LOCALE, ResultXanaMap, ScanFileType, ScanFileTypeWithPath,
-    SimpleIoMap, read_dirs_recursive_better,
+    BasicWatch, CrashErrKind, LOCALE, RecursiveStatResult, ResultXanaMap, ScanFileType,
+    ScanFileTypeWithPath, ScanStat, SimpleIoMap, read_dirs_recursive_better,
+    read_dirs_recursive_stat_better,
 };
 
 static ROOTS: LazyLock<Vec<String>> = LazyLock::new(|| {
@@ -21,6 +29,7 @@ static ROOTS: LazyLock<Vec<String>> = LazyLock::new(|| {
     raw.split('\n').map(|s| s.to_string()).collect()
 });
 pub const COMPRESSED_CACHE: PathConst = PathConst("compressed_paths.cache.json");
+pub const INPUT_CACHE: PathConst = PathConst("compressed_paths.inputcache.json");
 
 pub fn storfetch_paths_from_cache(conn: &mut StorTransaction) -> StorImportResult<()> {
     let compressed_bytes = std::fs::read(COMPRESSED_CACHE)
@@ -34,11 +43,43 @@ pub fn storfetch_paths_from_disk(
     conn: &mut StorTransaction,
     roots: &[impl AsRef<Path>],
 ) -> StorImportResult<()> {
-    let scans = scan_disk(roots);
+    #[derive(Serialize, Deserialize)]
+    struct ResWrapper {
+        out: Vec<(ScanFileTypeWithPath, ScanStat)>,
+    }
+
+    const LOAD_FROM_DISK: bool = false;
+    let scans = if LOAD_FROM_DISK || !INPUT_CACHE.exists() {
+        let res = ResWrapper {
+            out: scan_disk(roots),
+        };
+        // let raw = RawDieselBytes::serialize_postcard(&res)
+        //     .xana_err(StorImportErrorKind::InvalidCompressedPaths)?;
+        // std::fs::write(INPUT_CACHE, raw.as_inner())
+        //     .map_io_err(INPUT_CACHE)
+        //     .unwrap();
+        // info!(
+        //     "Wrote {} bytes to cache {}",
+        //     raw.0.len(),
+        //     INPUT_CACHE.display()
+        // );
+        res.out
+    } else {
+        let watch = BasicWatch::start();
+        let raw = std::fs::read(INPUT_CACHE).map_io_err(INPUT_CACHE).unwrap();
+        trace!("Loaded {} from disk in {watch}", INPUT_CACHE.display());
+        let res_cache = read_input_cache(&raw)?;
+        let res = res_cache
+            .into_iter()
+            .map(|(disk, scan)| ((&disk).into(), scan))
+            .collect();
+        info!("Loaded from {} in {watch}", INPUT_CACHE.display());
+        res
+    };
     let raw_size: usize = scans
         .iter()
         .map(|v| {
-            let path = v.path();
+            let path = v.0.path();
             path.as_os_str().len()
         })
         .sum();
@@ -73,52 +114,78 @@ pub fn storfetch_paths_from_disk(
         .xana_err(StorImportErrorKind::InvalidCompressedPaths)?;
     info!("wrote to {}", COMPRESSED_CACHE.display());
 
-    insert_compressed_encoded(conn, RawDieselBytes(encoded))
-    // todo!()
+    insert_compressed_encoded(conn, RawDieselBytes(encoded))?;
+    Ok(())
 }
 
-fn scan_disk(roots: &[impl AsRef<Path>]) -> Vec<ScanFileTypeWithPath> {
+fn scan_disk(roots: &[impl AsRef<Path>]) -> Vec<(ScanFileTypeWithPath, ScanStat)> {
     let total_watch = BasicWatch::start();
     let mut handles = Vec::new();
+    let mut output = ChannelOutSaved::new(INPUT_CACHE.as_ref());
+
+    let (output_send, output_recv) =
+        std::sync::mpsc::channel::<Option<(ScanFileTypeWithPath, ScanStat)>>();
+
     for root in roots.iter() {
         let root = root.as_ref().to_path_buf();
         info!("scanning {}...", root.display());
+        let output_send = output_send.clone();
         let handle = thread::Builder::new()
             .name(format!(
                 "{:<17}",
                 Path::new(&root).file_name().unwrap().display()
             ))
             .spawn(move || {
-                let watch = BasicWatch::start();
-                let res = read_dirs_recursive_better([root.clone()]);
-                info!("Scanned {} in {watch}", root.display());
-                res
+                let errors = scan_disk_root(&root, output_send.clone());
+                output_send.send(None).unwrap();
+                errors
             })
             .unwrap();
         handles.push(handle);
     }
-    let mut res_ok = Vec::new();
-    let mut res_err = Vec::new();
-    for handle in handles {
-        let (cur_res_ok, cur_res_err) = handle.join().unwrap();
-        // res_ok.extend(
-        //     cur_res_ok
-        //         .into_iter()
-        //         .map(|v| v.to_str().unwrap().to_string()),
-        // );
-        res_ok.extend(cur_res_ok);
-        res_err.extend(cur_res_err);
-    }
-    info!(
-        "Scanned {} files with {} errors in {total_watch}",
-        res_ok.len(),
-        res_err.len()
-    );
-    for (path, err) in res_err {
-        error!("failed {} because {}", path.display(), err);
+
+    let mut total_complete = 0;
+    loop {
+        let next = output_recv.recv().unwrap();
+        if let Some(next) = next {
+            output.push(next)
+        } else {
+            total_complete += 1;
+            if total_complete == roots.len() {
+                break;
+            }
+        }
     }
 
-    res_ok
+    let mut total_errors = 0;
+    for handle in handles {
+        let errors = handle.join().unwrap();
+        total_errors += errors;
+    }
+
+    let res = output.into_output();
+    info!(
+        "Scanned {} files with {total_errors} errors in {total_watch}",
+        res.len(),
+    );
+    res
+}
+
+fn scan_disk_root(
+    root: &Path,
+    output_send: std::sync::mpsc::Sender<Option<(ScanFileTypeWithPath, ScanStat)>>,
+) -> usize {
+    let watch = BasicWatch::start();
+    let mut total_errors = 0;
+    read_dirs_recursive_stat_better([root], |v| match v {
+        Ok(v) => output_send.send(Some(v)).unwrap(),
+        Err((path, e)) => {
+            total_errors += 1;
+            error!("failed {} because {}", path.display(), e)
+        }
+    });
+    info!("Scanned {} in {watch}", root.display());
+    total_errors
 }
 
 fn insert_compressed(

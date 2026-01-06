@@ -7,9 +7,9 @@ use serde::{Deserialize, Serialize};
 use std::ffi::OsString;
 use std::os::unix::prelude::OsStrExt;
 use std::path::{Component, Path, PathBuf};
-use xana_commons_rs::tracing_re::{info, trace};
+use xana_commons_rs::tracing_re::{info, trace, warn};
 use xana_commons_rs::{
-    CommaJoiner, CrashErrKind, ProgressWidget, ScanFileType, ScanFileTypeWithPath,
+    CommaJoiner, CrashErrKind, ProgressWidget, ScanFileType, ScanFileTypeWithPath, ScanStat,
 };
 
 /// Store file tree as a... tree.
@@ -21,19 +21,21 @@ pub struct CompressedPaths {
 }
 
 impl CompressedPaths {
-    fn from_scan_builder(mut scans: Vec<ScanFileTypeWithPath>) -> CompressedPathBuilder {
+    fn from_scan_builder(
+        mut scans: Vec<(ScanFileTypeWithPath, ScanStat)>,
+    ) -> CompressedPathBuilder {
         info!("starting sort");
-        scans.par_sort();
+        scans.par_sort_by_cached_key(|v| v.0.path().clone());
 
         let mut build = CompressedPathBuilder::new();
         let total_scans = scans.len();
         let mut progress = ProgressWidget::new(4096);
-        for (i, scan) in scans.into_iter().enumerate() {
+        for (i, (scan, stat)) in scans.into_iter().enumerate() {
             progress.log(i, total_scans, |msg| info!("scan import {msg}"));
 
             let (path, stype) = scan.into_parts();
-            info!("scanning {}", path.display());
-            build.push_path(&path, stype)
+            // info!("scanning {}", path.display());
+            build.push_path(&path, stype, stat)
         }
         build
     }
@@ -57,7 +59,7 @@ impl CompressedPaths {
         children_node_ids
     }
 
-    pub fn from_scan(scans: Vec<ScanFileTypeWithPath>) -> StorDieselResult<Self> {
+    pub fn from_scan(scans: Vec<(ScanFileTypeWithPath, ScanStat)>) -> StorDieselResult<Self> {
         Self::from_build(Self::from_scan_builder(scans))
     }
 
@@ -145,12 +147,7 @@ impl CompressedPathBuilder {
     fn new() -> Self {
         Self {
             parts: IndexSet::new(),
-            nodes: vec![CompNodeBuilder {
-                name_comp_id: usize::MAX - 100,
-                node_type: None,
-                children_indexes: Vec::new(),
-                delayed_symlink: None,
-            }],
+            nodes: vec![CompNodeBuilder::new_comp_id(usize::MAX - 100)],
             cache: Vec::new(),
         }
     }
@@ -163,10 +160,10 @@ impl CompressedPathBuilder {
         self.nodes.get_mut(node_id.inner_usize()).unwrap()
     }
 
-    fn push_path(&mut self, path: &Path, new_node_type: ScanFileType) {
+    fn push_path(&mut self, path: &Path, new_node_type: ScanFileType, stat: ScanStat) {
         let mut comps = path.components();
         assert_eq!(comps.next(), Some(Component::RootDir));
-        self.add_node_linear(comps, new_node_type, path)
+        self.add_node_linear(comps, new_node_type, path, stat)
     }
 
     fn add_node_linear<'c>(
@@ -174,6 +171,7 @@ impl CompressedPathBuilder {
         comps: impl Iterator<Item = Component<'c>>,
         new_node_type: ScanFileType,
         debug_source: &Path,
+        stat: ScanStat,
     ) {
         let mut last_index = ModelLocalTreeId::new(0);
         for (i, comp) in comps.enumerate() {
@@ -182,16 +180,29 @@ impl CompressedPathBuilder {
             };
 
             let mut is_clear_cache = false;
-            if let Some(cache) = self.cache.get(i) {
-                if cache.component == comp {
+            if let Some(CachedLookup {
+                component,
+                child_id,
+            }) = self.cache.get(i)
+            {
+                if component == comp {
                     // yay
-                    last_index = cache.child_id;
+                    last_index = *child_id;
                     continue;
                 } else {
                     is_clear_cache = true;
                 }
             }
             if is_clear_cache {
+                /*
+                todo: shouldn't this be "i - 1"??? perf takes though
+                let mut v = vec![1,2,3,4,5,6,7];
+                for i in 0..7 {
+                    if i > 3 {
+                        v.truncate(i - 1);
+                    }
+                }
+                */
                 self.cache.truncate(i);
             }
 
@@ -207,12 +218,7 @@ impl CompressedPathBuilder {
                 self.node_id_mut(last_index)
                     .children_indexes
                     .push(next_index);
-                self.nodes.push(CompNodeBuilder {
-                    name_comp_id: comp_index,
-                    node_type: None,
-                    children_indexes: Vec::new(),
-                    delayed_symlink: None,
-                });
+                self.nodes.push(CompNodeBuilder::new_comp_id(comp_index));
                 last_index = next_index;
             };
 
@@ -232,6 +238,7 @@ impl CompressedPathBuilder {
             ScanFileType::File => last.node_type = Some(CompNodeType::File),
             ScanFileType::Symlink { target } => last.delayed_symlink = Some(target),
         };
+        last.stat = Some(stat);
     }
 
     fn find_node_children(
@@ -300,12 +307,14 @@ struct CompNodeBuilder {
     node_type: Option<CompNodeType>,
     children_indexes: Vec<ModelLocalTreeId>,
     delayed_symlink: Option<PathBuf>,
+    stat: Option<ScanStat>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CompNode {
     name_comp_id: usize,
     node_type: CompNodeType,
+    stat: Option<ScanStat>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -322,6 +331,18 @@ pub enum CompNodeType {
     },
 }
 
+impl CompNodeBuilder {
+    fn new_comp_id(name_comp_id: usize) -> Self {
+        Self {
+            name_comp_id,
+            node_type: None,
+            children_indexes: Vec::new(),
+            delayed_symlink: None,
+            stat: None,
+        }
+    }
+}
+
 impl CompNode {
     fn from_builder(
         compressed_builder: &CompressedPathBuilder,
@@ -333,6 +354,7 @@ impl CompNode {
             node_type,
             children_indexes,
             delayed_symlink,
+            stat,
         } = compressed_builder.node_id(node_id);
         let mut symlink_type = None;
         // debug_context.push(&name);
@@ -427,9 +449,14 @@ impl CompNode {
                     }
                 }
             });
+        if stat.is_none() {
+            warn!("stat missing for {node_id}")
+        }
+
         Ok(Self {
             name_comp_id: *name_comp_id,
             node_type: res_node_type,
+            stat: stat.clone(),
         })
     }
 
@@ -538,7 +565,7 @@ mod test {
     use std::ffi::OsStr;
     use std::path::PathBuf;
     use xana_commons_rs::tracing_re::info;
-    use xana_commons_rs::{PrettyUnwrap, ScanFileTypeWithPath};
+    use xana_commons_rs::{PrettyUnwrap, ScanFileTypeWithPath, ScanStat};
 
     #[test]
     fn basic() {
@@ -569,15 +596,24 @@ mod test {
 
     fn easy_compressed_builder() -> CompressedPathBuilder {
         CompressedPaths::from_scan_builder(vec![
-            ScanFileTypeWithPath::File {
-                path: PathBuf::from("/head/content"),
-            },
-            ScanFileTypeWithPath::File {
-                path: PathBuf::from("/nope/test"),
-            },
-            ScanFileTypeWithPath::File {
-                path: PathBuf::from("/head/other"),
-            },
+            (
+                ScanFileTypeWithPath::File {
+                    path: PathBuf::from("/head/content"),
+                },
+                ScanStat::dummy_value(),
+            ),
+            (
+                ScanFileTypeWithPath::File {
+                    path: PathBuf::from("/nope/test"),
+                },
+                ScanStat::dummy_value(),
+            ),
+            (
+                ScanFileTypeWithPath::File {
+                    path: PathBuf::from("/head/other"),
+                },
+                ScanStat::dummy_value(),
+            ),
         ])
     }
 

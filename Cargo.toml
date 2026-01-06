@@ -20,6 +20,7 @@ strum = { version = "0.27", features = ["derive"] }
 bytes = { version = "1.11" }
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
 zstd = { version = "0.13.3" }
+postcard = { version = "1.1", features = ["alloc"] }
 
 #[patch.crates-io]
 #diesel = { path = "../diesel/diesel" }
