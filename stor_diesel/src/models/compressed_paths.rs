@@ -1,10 +1,13 @@
 use crate::err::StorDieselErrorKind;
 use crate::{ModelLocalTreeId, StorDieselResult, StorIdType};
 use indexmap::IndexSet;
+use itertools::Itertools;
 use rayon::prelude::ParallelSliceMut;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::ffi::OsString;
+use std::iter::Peekable;
 use std::os::unix::prelude::OsStrExt;
 use std::path::{Component, Path, PathBuf};
 use xana_commons_rs::tracing_re::{info, trace, warn};
@@ -64,10 +67,16 @@ impl CompressedPaths {
     }
 
     fn from_build(builder: CompressedPathBuilder) -> StorDieselResult<Self> {
-        let nodes = (0..builder.nodes.len())
-            .into_iter()
+        let nodes_res = (0..builder.nodes.len())
+            .into_par_iter()
             .map(|i| CompNode::from_builder(&builder, ModelLocalTreeId::new_usize(i)))
-            .try_collect()?;
+            .collect::<Vec<_>>();
+        let nodes = nodes_res.into_iter().try_collect()?;
+
+        // let nodes = (0..builder.nodes.len())
+        //     .into_iter()
+        //     .map(|i| CompNode::from_builder(&builder, ModelLocalTreeId::new_usize(i)))
+        //     .try_collect()?;
         Ok(Self {
             parts: builder
                 .parts
@@ -82,33 +91,6 @@ impl CompressedPaths {
         CompressedIter::new(self)
     }
 
-    // pub fn iter_filter_file_paths(&self) -> impl Iterator<Item = Vec<&[u8]>> {
-    //     self.iter_parent_child()
-    //         .filter_map(|IterEntry { node_id, parent_id }| {
-    //             let cur = self.node_id(node_id);
-    //             match cur.node_type {
-    //                 CompNodeType::File => {}
-    //                 _ => return None,
-    //             };
-    //             self.path_vec_from_node_id(node_id)
-    //         })
-    // }
-
-    // todo generic between builder and main
-    fn find_node_parent(&self, node_id: ModelLocalTreeId) -> ModelLocalTreeId {
-        self.nodes
-            .par_iter()
-            .position_any(|v| {
-                if let CompNodeType::Dir { children_node_ids } = &v.node_type {
-                    children_node_ids.contains(&node_id)
-                } else {
-                    false
-                }
-            })
-            .map(ModelLocalTreeId::new_usize)
-            .unwrap()
-    }
-
     // todo generic between builder and main
     fn path_vec_from_node_id(&self, node_id: ModelLocalTreeId) -> Vec<&[u8]> {
         let mut path_rev = Vec::new();
@@ -116,7 +98,7 @@ impl CompressedPaths {
         loop {
             let cur_node = &self.node_id(next_id);
             path_rev.push(self.parts[cur_node.name_comp_id].as_slice());
-            next_id = self.find_node_parent(next_id);
+            next_id = cur_node.parent;
             if next_id.inner_id() == 0 {
                 break;
             }
@@ -134,6 +116,7 @@ impl CompressedPaths {
         }
     }
 }
+
 struct CompressedPathBuilder {
     parts: IndexSet<OsString>,
     nodes: Vec<CompNodeBuilder>,
@@ -147,7 +130,10 @@ impl CompressedPathBuilder {
     fn new() -> Self {
         Self {
             parts: IndexSet::new(),
-            nodes: vec![CompNodeBuilder::new_comp_id(usize::MAX - 100)],
+            nodes: vec![CompNodeBuilder::new_comp_id(
+                usize::MAX - 100,
+                ModelLocalTreeId::new(0),
+            )],
             cache: Vec::new(),
         }
     }
@@ -195,7 +181,8 @@ impl CompressedPathBuilder {
             }
             if is_clear_cache {
                 /*
-                todo: shouldn't this be "i - 1"??? perf takes though
+                todo: shouldn't this be "i - 1"??? this index is bad we should remove
+                 reduced perf suggests otherwise
                 let mut v = vec![1,2,3,4,5,6,7];
                 for i in 0..7 {
                     if i > 3 {
@@ -218,7 +205,8 @@ impl CompressedPathBuilder {
                 self.node_id_mut(last_index)
                     .children_indexes
                     .push(next_index);
-                self.nodes.push(CompNodeBuilder::new_comp_id(comp_index));
+                self.nodes
+                    .push(CompNodeBuilder::new_comp_id(comp_index, last_index));
                 last_index = next_index;
             };
 
@@ -254,22 +242,13 @@ impl CompressedPathBuilder {
     }
 
     // todo generic between builder and main
-    fn find_node_parent(&self, node_id: ModelLocalTreeId) -> ModelLocalTreeId {
-        self.nodes
-            .par_iter()
-            .position_any(|v| v.children_indexes.contains(&node_id))
-            .map(ModelLocalTreeId::new_usize)
-            .unwrap()
-    }
-
-    // todo generic between builder and main
     fn path_vec_from_node_id(&self, node_id: ModelLocalTreeId) -> Vec<&OsString> {
         let mut path_rev = Vec::new();
         let mut next_id = node_id;
         while next_id.inner_id() != 0 {
             let cur_node = self.node_id(next_id);
             path_rev.push(&self.parts[cur_node.name_comp_id]);
-            next_id = self.find_node_parent(next_id);
+            next_id = cur_node.parent;
             if next_id.inner_id() == 0 {
                 break;
             }
@@ -279,30 +258,34 @@ impl CompressedPathBuilder {
     }
 
     fn pathbuf_from_node_id(&self, node_id: ModelLocalTreeId) -> PathBuf {
-        self.path_vec_from_node_id(node_id).into_iter().collect()
+        let res = PathBuf::from("/");
+        res.join(PathBuf::from_iter(
+            self.path_vec_from_node_id(node_id).into_iter(),
+        ))
     }
 
-    fn path_to_node_id(&self, path: &Path) -> StorDieselResult<ModelLocalTreeId> {
+    fn path_to_node_id(&self, path: &Path) -> Option<ModelLocalTreeId> {
         let mut comps = path.components();
         assert_eq!(comps.next(), Some(Component::RootDir));
         let mut next_id = ModelLocalTreeId::new(0);
         for comp in comps {
             let Component::Normal(comp) = comp else {
-                return Err(StorDieselErrorKind::UnknownComponent.build_message(path.display()));
+                return None;
             };
             let Some(comp_id) = self.parts.get_index_of(comp) else {
-                return Err(StorDieselErrorKind::UnknownComponent.build_message(path.display()));
+                return None;
             };
             let Some(child_id) = self.find_node_children(next_id, comp_id) else {
-                return Err(StorDieselErrorKind::UnknownComponent.build_message(path.display()));
+                return None;
             };
             next_id = child_id;
         }
-        Ok(next_id)
+        Some(next_id)
     }
 }
 
 struct CompNodeBuilder {
+    parent: ModelLocalTreeId,
     name_comp_id: usize,
     node_type: Option<CompNodeType>,
     children_indexes: Vec<ModelLocalTreeId>,
@@ -312,6 +295,7 @@ struct CompNodeBuilder {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CompNode {
+    parent: ModelLocalTreeId,
     name_comp_id: usize,
     node_type: CompNodeType,
     stat: Option<ScanStat>,
@@ -327,13 +311,14 @@ pub enum CompNodeType {
         target_node_id: ModelLocalTreeId,
     },
     BrokenSymlink {
-        raw: String,
+        raw: Vec<u8>,
     },
 }
 
 impl CompNodeBuilder {
-    fn new_comp_id(name_comp_id: usize) -> Self {
+    fn new_comp_id(name_comp_id: usize, parent: ModelLocalTreeId) -> Self {
         Self {
+            parent,
             name_comp_id,
             node_type: None,
             children_indexes: Vec::new(),
@@ -350,6 +335,7 @@ impl CompNode {
         // debug_context: &mut PathBuf,
     ) -> StorDieselResult<Self> {
         let CompNodeBuilder {
+            parent,
             name_comp_id,
             node_type,
             children_indexes,
@@ -390,20 +376,24 @@ impl CompNode {
                 }
                 if let Some(target_node_id) = last_index {
                     symlink_type = Some(CompNodeType::Symlink { target_node_id })
+                } else {
+                    symlink_type = Some(CompNodeType::BrokenSymlink {
+                        raw: delayed_symlink.as_os_str().as_bytes().to_vec(),
+                    });
                 }
             } else {
-                let cur_path: PathBuf = compressed_builder
-                    .path_vec_from_node_id(node_id)
-                    .into_iter()
-                    .collect();
+                let cur_path: PathBuf = compressed_builder.pathbuf_from_node_id(node_id);
                 let new_path_raw = cur_path.join(delayed_symlink);
                 let new_path = new_path_raw.normalize_lexically().map_err(|_marker_e| {
                     StorDieselErrorKind::SymlinkResolveFailed.build_message(new_path_raw.display())
                 })?;
-                let ref_id = compressed_builder.path_to_node_id(&new_path)?;
-                symlink_type = Some(CompNodeType::Symlink {
-                    target_node_id: ref_id,
-                })
+                if let Some(target_node_id) = compressed_builder.path_to_node_id(&new_path) {
+                    symlink_type = Some(CompNodeType::Symlink { target_node_id })
+                } else {
+                    symlink_type = Some(CompNodeType::BrokenSymlink {
+                        raw: delayed_symlink.as_os_str().as_bytes().to_vec(),
+                    });
+                }
                 // this path should now resolve
             }
         }
@@ -420,11 +410,11 @@ impl CompNode {
                 Some(v) => {
                     assert!(
                         children_indexes.is_empty(),
-                        "node {node_id} type {v:?} but has {} children",
-                        children_indexes
-                            .iter()
-                            .map(|v| v.to_string())
-                            .collect::<CommaJoiner>()
+                        "node {node_id} type {v:?} but has _ children",
+                        // children_indexes
+                        //     .iter()
+                        //     .map(|v| v.to_string())
+                        //     .collect::<CommaJoiner>()
                     );
                     Some(v.clone())
                 }
@@ -454,6 +444,7 @@ impl CompNode {
         }
 
         Ok(Self {
+            parent: *parent,
             name_comp_id: *name_comp_id,
             node_type: res_node_type,
             stat: stat.clone(),
@@ -533,7 +524,10 @@ impl<'c> Iterator for CompressedIter<'c> {
                 self.next()
             }
             CompNodeType::BrokenSymlink { raw } => {
-                trace!("ignore unsupported broken symlink {raw}");
+                trace!(
+                    "ignore unsupported broken symlink {}",
+                    str::from_utf8(raw).unwrap_or("NOT_UTF8")
+                );
                 self.next()
             }
         }

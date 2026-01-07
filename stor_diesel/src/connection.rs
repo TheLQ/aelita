@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use xana_commons_rs::num_format_re::ToFormattedString;
-use xana_commons_rs::tracing_re::{Level, info, span};
+use xana_commons_rs::tracing_re::{Level, debug, info, span};
 use xana_commons_rs::{LOCALE, read_file_better};
 
 pub enum PermaStore {
@@ -111,18 +111,18 @@ impl Instrumentation for StorInstrument {
                         && binds < prefix + suffix
                     {
                         let query_str = &query_str[..binds];
-                        info!("{query_str} -- ...binds truncate...");
+                        debug!("{query_str} -- ...binds truncate...");
                     } else {
                         let small_prefix = &query_str[0..prefix];
                         let small_suffix = &query_str[(query_str.len() - suffix)..];
                         let removed = query_str.len() - prefix - suffix;
-                        info!(
+                        debug!(
                             "{small_prefix}...truncate {} chars...{small_suffix}",
                             removed.to_formatted_string(&LOCALE)
                         );
                     }
                 } else {
-                    info!("{}", query_str);
+                    debug!("{}", query_str);
                 }
             }
             _ => (),
