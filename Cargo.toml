@@ -4,8 +4,9 @@ resolver = "2"
 
 default-members = ["www"]
 
-#[profile.release]
+[profile.release]
 #lto = "fat"
+debug = true
 
 #
 # Global Dependencies
@@ -25,5 +26,3 @@ postcard = { version = "1.1", features = ["alloc"] }
 #[patch.crates-io]
 #diesel = { path = "../diesel/diesel" }
 
-#[profile.release]
-#debug = true

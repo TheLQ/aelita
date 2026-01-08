@@ -26,6 +26,8 @@ pub fn assert_test_database(conn: &mut StorTransaction) -> QueryResult<()> {
     Ok(())
 }
 
+const ACTUAL_SQL_MAX_PACKET_SIZE: usize = 1073741824;
+pub const SQL_MAX_PACKET_SIZE: usize = ACTUAL_SQL_MAX_PACKET_SIZE - /*1 MiB*/1024usize.pow(2);
 pub fn assert_packet_size_huge_enough(conn: &mut StorConnection) -> StorDieselResult<()> {
     let max_packet_size = storapi_variables_get(conn, "max_allowed_packet")?;
     if max_packet_size < /*100 MiB*/100 * 1024 * 1024 {
@@ -37,6 +39,11 @@ pub fn assert_packet_size_huge_enough(conn: &mut StorConnection) -> StorDieselRe
         info!(
             "small packet size {max_packet_size} = {} MiB",
             max_packet_size / 1024 / 1024
+        );
+        assert_eq!(
+            usize::try_from(max_packet_size).unwrap(),
+            ACTUAL_SQL_MAX_PACKET_SIZE,
+            "update const with new size?"
         );
         Ok(())
     }

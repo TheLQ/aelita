@@ -30,12 +30,19 @@ CREATE TABLE IF NOT EXISTS `hd1_files_components`
     UNIQUE KEY `comp` (`component`)
 );
 
+# DROP TABLE `hd1_files_parents`
 CREATE TABLE IF NOT EXISTS `hd1_files_parents`
 (
     `tree_id`      INTEGER UNSIGNED NOT NULL,
     `tree_depth`   INTEGER UNSIGNED NOT NULL,
     `component_id` INTEGER UNSIGNED NOT NULL,
     `parent_id`    INTEGER UNSIGNED,
+    `created`      TIMESTAMP        NOT NULL,
+    `modified`     TIMESTAMP        NOT NULL,
+    `size`         INTEGER UNSIGNED NOT NULL,
+    `user_id`      INTEGER UNSIGNED NOT NULL,
+    `group_id`     INTEGER UNSIGNED NOT NULL,
+    `hard_links`   INTEGER UNSIGNED NOT NULL,
     PRIMARY KEY (`tree_id`),
     UNIQUE KEY `glob_unique` (`tree_depth`, `parent_id`, `component_id`),
     CONSTRAINT `fk_hd1_files_parents_components`

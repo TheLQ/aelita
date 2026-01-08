@@ -29,6 +29,9 @@ pub enum StorDieselErrorKind {
     CompressedUnknownComponent,
     //
     SymlinkResolveFailed,
+    //
+    EmptyResult,
+    JournalHashFailed,
 }
 
 crash_builder!(

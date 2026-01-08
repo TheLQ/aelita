@@ -110,13 +110,16 @@ diesel::table! {
         #[max_length = 100]
         cause_xrn -> Nullable<Varchar>,
         cause_description -> Text,
+        #[max_length = 32]
+        data_hash -> Nullable<Binary>,
     }
 }
 
 diesel::table! {
-    journal_immutable_data (journal_id) {
+    journal_immutable_data (data_id) {
         journal_id -> Unsigned<Integer>,
         data -> Longblob,
+        data_id -> Unsigned<Integer>,
     }
 }
 
@@ -191,7 +194,6 @@ diesel::joinable!(hd1_galleries -> hd1_sites (hd_site_id));
 diesel::joinable!(hd1_galleries -> journal_immutable (journal_id));
 diesel::joinable!(hd1_roots -> space_names (space_id));
 diesel::joinable!(hd1_sites -> journal_immutable (journal_id));
-diesel::joinable!(journal_immutable_data -> journal_immutable (journal_id));
 diesel::joinable!(space_names -> journal_immutable (journal_id));
 diesel::joinable!(space_owned -> journal_immutable (journal_id));
 diesel::joinable!(space_owned -> space_names (space_id));

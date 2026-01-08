@@ -4,12 +4,12 @@ use aelita_stor_diesel::ModelJournalTypeName;
 use aelita_stor_diesel::storapi_hd_revert_by_pop;
 use aelita_stor_diesel::{PermaStore, StorTransaction, establish_connection_or_panic};
 use aelita_stor_diesel::{storapi_journal_commit_new, storapi_journal_commit_remain_next};
-use aelita_stor_import::err::{StorImportError, StorImportResult};
+use aelita_stor_import::err::{StorImportError, StorImportErrorKind, StorImportResult};
 use aelita_stor_import::{storcommit_hd, storcommit_torrents};
 use std::ops::ControlFlow;
 use std::process::ExitCode;
 use xana_commons_rs::tracing_re::info;
-use xana_commons_rs::{BasicWatch, pretty_main};
+use xana_commons_rs::{BasicWatch, CrashErrKind, ResultXanaMap, pretty_main};
 
 fn main() -> ExitCode {
     log_init();
@@ -28,7 +28,9 @@ fn run() -> StorImportResult<()> {
     let mut total_commit = 0;
     if MEGA_TRANSACTION {
         StorTransaction::new_transaction("cli-import", &mut conn, |conn| {
-            while let Some(row) = storapi_journal_commit_remain_next(conn)? {
+            while let Some(row) = storapi_journal_commit_remain_next(conn)
+                .map_err(StorImportErrorKind::DieselFailed.xana_map())?
+            {
                 process_row(conn, row)?;
                 total_commit += 1;
             }
@@ -37,7 +39,9 @@ fn run() -> StorImportResult<()> {
     } else {
         loop {
             let next = StorTransaction::new_transaction("cli-import", &mut conn, |conn| {
-                if let Some(row) = storapi_journal_commit_remain_next(conn)? {
+                if let Some(row) = storapi_journal_commit_remain_next(conn)
+                    .xana_err(StorImportErrorKind::DieselFailed)?
+                {
                     process_row(conn, row)?;
                     total_commit += 1;
                     Ok::<_, StorImportError>(ControlFlow::Continue(()))

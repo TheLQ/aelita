@@ -1,14 +1,14 @@
 use crate::{
-    CompNodeType, CompressedPaths, HdPathAssociation, IterEntry, IterStack, ModelFileCompId,
-    ModelFileTreeId, ModelLocalTreeId, NewHdPathAssociation, StorDieselResult, StorIdType,
-    StorTransaction, storapi_hd_components_get_or_insert,
+    CompNodeType, CompressedPaths, HdPathAssociation, ModelFileCompId, ModelFileTreeId,
+    ModelLocalTreeId, NewHdPathAssociation, StorDieselResult, StorIdType, StorTransaction,
+    storapi_hd_components_get_or_insert,
 };
 use diesel::{HasQuery, RunQueryDsl};
 use std::collections::HashMap;
 
 /// To use AUTO INCREMENT each pass must query the database
 /// This is extremely slow with millions of rows
-/// So instead locally copy and do simple insert
+/// So instead calculate IDs locally (synced with db) and use pure-rust model gen
 pub fn build_associations_from_compressed(
     conn: &mut StorTransaction,
     compressed: &CompressedPaths,

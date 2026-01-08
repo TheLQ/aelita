@@ -1,21 +1,15 @@
 use crate::err::StorDieselErrorKind;
-use crate::{ModelFileCompId, ModelLocalTreeId, StorDieselResult, StorIdType};
+use crate::{ModelLocalTreeId, StorDieselResult, StorIdType};
 use indexmap::IndexSet;
 use itertools::Itertools;
 use rayon::prelude::ParallelSliceMut;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
-use std::io::stdin;
-use std::iter::Peekable;
-use std::ops::DerefMut;
 use std::os::unix::prelude::OsStrExt;
 use std::path::{Component, Path, PathBuf};
 use xana_commons_rs::tracing_re::{info, trace, warn};
-use xana_commons_rs::{
-    CommaJoiner, CrashErrKind, ProgressWidget, ScanFileType, ScanFileTypeWithPath, ScanStat,
-};
+use xana_commons_rs::{CrashErrKind, ProgressWidget, ScanFileType, ScanFileTypeWithPath, ScanStat};
 
 /// Store file tree as a... tree.
 /// Because Vec<PathBuf> is very inefficient at 10,000,000s of files

@@ -1,16 +1,15 @@
 use crate::err::{StorImportErrorKind, StorImportResult};
 use aelita_stor_diesel::RawDieselBytes;
 use serde::{Deserialize, Serialize};
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsStr;
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, BufWriter, Read, Write};
-use std::ops::Range;
 use std::os::unix::prelude::OsStrExt;
 use std::path::{Path, PathBuf};
 use xana_commons_rs::tracing_re::info;
 use xana_commons_rs::{
     BasicWatch, CrashErrKind, RecursiveStatResult, ResultXanaMap, ScanFileTypeWithPath, ScanStat,
-    SimpleIoMap, io_op,
+    SimpleIoMap,
 };
 
 type InputCacheData = (DiskScanFile, ScanStat);
@@ -40,7 +39,7 @@ impl ChannelOutSaved {
 
     pub(crate) fn into_output(mut self) -> Vec<RecursiveStatResult> {
         let len = self.output.len();
-        let mut remain = len % FLUSH_AT_ENTRIES;
+        let remain = len % FLUSH_AT_ENTRIES;
         if remain != 0 {
             for value in (len - remain)..len {
                 self.flush_values(value);

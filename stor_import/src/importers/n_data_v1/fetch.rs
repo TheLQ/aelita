@@ -3,24 +3,17 @@ use crate::importers::n_data_v1::path_backup::{ChannelOutSaved, read_input_cache
 use aelita_stor_diesel::ModelJournalTypeName;
 use aelita_stor_diesel::NewModelJournalImmutable;
 use aelita_stor_diesel::StorTransaction;
-use aelita_stor_diesel::err::StorDieselErrorKind::LoadInfileFailed;
 use aelita_stor_diesel::path_const::PathConst;
 use aelita_stor_diesel::storapi_journal_immutable_push_single;
 use aelita_stor_diesel::{CompressedPaths, RawDieselBytes};
-use serde::{Deserialize, Serialize};
-use std::ffi::{OsStr, OsString};
-use std::fs::{File, OpenOptions};
-use std::io::{BufWriter, Write, stdin};
-use std::ops::Range;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::LazyLock;
 use std::thread;
 use xana_commons_rs::num_format_re::ToFormattedString;
-use xana_commons_rs::tracing_re::{debug, error, info, trace, warn};
+use xana_commons_rs::tracing_re::{debug, error, info, trace};
 use xana_commons_rs::{
-    BasicWatch, CrashErrKind, LOCALE, RecursiveStatResult, ResultXanaMap, ScanFileType,
-    ScanFileTypeWithPath, ScanStat, SimpleIoMap, read_dirs_recursive_better,
-    read_dirs_recursive_stat_better,
+    BasicWatch, CrashErrKind, LOCALE, RecursiveStatResult, ResultXanaMap, SimpleIoMap,
+    read_dirs_recursive_better, read_dirs_recursive_stat_better,
 };
 
 static ROOTS: LazyLock<Vec<String>> = LazyLock::new(|| {
@@ -43,7 +36,7 @@ pub fn storfetch_paths_from_disk(
     conn: &mut StorTransaction,
     roots: &[impl AsRef<Path>],
 ) -> StorImportResult<()> {
-    const LOAD_FROM_DISK: bool = false;
+    const LOAD_FROM_DISK: bool = true;
     let scans = if LOAD_FROM_DISK || !SCAN_CACHE.exists() {
         scan_disk(roots)
     } else {
@@ -123,14 +116,14 @@ fn stat_scan_to_compressed(scans: Vec<RecursiveStatResult>) -> StorImportResult<
     diff_i = postcard_size_i - compressed_size_i;
     percent = (compressed_size_f / postcard_size_f) * 100.0;
     info!(
-        " - post diff {:>common_width$}  saved % {:.1}",
+        " - post diff {:>common_width$}  reduced to % {:.1}",
         diff_i.to_formatted_string(&LOCALE),
         percent
     );
     diff_i = raw_size_i - compressed_size_i;
     percent = (compressed_size_f / raw_size_f) * 100.0;
     info!(
-        " - raw diff {:>common_width$}  saved % {:.1}",
+        " - raw diff {:>common_width$}  reduced to % {:.1}",
         diff_i.to_formatted_string(&LOCALE),
         percent
     );
