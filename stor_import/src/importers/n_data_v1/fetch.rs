@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 use std::thread;
 use xana_commons_rs::num_format_re::ToFormattedString;
-use xana_commons_rs::tracing_re::{error, info, trace, warn};
+use xana_commons_rs::tracing_re::{debug, error, info, trace, warn};
 use xana_commons_rs::{
     BasicWatch, CrashErrKind, LOCALE, RecursiveStatResult, ResultXanaMap, ScanFileType,
     ScanFileTypeWithPath, ScanStat, SimpleIoMap, read_dirs_recursive_better,
@@ -29,7 +29,7 @@ static ROOTS: LazyLock<Vec<String>> = LazyLock::new(|| {
     raw.split('\n').map(|s| s.to_string()).collect()
 });
 pub const COMPRESSED_CACHE: PathConst = PathConst("compressed_paths.cache.json");
-pub const INPUT_CACHE: PathConst = PathConst("compressed_paths.inputcache.json");
+pub const SCAN_CACHE: PathConst = PathConst("compressed_paths.scancache.json");
 
 pub fn storfetch_paths_from_cache(conn: &mut StorTransaction) -> StorImportResult<()> {
     let compressed_bytes = std::fs::read(COMPRESSED_CACHE)
@@ -44,25 +44,29 @@ pub fn storfetch_paths_from_disk(
     roots: &[impl AsRef<Path>],
 ) -> StorImportResult<()> {
     const LOAD_FROM_DISK: bool = false;
-    let scans = if LOAD_FROM_DISK || !INPUT_CACHE.exists() {
+    let scans = if LOAD_FROM_DISK || !SCAN_CACHE.exists() {
         scan_disk(roots)
     } else {
-        input_read_from_cache()?
+        scan_disk_cached()?
     };
 
     let compressed = stat_scan_to_compressed(scans)?;
-    // insert_compressed_encoded(conn, RawDieselBytes(encoded))?;
+    let watch = BasicWatch::start();
+    let encoded = RawDieselBytes::serialize_postcard(&compressed)
+        .xana_err(StorImportErrorKind::InvalidCompressedPaths)?;
+    info!("CompressedPaths encoded in {watch}");
+    insert_compressed_encoded(conn, encoded)?;
     Ok(())
 }
 
-fn input_read_from_cache() -> StorImportResult<Vec<RecursiveStatResult>> {
+fn scan_disk_cached() -> StorImportResult<Vec<RecursiveStatResult>> {
     let watch = BasicWatch::start();
-    let res_cache = read_input_cache(INPUT_CACHE.as_ref())?;
+    let res_cache = read_input_cache(SCAN_CACHE.as_ref())?;
     let res = res_cache
         .into_iter()
         .map(|(disk, scan)| ((&disk).into(), scan))
         .collect();
-    info!("Loaded from {} in {watch}", INPUT_CACHE.display());
+    info!("Loaded from {} in {watch}", SCAN_CACHE.display());
     Ok(res)
 }
 
@@ -75,29 +79,60 @@ fn stat_scan_to_compressed(scans: Vec<RecursiveStatResult>) -> StorImportResult<
         })
         .sum();
 
+    let watch = BasicWatch::start();
     let compressed = CompressedPaths::from_scan(scans)?;
+    debug!("CompressedPath built in {watch}");
+    let postcard_size_i;
+    let compressed_size_i;
     let encoded = {
         let watch = BasicWatch::start();
         let post = RawDieselBytes::serialize_postcard(&compressed)
             .map_err(StorImportErrorKind::InvalidCompressedPaths.err_map())?;
+        postcard_size_i = post.0.len() as isize;
         trace!("Postcard serialized in {watch}");
 
         let watch = BasicWatch::start();
         let real = zstd::encode_all(post.as_inner(), 0)
             .map_io_err("zstd-err")
             .xana_err(StorImportErrorKind::InvalidCompressedPaths)?;
+        compressed_size_i = real.len() as isize;
         trace!("ZFS serialized in {watch}");
         real
     };
-    let encoded_size: usize = encoded.len();
 
-    let saved_bytes = raw_size as isize - encoded_size as isize;
-    let saved_percent = ((raw_size as f64 - encoded_size as f64) / raw_size as f64) * 100.0;
+    let raw_size_i = raw_size as isize;
+    let raw_size_f = raw_size as f64;
+    let postcard_size_f = postcard_size_i as f64;
+    let compressed_size_f = compressed_size_i as f64;
+    let common_width = 14;
+
+    let mut diff_i;
+    let mut percent;
     info!(
-        "encoded {} raw {} saved {} reduction {saved_percent:.1}%",
-        encoded_size.to_formatted_string(&LOCALE),
-        raw_size.to_formatted_string(&LOCALE),
-        saved_bytes.to_formatted_string(&LOCALE)
+        "zstd     {:>common_width$}",
+        compressed_size_i.to_formatted_string(&LOCALE)
+    );
+    info!(
+        "postcard {:>common_width$}",
+        postcard_size_i.to_formatted_string(&LOCALE),
+    );
+    info!(
+        "raw      {:>common_width$}",
+        raw_size_i.to_formatted_string(&LOCALE),
+    );
+    diff_i = postcard_size_i - compressed_size_i;
+    percent = (compressed_size_f / postcard_size_f) * 100.0;
+    info!(
+        " - post diff {:>common_width$}  saved % {:.1}",
+        diff_i.to_formatted_string(&LOCALE),
+        percent
+    );
+    diff_i = raw_size_i - compressed_size_i;
+    percent = (compressed_size_f / raw_size_f) * 100.0;
+    info!(
+        " - raw diff {:>common_width$}  saved % {:.1}",
+        diff_i.to_formatted_string(&LOCALE),
+        percent
     );
 
     std::fs::write(COMPRESSED_CACHE, &encoded)
@@ -111,7 +146,7 @@ fn stat_scan_to_compressed(scans: Vec<RecursiveStatResult>) -> StorImportResult<
 fn scan_disk(roots: &[impl AsRef<Path>]) -> Vec<RecursiveStatResult> {
     let total_watch = BasicWatch::start();
     let mut handles = Vec::new();
-    let mut output = ChannelOutSaved::new(INPUT_CACHE.as_ref());
+    let mut output = ChannelOutSaved::new(SCAN_CACHE.as_ref());
 
     let (output_send, output_recv) = std::sync::mpsc::channel::<Option<RecursiveStatResult>>();
 

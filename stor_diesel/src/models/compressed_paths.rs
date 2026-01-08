@@ -158,6 +158,7 @@ impl CompressedPathBuilder {
         self.nodes.get_mut(node_id.inner_usize()).unwrap()
     }
 
+    /// hot. 200-500k/second expected
     fn push_path(&mut self, path: &Path, new_node_type: ScanFileType, stat: ScanStat) {
         // trace!("pushing {}", path.display());
 
@@ -281,6 +282,8 @@ impl CompressedPathBuilder {
         let node = &self.nodes[node_id.inner_usize()];
         // [slice::contains] for usize is niche optimized
         if node.children_comp_ids.contains(&needle_comp_id) {
+            // this isn't niched AFAIK
+            // but is enormously faster than node.children_indexes equivalent
             let res = node
                 .children_comp_ids
                 .iter()

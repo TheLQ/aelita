@@ -83,12 +83,18 @@ impl ChannelOutSaved {
 //
 
 pub fn read_input_cache(path: &Path) -> StorImportResult<Vec<InputCacheData>> {
-    let watch = BasicWatch::start();
     let file = File::open(path)
         .map_io_err(path)
         .xana_err(StorImportErrorKind::InvalidCompressedPaths)?;
-    let mut reader = BufReader::new(file);
+    let reader = BufReader::new(file);
+    read_input_cache_buffer(path, reader)
+}
 
+fn read_input_cache_buffer(
+    path: &Path,
+    mut reader: BufReader<File>,
+) -> StorImportResult<Vec<InputCacheData>> {
+    let watch = BasicWatch::start();
     let mut res = Vec::new();
     let mut total_len = 0;
     loop {
@@ -189,6 +195,7 @@ impl From<&DiskScanFile> for ScanFileTypeWithPath {
 mod test {
     use crate::importers::n_data_v1::path_backup::{ChannelOutSaved, read_input_cache};
     use aelita_commons::log_init;
+    use std::env::temp_dir;
     use std::path::Path;
     use xana_commons_rs::tracing_re::info;
     use xana_commons_rs::{PrettyUnwrap, ScanFileTypeWithPath, ScanStat};
@@ -197,10 +204,10 @@ mod test {
     fn end_to_end() {
         log_init();
 
-        let output_path = Path::new("/tmp/path_backup_end_to_end.dat");
-        let _ = std::fs::remove_file(output_path);
+        let output_path = temp_dir().join("path_backup_end_to_end.dat");
+        let _ = std::fs::remove_file(&output_path);
         {
-            let mut out = ChannelOutSaved::new(output_path);
+            let mut out = ChannelOutSaved::new(&output_path);
             out.push((
                 ScanFileTypeWithPath::Dir {
                     path: "/lol".into(),
@@ -215,9 +222,7 @@ mod test {
             ));
             out.into_output();
         }
-        let saved_data = std::fs::read(output_path).unwrap();
-        info!("saved data {}", saved_data.len());
-        let res = read_input_cache(&saved_data).unwrap();
+        let res = read_input_cache(&output_path).unwrap();
         println!("{res:?}")
     }
 }
