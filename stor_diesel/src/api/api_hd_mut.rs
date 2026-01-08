@@ -32,7 +32,7 @@ pub fn storapi_rebuild_parents(conn: &mut StorTransaction) -> StorDieselResult<(
 
     // push_associations_fancy_insert(conn)?;
     let watch = BasicWatch::start();
-    let compressed_paths_raw = storapi_journal_get_data(conn, ModelJournalId::new(21))?;
+    let compressed_paths_raw = storapi_journal_get_data(conn, ModelJournalId::new(144))?;
     debug!(
         "loaded {} MB in {watch}",
         (compressed_paths_raw.as_inner().len() / 1000 / 1000).to_formatted_string(&LOCALE)
@@ -85,22 +85,22 @@ fn components_update(
     );
     assert_eq!(total_rows, expected_length);
 
-    // let watch = BasicWatch::start();
-    // let rows = diesel::sql_query(
-    //     "INSERT IGNORE INTO `hd1_files_components` (component) \
-    //     SELECT component FROM `fast_hd_components`",
-    // )
-    // // ON DUPLICATE KEY UPDATE `hd1_files_tree`.component = `hd1_files_tree`.component
-    // .execute(conn.inner())?;
-    // :-(
-    // let rows = diesel::insert_into(schema::hd1_files_tree::table)
-    //     .values(schema::hd1_files_tree::table.as_sql())
-    //     .execute(conn.inner())?;
-    // info!(
-    //     "added {} ({:.1}?) components in {watch}",
-    //     rows.to_formatted_string(&LOCALE),
-    //     rows / components_unique_input.len() * 100
-    // );
+    let watch = BasicWatch::start();
+    let rows = diesel::sql_query(
+        "INSERT INTO `hd1_files_components` (component) \
+        SELECT component FROM `fast_hd_components` fast \
+        WHERE \
+        NOT EXISTS (\
+            SELECT 1 FROM `hd1_files_components` WHERE fast.component = `fast_hd_components`.`component`\
+        )",
+    )
+    .execute(conn.inner())?;
+
+    info!(
+        "added {} ({:.1}?) components in {watch}",
+        rows.to_formatted_string(&LOCALE),
+        rows / components_unique_input.len() * 100
+    );
 
     Ok(())
 }
