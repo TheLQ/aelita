@@ -1,13 +1,15 @@
 use crate::err::StorDieselErrorKind;
-use crate::{ModelLocalTreeId, StorDieselResult, StorIdType};
+use crate::{ModelFileCompId, ModelLocalTreeId, StorDieselResult, StorIdType};
 use indexmap::IndexSet;
 use itertools::Itertools;
 use rayon::prelude::ParallelSliceMut;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
+use std::io::stdin;
 use std::iter::Peekable;
+use std::ops::DerefMut;
 use std::os::unix::prelude::OsStrExt;
 use std::path::{Component, Path, PathBuf};
 use xana_commons_rs::tracing_re::{info, trace, warn};
@@ -32,7 +34,7 @@ impl CompressedPaths {
 
         let mut build = CompressedPathBuilder::new();
         let total_scans = scans.len();
-        let mut progress = ProgressWidget::new(4096);
+        let mut progress = ProgressWidget::new(4096 * 4);
         for (i, (scan, stat)) in scans.into_iter().enumerate() {
             progress.log(i, total_scans, |msg| info!("scan import {msg}"));
 
@@ -124,6 +126,7 @@ struct CompressedPathBuilder {
     /// Vastly improving performance with 30 million paths up to 9 levels deep
     /// 10k/sec to 250k/sec
     cache: Vec<CachedLookup>,
+    fast_path: PathBuf,
 }
 
 impl CompressedPathBuilder {
@@ -135,6 +138,7 @@ impl CompressedPathBuilder {
                 ModelLocalTreeId::new(0),
             )],
             cache: Vec::new(),
+            fast_path: PathBuf::from("/"),
         }
     }
 
@@ -147,51 +151,86 @@ impl CompressedPathBuilder {
     }
 
     fn push_path(&mut self, path: &Path, new_node_type: ScanFileType, stat: ScanStat) {
-        let mut comps = path.components();
-        assert_eq!(comps.next(), Some(Component::RootDir));
-        self.add_node_linear(comps, new_node_type, path, stat)
-    }
+        // trace!("pushing {}", path.display());
 
-    fn add_node_linear<'c>(
-        &mut self,
-        comps: impl Iterator<Item = Component<'c>>,
-        new_node_type: ScanFileType,
-        debug_source: &Path,
-        stat: ScanStat,
-    ) {
-        let mut last_index = ModelLocalTreeId::new(0);
-        for (i, comp) in comps.enumerate() {
-            let Component::Normal(comp) = comp else {
-                panic!("Valid path {}", debug_source.display())
-            };
-
-            let mut is_clear_cache = false;
-            if let Some(CachedLookup {
-                component,
-                child_id,
-            }) = self.cache.get(i)
-            {
-                if component == comp {
-                    // yay
-                    last_index = *child_id;
-                    continue;
+        // fast short circuit
+        let mut last_index;
+        if self.fast_path.as_os_str() != "/" {
+            loop {
+                let path_bytes = path.as_os_str().as_bytes();
+                let fast_bytes = self.fast_path.as_os_str().as_bytes();
+                if path_bytes.starts_with(fast_bytes)
+                    // avoid a/bb from matching a/bbbb
+                    && path_bytes[fast_bytes.len()] == b'/'
+                {
+                    break;
                 } else {
-                    is_clear_cache = true;
-                }
-            }
-            if is_clear_cache {
-                /*
-                todo: shouldn't this be "i - 1"??? this index is bad we should remove
-                 reduced perf suggests otherwise
-                let mut v = vec![1,2,3,4,5,6,7];
-                for i in 0..7 {
-                    if i > 3 {
-                        v.truncate(i - 1);
+                    let is_root = !self.fast_path.pop();
+                    if is_root {
+                        break;
                     }
                 }
-                */
-                self.cache.truncate(i);
             }
+
+            let cached_comps = self.fast_path.iter().skip(1).count();
+            if cached_comps < 2 {
+                warn!(
+                    "fast path {} useless for {}",
+                    self.fast_path.display(),
+                    path.display()
+                );
+            } else if cached_comps > 50 {
+                panic!(
+                    "fast path {} useless for {}",
+                    self.fast_path.display(),
+                    path.display()
+                );
+            }
+            self.cache.truncate(cached_comps);
+
+            if let Some(last_cache) = self.cache.last() {
+                assert_eq!(last_cache.component, self.fast_path.iter().last().unwrap());
+                last_index = last_cache.child_id;
+            } else {
+                // empty, reset
+                last_index = ModelLocalTreeId::new(0);
+            }
+        } else {
+            last_index = ModelLocalTreeId::new(0);
+        }
+
+        // let remain_path = path.mutself.fast_path).unwrap_or_else(|e| {
+        //     panic!(
+        //         "failed to strip '{}' from '{}' - {e}",
+        //         self.fast_path.display(),
+        //         path.display()
+        //     )
+        // });
+        let remain_path = {
+            let path_bytes = path.as_os_str().as_bytes();
+            let fast_bytes = self.fast_path.as_os_str().as_bytes();
+            // trace!(
+            //     "fast {} remove from {}",
+            //     self.fast_path.display(),
+            //     path.display()
+            // );
+            if path_bytes == b"/" {
+                path
+            } else if fast_bytes == b"/" {
+                Path::new(OsStr::from_bytes(&path_bytes[1..]))
+            } else {
+                Path::new(OsStr::from_bytes(
+                    &path_bytes[(fast_bytes.len() + /*slash*/1)..],
+                ))
+            }
+        };
+        // trace!("remain {}", remain_path.display());
+        let mut comps = remain_path.components();
+        // assert_eq!(comps.next(), Some(Component::RootDir));
+        for (i, comp) in comps.enumerate() {
+            let Component::Normal(comp) = comp else {
+                panic!("invalid path {}", path.display())
+            };
 
             let comp_index = self.parts.get_index_of(comp).unwrap_or_else(|| {
                 self.parts.insert(comp.to_os_string());
@@ -202,9 +241,9 @@ impl CompressedPathBuilder {
                 last_index = node_id;
             } else {
                 let next_index = ModelLocalTreeId::new_usize(self.nodes.len());
-                self.node_id_mut(last_index)
-                    .children_indexes
-                    .push(next_index);
+                let prev_node = self.node_id_mut(last_index);
+                prev_node.children_indexes.push(next_index);
+                prev_node.children_comp_ids.push(comp_index);
                 self.nodes
                     .push(CompNodeBuilder::new_comp_id(comp_index, last_index));
                 last_index = next_index;
@@ -215,8 +254,12 @@ impl CompressedPathBuilder {
                 component: comp.to_os_string(),
             })
         }
-        let last = self.node_id_mut(last_index);
 
+        if let Some(parent) = path.parent() {
+            self.fast_path = parent.to_path_buf();
+        }
+
+        let last = self.node_id_mut(last_index);
         match new_node_type {
             ScanFileType::Dir => {
                 last.node_type = Some(CompNodeType::Dir {
@@ -289,6 +332,7 @@ struct CompNodeBuilder {
     name_comp_id: usize,
     node_type: Option<CompNodeType>,
     children_indexes: Vec<ModelLocalTreeId>,
+    children_comp_ids: Vec<usize>,
     delayed_symlink: Option<PathBuf>,
     stat: Option<ScanStat>,
 }
@@ -322,6 +366,7 @@ impl CompNodeBuilder {
             name_comp_id,
             node_type: None,
             children_indexes: Vec::new(),
+            children_comp_ids: Vec::new(),
             delayed_symlink: None,
             stat: None,
         }
@@ -341,6 +386,7 @@ impl CompNode {
             children_indexes,
             delayed_symlink,
             stat,
+            children_comp_ids,
         } = compressed_builder.node_id(node_id);
         let mut symlink_type = None;
         // debug_context.push(&name);
@@ -581,18 +627,62 @@ mod test {
 
     #[test]
     fn get_path() {
+        log_init();
         let compressed = easy_compressed_builder();
+        for i in 0..compressed.nodes.len() {}
+
         assert_eq!(
             compressed.path_vec_from_node_id(ModelLocalTreeId::new(3)),
-            vec![OsStr::new("head"), OsStr::new("other")]
+            vec![
+                OsStr::new("head"),
+                OsStr::new("content"),
+                OsStr::new("other")
+            ]
         );
+    }
+
+    #[test]
+    fn path() {
+        let mut start = PathBuf::from("/a/b/c/d");
+        for i in 0..9 {
+            start.pop();
+            // println!("{}", start.display());
+            for v in start.iter() {
+                print!("{} - ", v.to_str().unwrap());
+            }
+            println!()
+        }
     }
 
     fn easy_compressed_builder() -> CompressedPathBuilder {
         CompressedPaths::from_scan_builder(vec![
             (
-                ScanFileTypeWithPath::File {
+                ScanFileTypeWithPath::Dir {
+                    path: PathBuf::from("/head"),
+                },
+                ScanStat::dummy_value(),
+            ),
+            (
+                ScanFileTypeWithPath::Dir {
                     path: PathBuf::from("/head/content"),
+                },
+                ScanStat::dummy_value(),
+            ),
+            (
+                ScanFileTypeWithPath::File {
+                    path: PathBuf::from("/head/content/other"),
+                },
+                ScanStat::dummy_value(),
+            ),
+            (
+                ScanFileTypeWithPath::File {
+                    path: PathBuf::from("/head/content/nest"),
+                },
+                ScanStat::dummy_value(),
+            ),
+            (
+                ScanFileTypeWithPath::File {
+                    path: PathBuf::from("/head/content/sub"),
                 },
                 ScanStat::dummy_value(),
             ),
@@ -604,7 +694,19 @@ mod test {
             ),
             (
                 ScanFileTypeWithPath::File {
-                    path: PathBuf::from("/head/other"),
+                    path: PathBuf::from("/head/deep/other"),
+                },
+                ScanStat::dummy_value(),
+            ),
+            (
+                ScanFileTypeWithPath::File {
+                    path: PathBuf::from("/head/deep/more"),
+                },
+                ScanStat::dummy_value(),
+            ),
+            (
+                ScanFileTypeWithPath::File {
+                    path: PathBuf::from("/head/deep/and"),
                 },
                 ScanStat::dummy_value(),
             ),

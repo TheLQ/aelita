@@ -3,12 +3,15 @@ use aelita_stor_diesel::RawDieselBytes;
 use serde::{Deserialize, Serialize};
 use std::ffi::{OsStr, OsString};
 use std::fs::{File, OpenOptions};
-use std::io::{BufWriter, Write};
+use std::io::{BufReader, BufWriter, Read, Write};
 use std::ops::Range;
 use std::os::unix::prelude::OsStrExt;
 use std::path::{Path, PathBuf};
 use xana_commons_rs::tracing_re::info;
-use xana_commons_rs::{CrashErrKind, RecursiveStatResult, ScanFileTypeWithPath, ScanStat};
+use xana_commons_rs::{
+    BasicWatch, CrashErrKind, RecursiveStatResult, ResultXanaMap, ScanFileTypeWithPath, ScanStat,
+    SimpleIoMap, io_op,
+};
 
 type InputCacheData = (DiskScanFile, ScanStat);
 type InputCacheDataRef<'s> = Vec<(DiskScanFile, &'s ScanStat)>;
@@ -79,27 +82,38 @@ impl ChannelOutSaved {
 
 //
 
-pub fn read_input_cache(input_init: &[u8]) -> StorImportResult<Vec<InputCacheData>> {
+pub fn read_input_cache(path: &Path) -> StorImportResult<Vec<InputCacheData>> {
+    let watch = BasicWatch::start();
+    let file = File::open(path)
+        .map_io_err(path)
+        .xana_err(StorImportErrorKind::InvalidCompressedPaths)?;
+    let mut reader = BufReader::new(file);
+
     let mut res = Vec::new();
     let mut total_len = 0;
-    let mut input = input_init;
-    while !input.is_empty() {
-        let (len_raw, remain) = input.split_at(U64_BYTES);
-        let len = usize::from_ne_bytes(
-            len_raw
-                .as_array()
-                .unwrap_or_else(|| {
-                    panic!("unknown at {total_len} from input of {}", input_init.len())
-                })
-                .clone(),
-        );
+    loop {
+        let mut len_raw = [0; U64_BYTES];
+        match reader.read_exact(&mut len_raw) {
+            Ok(()) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => break,
+            Err(e) => {
+                return Err(e)
+                    .map_io_err(path)
+                    .xana_err(StorImportErrorKind::InvalidCompressedPaths);
+            }
+        }
+        let len = usize::from_ne_bytes(len_raw);
 
-        let (data_raw, remain) = remain.split_at(len);
-        let v: InputCacheData = postcard::from_bytes(data_raw).map_err(
+        let mut data_raw = vec![0; len];
+        reader
+            .read_exact(&mut data_raw)
+            .map_io_err(path)
+            .xana_err(StorImportErrorKind::InvalidCompressedPaths)?;
+        let v: InputCacheData = postcard::from_bytes(&data_raw).map_err(
             StorImportErrorKind::InvalidCompressedPaths.err_message_fn_map(|| {
                 format!(
-                    "bad postcard len {len} at {total_len} from input of {}",
-                    input_init.len()
+                    "bad postcard post {total_len} len {len} from {}",
+                    path.display()
                 )
             }),
         )?;
@@ -109,9 +123,13 @@ pub fn read_input_cache(input_init: &[u8]) -> StorImportResult<Vec<InputCacheDat
         // res.push((v, ScanStat::dummy_value()));
         res.push(v);
         total_len += len + U64_BYTES;
-        input = remain;
     }
-    info!("finished decoding");
+    info!(
+        "Read {} entries in {watch} from {} byte {}",
+        res.len(),
+        total_len,
+        watch
+    );
 
     Ok(res)
 }

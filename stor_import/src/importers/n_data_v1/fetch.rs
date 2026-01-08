@@ -10,7 +10,7 @@ use aelita_stor_diesel::{CompressedPaths, RawDieselBytes};
 use serde::{Deserialize, Serialize};
 use std::ffi::{OsStr, OsString};
 use std::fs::{File, OpenOptions};
-use std::io::{BufWriter, Write};
+use std::io::{BufWriter, Write, stdin};
 use std::ops::Range;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
@@ -43,39 +43,30 @@ pub fn storfetch_paths_from_disk(
     conn: &mut StorTransaction,
     roots: &[impl AsRef<Path>],
 ) -> StorImportResult<()> {
-    #[derive(Serialize, Deserialize)]
-    struct ResWrapper {
-        out: Vec<(ScanFileTypeWithPath, ScanStat)>,
-    }
-
     const LOAD_FROM_DISK: bool = false;
     let scans = if LOAD_FROM_DISK || !INPUT_CACHE.exists() {
-        let res = ResWrapper {
-            out: scan_disk(roots),
-        };
-        // let raw = RawDieselBytes::serialize_postcard(&res)
-        //     .xana_err(StorImportErrorKind::InvalidCompressedPaths)?;
-        // std::fs::write(INPUT_CACHE, raw.as_inner())
-        //     .map_io_err(INPUT_CACHE)
-        //     .unwrap();
-        // info!(
-        //     "Wrote {} bytes to cache {}",
-        //     raw.0.len(),
-        //     INPUT_CACHE.display()
-        // );
-        res.out
+        scan_disk(roots)
     } else {
-        let watch = BasicWatch::start();
-        let raw = std::fs::read(INPUT_CACHE).map_io_err(INPUT_CACHE).unwrap();
-        trace!("Loaded {} from disk in {watch}", INPUT_CACHE.display());
-        let res_cache = read_input_cache(&raw)?;
-        let res = res_cache
-            .into_iter()
-            .map(|(disk, scan)| ((&disk).into(), scan))
-            .collect();
-        info!("Loaded from {} in {watch}", INPUT_CACHE.display());
-        res
+        input_read_from_cache()?
     };
+
+    let compressed = stat_scan_to_compressed(scans)?;
+    // insert_compressed_encoded(conn, RawDieselBytes(encoded))?;
+    Ok(())
+}
+
+fn input_read_from_cache() -> StorImportResult<Vec<RecursiveStatResult>> {
+    let watch = BasicWatch::start();
+    let res_cache = read_input_cache(INPUT_CACHE.as_ref())?;
+    let res = res_cache
+        .into_iter()
+        .map(|(disk, scan)| ((&disk).into(), scan))
+        .collect();
+    info!("Loaded from {} in {watch}", INPUT_CACHE.display());
+    Ok(res)
+}
+
+fn stat_scan_to_compressed(scans: Vec<RecursiveStatResult>) -> StorImportResult<CompressedPaths> {
     let raw_size: usize = scans
         .iter()
         .map(|v| {
@@ -114,17 +105,15 @@ pub fn storfetch_paths_from_disk(
         .xana_err(StorImportErrorKind::InvalidCompressedPaths)?;
     info!("wrote to {}", COMPRESSED_CACHE.display());
 
-    insert_compressed_encoded(conn, RawDieselBytes(encoded))?;
-    Ok(())
+    Ok(compressed)
 }
 
-fn scan_disk(roots: &[impl AsRef<Path>]) -> Vec<(ScanFileTypeWithPath, ScanStat)> {
+fn scan_disk(roots: &[impl AsRef<Path>]) -> Vec<RecursiveStatResult> {
     let total_watch = BasicWatch::start();
     let mut handles = Vec::new();
     let mut output = ChannelOutSaved::new(INPUT_CACHE.as_ref());
 
-    let (output_send, output_recv) =
-        std::sync::mpsc::channel::<Option<(ScanFileTypeWithPath, ScanStat)>>();
+    let (output_send, output_recv) = std::sync::mpsc::channel::<Option<RecursiveStatResult>>();
 
     for root in roots.iter() {
         let root = root.as_ref().to_path_buf();
@@ -173,7 +162,7 @@ fn scan_disk(roots: &[impl AsRef<Path>]) -> Vec<(ScanFileTypeWithPath, ScanStat)
 
 fn scan_disk_root(
     root: &Path,
-    output_send: std::sync::mpsc::Sender<Option<(ScanFileTypeWithPath, ScanStat)>>,
+    output_send: std::sync::mpsc::Sender<Option<RecursiveStatResult>>,
 ) -> usize {
     let watch = BasicWatch::start();
     let mut total_errors = 0;
