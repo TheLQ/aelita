@@ -19,6 +19,7 @@ use xana_commons_rs::{
 
 /// Store file tree as a... tree.
 /// Because Vec<PathBuf> is very inefficient at 10,000,000s of files
+/// Optimized for small serialized size
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CompressedPaths {
     parts: Vec<Vec<u8>>,
@@ -31,6 +32,12 @@ impl CompressedPaths {
     ) -> CompressedPathBuilder {
         info!("starting sort");
         scans.par_sort_by_cached_key(|v| v.0.path().clone());
+
+        // warn!("Load complete. press enter to continue...");
+        // let mut _in = String::new();
+        // stdin()
+        //     .read_line(&mut _in)
+        //     .expect("Did not enter a correct string");
 
         let mut build = CompressedPathBuilder::new();
         let total_scans = scans.len();
@@ -119,6 +126,7 @@ impl CompressedPaths {
     }
 }
 
+/// Optimized for cheap modifying with extra lookup fields
 struct CompressedPathBuilder {
     parts: IndexSet<OsString>,
     nodes: Vec<CompNodeBuilder>,
@@ -157,6 +165,8 @@ impl CompressedPathBuilder {
         let mut last_index;
         if self.fast_path.as_os_str() != "/" {
             loop {
+                // [Path::starts_with] expensively compares each .components()
+                // Instead compare byte slices
                 let path_bytes = path.as_os_str().as_bytes();
                 let fast_bytes = self.fast_path.as_os_str().as_bytes();
                 if path_bytes.starts_with(fast_bytes)
@@ -189,7 +199,7 @@ impl CompressedPathBuilder {
             self.cache.truncate(cached_comps);
 
             if let Some(last_cache) = self.cache.last() {
-                assert_eq!(last_cache.component, self.fast_path.iter().last().unwrap());
+                // assert_eq!(last_cache.component, self.fast_path.iter().last().unwrap());
                 last_index = last_cache.child_id;
             } else {
                 // empty, reset
@@ -199,13 +209,6 @@ impl CompressedPathBuilder {
             last_index = ModelLocalTreeId::new(0);
         }
 
-        // let remain_path = path.mutself.fast_path).unwrap_or_else(|e| {
-        //     panic!(
-        //         "failed to strip '{}' from '{}' - {e}",
-        //         self.fast_path.display(),
-        //         path.display()
-        //     )
-        // });
         let remain_path = {
             let path_bytes = path.as_os_str().as_bytes();
             let fast_bytes = self.fast_path.as_os_str().as_bytes();
@@ -225,9 +228,7 @@ impl CompressedPathBuilder {
             }
         };
         // trace!("remain {}", remain_path.display());
-        let mut comps = remain_path.components();
-        // assert_eq!(comps.next(), Some(Component::RootDir));
-        for (i, comp) in comps.enumerate() {
+        for comp in remain_path.components() {
             let Component::Normal(comp) = comp else {
                 panic!("invalid path {}", path.display())
             };
@@ -277,11 +278,17 @@ impl CompressedPathBuilder {
         node_id: ModelLocalTreeId,
         needle_comp_id: usize,
     ) -> Option<ModelLocalTreeId> {
-        self.nodes[node_id.inner_usize()]
-            .children_indexes
-            .iter()
-            .find(|v| self.nodes[v.inner_usize()].name_comp_id == needle_comp_id)
-            .map(|v| *v)
+        let node = &self.nodes[node_id.inner_usize()];
+        // [slice::contains] for usize is niche optimized
+        if node.children_comp_ids.contains(&needle_comp_id) {
+            let res = node
+                .children_comp_ids
+                .iter()
+                .position(|v| *v == needle_comp_id)?;
+            Some(node.children_indexes[res])
+        } else {
+            None
+        }
     }
 
     // todo generic between builder and main
