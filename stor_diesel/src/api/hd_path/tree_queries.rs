@@ -19,11 +19,25 @@ pub fn storapi_hd_get_path_by_id(
     conn: &mut StorTransaction,
     id: ModelFileTreeId,
 ) -> StorDieselResult<(Vec<PathRow>, PathBuf)> {
-    info!("storapi_hd_get_path_by_id for {id}");
     if id.inner_id() == XRN_PATH_ROOT_ID {
-        return Ok((Vec::new(), PathBuf::from("/")));
+        _storapi_hd_get_path_by_id_root(conn)
+    } else {
+        _storapi_hd_get_path_by_id_path(conn, id)
     }
+}
 
+pub fn _storapi_hd_get_path_by_id_root(
+    conn: &mut StorTransaction,
+) -> StorDieselResult<(Vec<PathRow>, PathBuf)> {
+    info!("storapi_hd_get_path_by_id root");
+    Ok((Vec::new(), PathBuf::from("/")))
+}
+
+pub fn _storapi_hd_get_path_by_id_path(
+    conn: &mut StorTransaction,
+    id: ModelFileTreeId,
+) -> StorDieselResult<(Vec<PathRow>, PathBuf)> {
+    info!("storapi_hd_get_path_by_id path for {id}");
     // todo can the second query be written to only select and join the last row?
     let raw_query = "\
         WITH RECURSIVE
@@ -133,6 +147,36 @@ pub fn storapi_hd_get_path_by_path(
 }
 
 pub fn storapi_hd_list_children_by_id(
+    conn: &mut StorTransaction,
+    parent_id: ModelFileTreeId,
+) -> StorDieselResult<Vec<PathRow>> {
+    if parent_id.inner_id() == XRN_PATH_ROOT_ID {
+        _storapi_hd_list_children_by_id_root(conn)
+    } else {
+        _storapi_hd_list_children_by_id_path(conn, parent_id)
+    }
+}
+
+fn _storapi_hd_list_children_by_id_root(
+    conn: &mut StorTransaction,
+) -> StorDieselResult<Vec<PathRow>> {
+    info!("storapi_hd_list_children_by_id root");
+    let raw_query = format!(
+        "SELECT p.tree_id, p.tree_depth, p.component_id, p.parent_id, comp.component \
+        FROM `hd1_files_parents` p \
+        INNER JOIN `hd1_files_components` comp ON \
+            comp.id = p.component_id \
+        WHERE \
+            p.tree_depth = 0 AND \
+            p.parent_id IS NULL \
+        LIMIT {LIMIT_CHILDREN_SIZE}"
+    );
+    diesel::sql_query(raw_query)
+        .get_results::<PathRow>(conn.inner())
+        .map_err(Into::into)
+}
+
+fn _storapi_hd_list_children_by_id_path(
     conn: &mut StorTransaction,
     parent_id: ModelFileTreeId,
 ) -> StorDieselResult<Vec<PathRow>> {
