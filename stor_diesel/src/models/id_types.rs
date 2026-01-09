@@ -7,7 +7,7 @@ use diesel::serialize::{Output, ToSql};
 use diesel::sql_types::{Integer, Unsigned};
 use std::fmt::{Display, Formatter};
 
-pub trait StorIdType {
+pub trait StorIdTypeDiesel {
     fn new(inner: u32) -> Self;
 
     fn new_usize(input: usize) -> Self;
@@ -42,7 +42,7 @@ macro_rules! id_type {
         #[repr(transparent)]
         pub struct $name(u32);
 
-        impl StorIdType for $name {
+        impl StorIdTypeDiesel for $name {
             fn new(inner: u32) -> Self {
                 Self(inner)
             }

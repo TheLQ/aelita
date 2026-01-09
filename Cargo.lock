@@ -17,18 +17,15 @@ dependencies = [
  "aelita_xrn",
  "chrono",
  "diesel",
- "fxhash",
- "indexmap",
  "itertools",
  "postcard",
- "rayon",
  "serde",
  "serde_json",
  "sha2",
  "strum",
- "thiserror",
  "url",
  "xana-commons-rs",
+ "xana-fs-indexer-rs",
 ]
 
 [[package]]
@@ -44,6 +41,7 @@ dependencies = [
  "strum",
  "tokio",
  "xana-commons-rs",
+ "xana-fs-indexer-rs",
  "zstd",
 ]
 
@@ -266,10 +264,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "145052bdd345b87320e369255277e3fb5152762ad123a901ef5c262dd38fe8d2"
 dependencies = [
  "iana-time-zone",
- "js-sys",
  "num-traits",
  "serde",
- "wasm-bindgen",
  "windows-link",
 ]
 
@@ -1144,9 +1140,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.12.1"
+version = "2.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ad4bb2b565bca0645f4d68c5c9af97fba094e9791da685bf83cb5f3ce74acf2"
+checksum = "7714e70437a7dc3ac8eb7e6f8df75fd8eb422675fc7678aff7364301092b1017"
 dependencies = [
  "equivalent",
  "hashbrown",
@@ -2749,6 +2745,19 @@ dependencies = [
  "tracing",
  "tracing-log",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "xana-fs-indexer-rs"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "indexmap",
+ "itertools",
+ "rayon",
+ "serde",
+ "strum",
+ "xana-commons-rs",
 ]
 
 [[package]]

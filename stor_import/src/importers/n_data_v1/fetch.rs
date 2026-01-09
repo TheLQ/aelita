@@ -2,19 +2,17 @@ use crate::err::{StorImportErrorKind, StorImportResult};
 use crate::importers::n_data_v1::path_backup::{ChannelOutSaved, read_input_cache};
 use aelita_stor_diesel::ModelJournalTypeName;
 use aelita_stor_diesel::NewModelJournalImmutable;
+use aelita_stor_diesel::RawDieselBytes;
 use aelita_stor_diesel::StorTransaction;
 use aelita_stor_diesel::path_const::PathConst;
 use aelita_stor_diesel::storapi_journal_immutable_push_single;
-use aelita_stor_diesel::{CompressedPaths, RawDieselBytes};
 use std::path::Path;
 use std::sync::LazyLock;
 use std::thread;
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{debug, error, info, trace};
-use xana_commons_rs::{
-    BasicWatch, CrashErrKind, LOCALE, RecursiveStatResult, ResultXanaMap, SimpleIoMap,
-    read_dirs_recursive_better, read_dirs_recursive_stat_better,
-};
+use xana_commons_rs::{BasicWatch, CrashErrKind, LOCALE, ResultXanaMap, SimpleIoMap};
+use xana_fs_indexer_rs::{CompressedPaths, RecursiveStatResult, read_dirs_recursive_stat_better};
 
 static ROOTS: LazyLock<Vec<String>> = LazyLock::new(|| {
     let path = Path::new("local_data/ndata_roots.txt");
@@ -73,7 +71,8 @@ fn stat_scan_to_compressed(scans: Vec<RecursiveStatResult>) -> StorImportResult<
         .sum();
 
     let watch = BasicWatch::start();
-    let compressed = CompressedPaths::from_scan(scans)?;
+    let compressed = CompressedPaths::from_scan(scans)
+        .map_err(StorImportErrorKind::InvalidCompressedPaths.xana_map())?;
     debug!("CompressedPath built in {watch}");
     let postcard_size_i;
     let compressed_size_i;

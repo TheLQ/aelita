@@ -7,10 +7,8 @@ use std::io::{BufReader, BufWriter, Read, Write};
 use std::os::unix::prelude::OsStrExt;
 use std::path::{Path, PathBuf};
 use xana_commons_rs::tracing_re::info;
-use xana_commons_rs::{
-    BasicWatch, CrashErrKind, RecursiveStatResult, ResultXanaMap, ScanFileTypeWithPath, ScanStat,
-    SimpleIoMap,
-};
+use xana_commons_rs::{BasicWatch, CrashErrKind, ResultXanaMap, SimpleIoMap};
+use xana_fs_indexer_rs::{RecursiveStatResult, ScanFileTypeWithPath, ScanStat};
 
 type InputCacheData = (DiskScanFile, ScanStat);
 type InputCacheDataRef<'s> = Vec<(DiskScanFile, &'s ScanStat)>;

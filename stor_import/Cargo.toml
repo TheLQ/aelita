@@ -8,6 +8,7 @@ publish = false
 aelita_commons = { path = "../commons" }
 aelita_stor_diesel = { path = "../stor_diesel" }
 xana-commons-rs = { workspace = true }
+xana-fs-indexer-rs = { workspace = true }
 #
 bytes = { workspace = true }
 tokio = { workspace = true }

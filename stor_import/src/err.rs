@@ -4,6 +4,7 @@ use xana_commons_rs::CrashErr;
 use xana_commons_rs::qbittorrent_re::QbitError;
 use xana_commons_rs::scraper_re::{PIoReqwestError, PReqwestError};
 use xana_commons_rs::{CrashErrKind, crash_builder};
+use xana_fs_indexer_rs::IndexerErrorKind;
 
 pub type StorImportResult<T> = Result<T, Box<StorImportError>>;
 
@@ -35,6 +36,7 @@ crash_builder!(
     (extern TryFromNumber, std::num::TryFromIntError),
     // import unique
     (mod StorDieselError, StorDieselErrorKind),
+    (mod IndexerError, IndexerErrorKind),
 );
 
 impl From<Box<StorDieselError>> for Box<StorImportError> {

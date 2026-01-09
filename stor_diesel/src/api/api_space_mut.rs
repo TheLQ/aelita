@@ -1,6 +1,6 @@
 use crate::api::common::{check_insert_num_rows, mysql_last_id};
 use crate::{
-    ModelSpaceId, ModelSpaceOwned, NewModelSpaceName, StorDieselResult, StorIdType,
+    ModelSpaceId, ModelSpaceOwned, NewModelSpaceName, StorDieselResult, StorIdTypeDiesel,
     StorTransaction, XrnAsOwnedTable, schema,
 };
 use diesel::RunQueryDsl;

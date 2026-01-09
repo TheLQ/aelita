@@ -1,5 +1,5 @@
-use crate::err::StorDieselErrorKind;
 use crate::StorDieselResult;
+use crate::err::StorDieselErrorKind;
 use std::str::FromStr;
 use xana_commons_rs::CrashErrKind;
 

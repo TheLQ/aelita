@@ -9,9 +9,9 @@ aelita_commons = { path = "../commons" }
 aelita_xrn = { path = "../xrn" }
 #
 xana-commons-rs = { workspace = true }
+xana-fs-indexer-rs = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-thiserror = { workspace = true }
 chrono = { workspace = true }
 strum = { workspace = true }
 #
@@ -19,8 +19,5 @@ strum = { workspace = true }
 diesel = { version = "2.3.5", default-features = false, features = ["mysql", "chrono", "32-column-tables"] }
 postcard = { workspace = true }
 itertools = "0.14"
-fxhash = "0.2"
-indexmap = "2.12.1"
-rayon = "1.11"
 sha2 = "0.10.9"
 url = "2.5.8"

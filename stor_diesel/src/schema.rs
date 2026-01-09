@@ -36,6 +36,12 @@ diesel::table! {
         tree_depth -> Unsigned<Integer>,
         component_id -> Unsigned<Integer>,
         parent_id -> Nullable<Unsigned<Integer>>,
+        created -> Timestamp,
+        modified -> Timestamp,
+        size -> Unsigned<BigInt>,
+        user_id -> Unsigned<Integer>,
+        group_id -> Unsigned<Integer>,
+        hard_links -> Unsigned<BigInt>,
     }
 }
 

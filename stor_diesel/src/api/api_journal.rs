@@ -3,7 +3,7 @@ use crate::api::common::{
 };
 use crate::connection::StorTransaction;
 use crate::err::{StorDieselErrorKind, StorDieselResult};
-use crate::models::id_types::{ModelJournalId, StorIdType};
+use crate::models::id_types::{ModelJournalId, StorIdTypeDiesel};
 use crate::models::model_journal::{
     ModelJournalImmutable, NewModelJournalImmutable, NewModelJournalImmutableDiesel,
 };
@@ -88,11 +88,13 @@ pub fn storapi_journal_get_data(
         .filter(schema::journal_immutable::journal_id.eq(journal_id))
         .first(conn.inner())?;
 
+    let watch = BasicWatch::start();
     let datas: Vec<Vec<u8>> = schema::journal_immutable_data::table
         .select(schema::journal_immutable_data::data)
         .filter(schema::journal_immutable_data::journal_id.eq(journal_id))
         .order_by(schema::journal_immutable_data::data_id)
         .get_results(conn.inner())?;
+    info!("Loaded {} datas in {watch}", datas.len());
     if datas.is_empty() {
         Err(StorDieselErrorKind::EmptyResult.build())
     } else {

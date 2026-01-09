@@ -1,9 +1,10 @@
 use crate::err::{StorImportErrorKind, StorImportResult};
+use aelita_stor_diesel::ModelJournalImmutable;
 use aelita_stor_diesel::ModelJournalTypeName;
 use aelita_stor_diesel::StorTransaction;
 use aelita_stor_diesel::storapi_hd_tree_push;
-use aelita_stor_diesel::{CompressedPaths, ModelJournalImmutable};
 use xana_commons_rs::ResultXanaMap;
+use xana_fs_indexer_rs::CompressedPaths;
 
 pub fn storcommit_hd(
     conn: &mut StorTransaction,

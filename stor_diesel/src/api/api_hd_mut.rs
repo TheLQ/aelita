@@ -3,8 +3,8 @@ use crate::api::assert_test_database;
 use crate::api::common::SQL_PLACEHOLDER_MAX;
 use crate::models::enum_types::ModelJournalTypeName;
 use crate::schema_temp::{FAST_HD_COMPONENTS_CREATE, FAST_HD_COMPONENTS_TRUNCATE};
-use crate::{CompressedPaths, StorIdType, storapi_journal_get_data};
 use crate::{ModelFileCompId, ModelJournalId};
+use crate::{ScanStatDiesel, StorIdTypeDiesel, storapi_journal_get_data};
 use crate::{StorDieselResult, StorTransaction, schema, schema_temp};
 use crate::{build_associations_from_compressed, storapi_variables_get_str};
 use diesel::RunQueryDsl;
@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{debug, info, trace};
 use xana_commons_rs::{BasicWatch, LOCALE};
+use xana_fs_indexer_rs::CompressedPaths;
 
 pub fn storapi_hd_tree_push(
     conn: &mut StorTransaction,
@@ -28,8 +29,12 @@ pub fn storapi_hd_tree_push(
     let mut rows = 0;
     for chunk in chunks {
         info!("Insert chunk {rows} of {chunks_len}");
+        let diesel_chunk = chunk
+            .into_iter()
+            .map(|(assoc, stat)| (assoc, ScanStatDiesel::from(stat.clone())))
+            .collect::<Vec<_>>();
         let cur_rows = diesel::insert_into(schema::hd1_files_parents::table)
-            .values(chunk)
+            .values(diesel_chunk)
             .execute(conn.inner())?;
         rows += cur_rows;
     }

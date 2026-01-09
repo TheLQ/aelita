@@ -1,7 +1,7 @@
 use crate::api::api_hd::storapi_hd_components_with;
 use crate::err::StorDieselErrorKind;
 use crate::{
-    HdPathDieselDyn, ModelFileTreeId, PathRow, StorDieselResult, StorIdType, StorTransaction,
+    HdPathDieselDyn, ModelFileTreeId, PathRow, StorDieselResult, StorIdTypeDiesel, StorTransaction,
     components_get_bytes, path_components,
 };
 use aelita_xrn::defs::path_xrn::XRN_PATH_ROOT_ID;
