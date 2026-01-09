@@ -193,9 +193,7 @@ mod test {
     use crate::importers::n_data_v1::path_backup::{ChannelOutSaved, read_input_cache};
     use aelita_commons::log_init;
     use std::env::temp_dir;
-    use std::path::Path;
-    use xana_commons_rs::tracing_re::info;
-    use xana_commons_rs::{PrettyUnwrap, ScanFileTypeWithPath, ScanStat};
+    use xana_fs_indexer_rs::{ScanFileTypeWithPath, ScanStat};
 
     #[test]
     fn end_to_end() {

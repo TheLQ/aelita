@@ -27,3 +27,17 @@ CREATE TABLE IF NOT EXISTS `journal_immutable_data`
 #     ADD CONSTRAINT `fk_journal_immutable_data_journal`
 #         FOREIGN KEY (`journal_id`) REFERENCES `journal_immutable` (`journal_id`)
 #     ADD COLUMN (`data_id` INTEGER UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY);
+
+# SET foreign_key_checks = 0;
+# update journal_immutable
+# set journal_id = 1
+# where journal_id = 0;
+# update journal_immutable_data
+# set journal_id = 1
+# where journal_id = 0;
+# SET foreign_key_checks = 1;
+
+# delete
+# from journal_immutable
+# where journal_id in (1, 146, 147);
+

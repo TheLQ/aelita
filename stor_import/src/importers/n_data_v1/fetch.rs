@@ -51,6 +51,7 @@ pub fn storfetch_paths_from_disk(
 }
 
 fn scan_disk_cached() -> StorImportResult<Vec<RecursiveStatResult>> {
+    info!("loading scan_disk from {}", SCAN_CACHE.display());
     let watch = BasicWatch::start();
     let res_cache = read_input_cache(SCAN_CACHE.as_ref())?;
     let res = res_cache

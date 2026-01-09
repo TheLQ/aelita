@@ -1,19 +1,23 @@
 use crate::api::api_hd::components_get_from_fast;
 use crate::api::assert_test_database;
+use crate::api::bulk_insert::bulk_insert;
 use crate::api::common::SQL_PLACEHOLDER_MAX;
 use crate::models::enum_types::ModelJournalTypeName;
 use crate::schema_temp::{FAST_HD_COMPONENTS_CREATE, FAST_HD_COMPONENTS_TRUNCATE};
-use crate::{ModelFileCompId, ModelJournalId};
+use crate::{HdPathAssociation, ModelFileCompId, ModelJournalId};
 use crate::{ScanStatDiesel, StorIdTypeDiesel, storapi_journal_get_data};
 use crate::{StorDieselResult, StorTransaction, schema, schema_temp};
 use crate::{build_associations_from_compressed, storapi_variables_get_str};
+use chrono::NaiveDateTime;
+use chrono::format::{DelayedFormat, StrftimeItems};
 use diesel::RunQueryDsl;
 use diesel::prelude::*;
 use std::collections::HashMap;
+use std::fmt::Write;
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{debug, info, trace};
 use xana_commons_rs::{BasicWatch, LOCALE};
-use xana_fs_indexer_rs::CompressedPaths;
+use xana_fs_indexer_rs::{CompressedPaths, ScanStat};
 
 pub fn storapi_hd_tree_push(
     conn: &mut StorTransaction,
@@ -24,23 +28,60 @@ pub fn storapi_hd_tree_push(
     info!("autocommit is {autocommit}");
 
     let new = build_associations_from_compressed(conn, &compressed)?;
-    let chunks = new.chunks(SQL_PLACEHOLDER_MAX / 4);
-    let chunks_len = chunks.len();
-    let mut rows = 0;
-    for chunk in chunks {
-        info!("Insert chunk {rows} of {chunks_len}");
-        let diesel_chunk = chunk
-            .into_iter()
-            .map(|(assoc, stat)| (assoc, ScanStatDiesel::from(stat.clone())))
-            .collect::<Vec<_>>();
-        let cur_rows = diesel::insert_into(schema::hd1_files_parents::table)
-            .values(diesel_chunk)
-            .execute(conn.inner())?;
-        rows += cur_rows;
-    }
+
+    let rows = bulk_insert(
+        conn,
+        "hd1_files_parents",
+        [
+            "tree_id",
+            "tree_depth",
+            "component_id",
+            "parent_id",
+            "created",
+            "modified",
+            "size",
+            "user_id",
+            "group_id",
+            "hard_links",
+        ],
+        &new,
+        |(
+            HdPathAssociation {
+                tree_id,
+                tree_depth,
+                component_id,
+                parent_id,
+            },
+            ScanStat {
+                created,
+                modified,
+                size,
+                user_id,
+                group_id,
+                hard_links,
+            },
+        ),
+         query_res| {
+            write!(
+                query_res,
+                "{tree_id},{tree_depth},{component_id},{parent_id},{created},{modified},{size},{user_id},{group_id},{hard_links}",
+                created = chrono_to_mysql(created),
+                modified = chrono_to_mysql(modified),
+                parent_id = match parent_id {
+                   Some(v) => v.to_string(),
+                   None => "NULL".into(),
+                }
+            ).unwrap()
+        },
+        4_000_000,
+    )?;
     debug!("inserted {rows} rows");
 
     Ok(())
+}
+
+fn chrono_to_mysql(chron: &NaiveDateTime) -> DelayedFormat<StrftimeItems> {
+    chron.format("'%Y-%m-%d %H:%M:%S%.6f'")
 }
 
 pub fn storapi_rebuild_parents(conn: &mut StorTransaction) -> StorDieselResult<()> {
@@ -48,7 +89,7 @@ pub fn storapi_rebuild_parents(conn: &mut StorTransaction) -> StorDieselResult<(
 
     // push_associations_fancy_insert(conn)?;
     let watch = BasicWatch::start();
-    let compressed_paths_raw = storapi_journal_get_data(conn, ModelJournalId::new(144))?;
+    let compressed_paths_raw = storapi_journal_get_data(conn, ModelJournalId::new(148))?;
     debug!(
         "loaded {} MB in {watch}",
         (compressed_paths_raw.as_inner().len() / 1000 / 1000).to_formatted_string(&LOCALE)

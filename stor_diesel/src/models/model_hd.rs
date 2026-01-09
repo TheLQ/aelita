@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::path::{Component, Path};
 use xana_commons_rs::CrashErrKind;
+use xana_fs_indexer_rs::ScanStat;
 
 pub const HD_PATH_DEPTH: usize = 11;
 
@@ -124,6 +125,72 @@ where
     };
 
     Ok(Some(T::from_nullable_sql(field.value())?))
+}
+
+#[derive(diesel::HasQuery, diesel::QueryableByName, diesel::Insertable)]
+#[diesel(table_name = schema::hd1_files_parents)]
+#[diesel(check_for_backend(diesel::mysql::Mysql))]
+pub struct ScanStatDiesel {
+    created: chrono::NaiveDateTime,
+    modified: chrono::NaiveDateTime,
+    size: u64,
+    user_id: u32,
+    group_id: u32,
+    hard_links: u64,
+}
+
+impl From<ScanStat> for ScanStatDiesel {
+    fn from(
+        ScanStat {
+            created,
+            modified,
+            size,
+            user_id,
+            group_id,
+            hard_links,
+        }: ScanStat,
+    ) -> Self {
+        Self {
+            created,
+            modified,
+            size,
+            user_id,
+            group_id,
+            hard_links,
+        }
+    }
+}
+
+impl From<ScanStatDiesel> for ScanStat {
+    fn from(
+        ScanStatDiesel {
+            created,
+            modified,
+            size,
+            user_id,
+            group_id,
+            hard_links,
+        }: ScanStatDiesel,
+    ) -> Self {
+        Self {
+            created,
+            modified,
+            size,
+            user_id,
+            group_id,
+            hard_links,
+        }
+    }
+}
+
+#[derive(diesel::HasQuery, diesel::Insertable)]
+#[diesel(table_name = schema::hd1_files_parents)]
+#[diesel(check_for_backend(diesel::mysql::Mysql))]
+pub struct CombinedStatAssociation {
+    #[diesel(embed)]
+    pub path: HdPathAssociation,
+    #[diesel(embed)]
+    pub stat: ScanStatDiesel,
 }
 
 #[derive(diesel::HasQuery, diesel::Insertable, diesel::QueryableByName, Serialize, Deserialize)]

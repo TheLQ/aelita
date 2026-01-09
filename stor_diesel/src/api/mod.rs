@@ -7,6 +7,7 @@ pub mod api_space_mut;
 pub mod api_tor;
 pub mod api_tor_mut;
 pub mod api_variables;
+mod bulk_insert;
 mod common;
 pub mod hd_path;
 
