@@ -76,7 +76,7 @@ async fn render_html_list(state: WState) -> WebResult<BasicResponse> {
     #[derive(Serialize)]
     struct Data {
         initial_search: &'static str,
-    };
+    }
     let params = BaseHtml::title("Browse Tor").build(Data {
         initial_search: "Tor",
     });

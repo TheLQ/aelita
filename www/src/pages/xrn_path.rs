@@ -5,7 +5,8 @@ use crate::server::convert_xrn::XrnFromUrl;
 use crate::server::util::{BasicResponse, pretty_basic_page};
 use aelita_stor_diesel::err::StorDieselErrorKind;
 use aelita_stor_diesel::{
-    ModelFileTreeId, PathRow, storapi_hd_get_path_by_id, storapi_hd_list_children_by_id,
+    ModelFileTreeId, PathRow, StorIdTypeDiesel, storapi_hd_get_path_by_id,
+    storapi_hd_list_children_by_id,
 };
 use aelita_xrn::defs::address::XrnAddr;
 use aelita_xrn::defs::path_xrn::{PathXrn, PathXrnType};
@@ -78,7 +79,7 @@ fn render_html(
         breadcrumbs.push(PathXrn::new(
             PathXrnType::Fs,
             partial_path,
-            row.association.tree_id,
+            row.association.tree_id.inner_id(),
         ))
     }
 
@@ -104,7 +105,7 @@ fn render_html(
                     xrn: PathXrn::new(
                         PathXrnType::Fs,
                         path.join(comp_name),
-                        row.association.tree_id,
+                        row.association.tree_id.inner_id(),
                     ),
                     name: comp_name.to_string(),
                 }

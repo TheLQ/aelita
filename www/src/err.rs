@@ -1,13 +1,12 @@
 use crate::server::util::{BasicResponse, pretty_basic_page};
-use aelita_stor_diesel::StorDieselError;
 use aelita_stor_diesel::err::StorDieselErrorKind;
-use aelita_xrn::err::{LibxrnError, XrnErrorKind};
+use aelita_xrn::err::XrnErrorKind;
 use axum::body::Body;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use handlebars::html_escape;
 use xana_commons_rs::tracing_re::error;
-use xana_commons_rs::{SimpleIoError, crash_builder, pretty_format_error};
+use xana_commons_rs::{crash_builder, pretty_format_error};
 
 pub type WebResult<R> = Result<R, Box<WebError>>;
 

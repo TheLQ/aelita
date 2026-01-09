@@ -1,14 +1,9 @@
 use crate::err::{WebError, WebErrorKind};
-use aelita_xrn::defs::address::XrnAddr;
-use aelita_xrn::defs::common::{SubXrnImpl, XrnSubTypeImpl};
-use aelita_xrn::err::LibxrnError;
+use aelita_xrn::defs::common::SubXrnImpl;
 use axum::extract::{FromRequestParts, Path};
 use axum::http::request::Parts;
-use serde::de::StdError;
-use std::fmt::Debug;
-use std::str::FromStr;
-use xana_commons_rs::tracing_re::{trace, warn};
-use xana_commons_rs::{AsMeta, CrashErrKind, IntoXanaErr, ResultXanaMap};
+use xana_commons_rs::tracing_re::trace;
+use xana_commons_rs::{CrashErrKind, ResultXanaMap};
 
 /// Axum extractor to parse xrn directly from the path
 pub struct XrnFromUrl<Xrn>(pub Xrn)
