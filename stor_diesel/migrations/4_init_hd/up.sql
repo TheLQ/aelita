@@ -39,10 +39,10 @@ CREATE TABLE IF NOT EXISTS `hd1_files_parents`
     `parent_id`    INTEGER UNSIGNED,
     `created`      TIMESTAMP        NOT NULL,
     `modified`     TIMESTAMP        NOT NULL,
-    `size`         INTEGER UNSIGNED NOT NULL,
+    `size`         BIGINT UNSIGNED  NOT NULL,
     `user_id`      INTEGER UNSIGNED NOT NULL,
     `group_id`     INTEGER UNSIGNED NOT NULL,
-    `hard_links`   INTEGER UNSIGNED NOT NULL,
+    `hard_links`   BIGINT UNSIGNED  NOT NULL,
     PRIMARY KEY (`tree_id`),
     UNIQUE KEY `glob_unique` (`tree_depth`, `parent_id`, `component_id`),
     CONSTRAINT `fk_hd1_files_parents_components`

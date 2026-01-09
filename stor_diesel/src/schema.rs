@@ -38,10 +38,10 @@ diesel::table! {
         parent_id -> Nullable<Unsigned<Integer>>,
         created -> Timestamp,
         modified -> Timestamp,
-        size -> Unsigned<BigInt>,
+        size -> Unsigned<Bigint>,
         user_id -> Unsigned<Integer>,
         group_id -> Unsigned<Integer>,
-        hard_links -> Unsigned<BigInt>,
+        hard_links -> Unsigned<Bigint>,
     }
 }
 
@@ -200,6 +200,7 @@ diesel::joinable!(hd1_galleries -> hd1_sites (hd_site_id));
 diesel::joinable!(hd1_galleries -> journal_immutable (journal_id));
 diesel::joinable!(hd1_roots -> space_names (space_id));
 diesel::joinable!(hd1_sites -> journal_immutable (journal_id));
+diesel::joinable!(journal_immutable_data -> journal_immutable (journal_id));
 diesel::joinable!(space_names -> journal_immutable (journal_id));
 diesel::joinable!(space_owned -> journal_immutable (journal_id));
 diesel::joinable!(space_owned -> space_names (space_id));
