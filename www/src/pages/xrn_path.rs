@@ -1,6 +1,7 @@
 use crate::controllers::handlebars::HbsPage;
 use crate::controllers::state::WState;
 use crate::err::{WebErrorCause, WebErrorKind, WebResult};
+use crate::pages::base_html::BaseHtml;
 use crate::server::convert_xrn::XrnFromUrl;
 use crate::server::util::{BasicResponse, pretty_basic_page};
 use aelita_stor_diesel::err::StorDieselErrorKind;
@@ -112,5 +113,6 @@ fn render_html(
             })
             .collect(),
     };
-    state.render_page(HbsPage::Xrn_Path, props)
+    let params = BaseHtml::title("xrn path browser").build(props);
+    state.render_page(HbsPage::Xrn_Path, params)
 }

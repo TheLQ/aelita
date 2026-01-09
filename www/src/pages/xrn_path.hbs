@@ -1,26 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Aelita Browse Paths</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css">
-</head>
-<body>
-
-
-<div class="section">
-    <h1 class="title">Browse Path {{root_title}} with {{len children}}</h1>
-    {{#if parent_xrn}}
+{{#> base_html}}
+    <h1 class="title">Browse Path {{body.root_title}} with {{len body.children}}</h1>
+    {{#if body.parent_xrn}}
         <div class="">
             <a href="/{{parent_xrn}}">Up</a>
         </div>
     {{/if}}
-    {{#each children}}
+    {{#each body.children}}
         <div class="">
             <a href="/{{xrn}}">{{name}}</a>
         </div>
     {{/each}}
-</div>
-
-</body>
-</html>
+{{/base_html}}
