@@ -9,7 +9,9 @@ use std::ffi::{OsStr, OsString};
 use std::os::unix::prelude::OsStrExt;
 use std::path::{Component, Path, PathBuf};
 use xana_commons_rs::tracing_re::{info, trace, warn};
-use xana_commons_rs::{CrashErrKind, ProgressWidget, ScanFileType, ScanFileTypeWithPath, ScanStat};
+use xana_commons_rs::{
+    CrashErrKind, ProgressWidget, ResultXanaMap, ScanFileType, ScanFileTypeWithPath, ScanStat,
+};
 
 /// Store file tree as a... tree.
 /// Because Vec<PathBuf> is very inefficient at 10,000,000s of files
@@ -95,7 +97,7 @@ impl CompressedPaths {
     }
 
     // todo generic between builder and main
-    fn path_vec_from_node_id(&self, node_id: ModelLocalTreeId) -> Vec<&[u8]> {
+    pub fn path_vec_from_node_id(&self, node_id: ModelLocalTreeId) -> Vec<&[u8]> {
         let mut path_rev = Vec::new();
         let mut next_id = node_id;
         loop {
@@ -346,7 +348,7 @@ pub struct CompNode {
     parent: ModelLocalTreeId,
     name_comp_id: usize,
     node_type: CompNodeType,
-    stat: Option<ScanStat>,
+    stat: ScanStat,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -489,15 +491,21 @@ impl CompNode {
                     }
                 }
             });
-        if stat.is_none() {
-            warn!("stat missing for {node_id}")
-        }
+
+        let stat = match stat.clone() {
+            Some(v) => v,
+            None => {
+                let path = compressed_builder.pathbuf_from_node_id(node_id);
+                warn!("post-filling stat for {}", path.display());
+                ScanStat::new(&path).xana_err(StorDieselErrorKind::_TODO)?
+            }
+        };
 
         Ok(Self {
             parent: *parent,
             name_comp_id: *name_comp_id,
             node_type: res_node_type,
-            stat: stat.clone(),
+            stat,
         })
     }
 
@@ -507,6 +515,10 @@ impl CompNode {
 
     pub fn name_from<'c>(&self, compressed: &'c CompressedPaths) -> &'c [u8] {
         compressed.parts[self.name_comp_id].as_slice()
+    }
+
+    pub fn stat(&self) -> &ScanStat {
+        &self.stat
     }
 }
 struct CachedLookup {
