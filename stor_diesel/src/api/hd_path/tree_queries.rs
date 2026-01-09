@@ -169,6 +169,7 @@ fn _storapi_hd_list_children_by_id_root(
         WHERE \
             p.tree_depth = 0 AND \
             p.parent_id IS NULL \
+        ORDER BY comp.component ASC
         LIMIT {LIMIT_CHILDREN_SIZE}"
     );
     diesel::sql_query(raw_query)
@@ -221,15 +222,16 @@ fn _storapi_hd_list_children_by_id_path(
 
     let raw_query = format!(
         "SELECT p.tree_id, p.tree_depth, p.component_id, p.parent_id, comp.component \
-    FROM `hd1_files_parents` initial_p \
-    INNER JOIN `hd1_files_parents` p ON
-        p.parent_id = initial_p.tree_id AND
-        p.tree_depth = initial_p.tree_depth + 1
-    INNER JOIN `hd1_files_components` comp ON
-        comp.id = p.component_id
-    WHERE
-        initial_p.tree_id = ?
-    LIMIT {LIMIT_CHILDREN_SIZE}"
+        FROM `hd1_files_parents` initial_p \
+        INNER JOIN `hd1_files_parents` p ON \
+            p.parent_id = initial_p.tree_id AND \
+            p.tree_depth = initial_p.tree_depth + 1 \
+        INNER JOIN `hd1_files_components` comp ON \
+            comp.id = p.component_id \
+        WHERE \
+            initial_p.tree_id = ? \
+        ORDER BY comp.component ASC \
+        LIMIT {LIMIT_CHILDREN_SIZE}"
     );
     let query = diesel::sql_query(raw_query)
         .bind::<diesel::sql_types::Unsigned<diesel::sql_types::Integer>, _>(parent_id);
