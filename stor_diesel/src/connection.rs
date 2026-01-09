@@ -4,6 +4,7 @@ use diesel::{ConnectionError, MysqlConnection};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
+use url::Url;
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{Level, debug, info, span};
 use xana_commons_rs::{LOCALE, read_file_better};
@@ -49,17 +50,23 @@ pub fn load_db_url_from_env(perma: PermaStore) -> String {
         })
         .collect::<HashMap<_, _>>();
 
-    let mut url_raw = env_map
+    let url_raw = env_map
         .get("DATABASE_URL")
         .expect("DATABASE_URL must be set")
         .to_string();
-    let last_slash = url_raw
-        .bytes()
-        .into_iter()
-        .rposition(|v| v == b'/')
-        .unwrap()
-        + /*slash*/1;
-    url_raw.replace_range(last_slash.., perma_name);
+    let url = Url::parse(&url_raw).unwrap();
+    let url_path = url.path();
+    if !url_path.ends_with(&format!("/{perma_name}")) {
+        panic!("expected {perma_name} but env is {url_raw}")
+    }
+
+    // let last_slash = url_raw
+    //     .bytes()
+    //     .into_iter()
+    //     .rposition(|v| v == b'/')
+    //     .unwrap()
+    //     + /*slash*/1;
+    // url_raw.replace_range(last_slash.., perma_name);
     url_raw
 }
 
