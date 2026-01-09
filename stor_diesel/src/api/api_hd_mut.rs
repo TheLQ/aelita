@@ -22,7 +22,18 @@ pub fn storapi_hd_tree_push(
     let autocommit = storapi_variables_get_str(conn.inner(), "autocommit")?;
     info!("autocommit is {autocommit}");
 
-    build_associations_from_compressed(conn, &compressed)?;
+    let new = build_associations_from_compressed(conn, &compressed)?;
+    let chunks = new.chunks(SQL_PLACEHOLDER_MAX / 4);
+    let chunks_len = chunks.len();
+    let mut rows = 0;
+    for chunk in chunks {
+        info!("Insert chunk {rows} of {chunks_len}");
+        let cur_rows = diesel::insert_into(schema::hd1_files_parents::table)
+            .values(chunk)
+            .execute(conn.inner())?;
+        rows += cur_rows;
+    }
+    debug!("inserted {rows} rows");
 
     Ok(())
 }
@@ -91,7 +102,7 @@ fn components_update(
         SELECT component FROM `fast_hd_components` fast \
         WHERE \
         NOT EXISTS (\
-            SELECT 1 FROM `hd1_files_components` WHERE fast.component = `fast_hd_components`.`component`\
+            SELECT 1 FROM `hd1_files_components` WHERE fast.component = `hd1_files_components`.`component`\
         )",
     )
     .execute(conn.inner())?;

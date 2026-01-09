@@ -5,6 +5,9 @@ use crate::{
 };
 use diesel::{HasQuery, RunQueryDsl};
 use std::collections::HashMap;
+use xana_commons_rs::LOCALE;
+use xana_commons_rs::num_format_re::ToFormattedString;
+use xana_commons_rs::tracing_re::{debug, info};
 
 /// To use AUTO INCREMENT each pass must query the database
 /// This is extremely slow with millions of rows
@@ -12,65 +15,70 @@ use std::collections::HashMap;
 pub fn build_associations_from_compressed(
     conn: &mut StorTransaction,
     compressed: &CompressedPaths,
-) -> StorDieselResult<()> {
+) -> StorDieselResult<Vec<HdPathAssociation>> {
     let mut database = AssociationCompressed::init(conn)?;
     database.upsert_components(compressed)?;
 
-    let CompNodeType::Dir { children_node_ids } = compressed.nodes()[0].node_type() else {
-        unreachable!()
-    };
-    for root_node_id in children_node_ids {
-        let root_node = compressed.node_id(*root_node_id);
-        let root_comp = database.components_to_id[root_node.name_from(&compressed)];
-
-        let parent_id = database.association_get_or_insert(NewHdPathAssociation {
-            tree_depth: 0,
-            parent_id: None,
-            component_id: root_comp,
-        });
-
-        match root_node.node_type() {
-            CompNodeType::Dir { children_node_ids } => {
-                // only the 2nd level /a/b has Some(parent_id)
-                for child_node_id in children_node_ids {
-                    recurse_compressed(&mut database, compressed, parent_id, *child_node_id, 1)
-                }
-            }
-            CompNodeType::File => {
-                // adding is enough
-            }
-            v => todo!("{v:?}"),
-        }
-    }
-    Ok(())
+    recurse_compressed(&mut database, compressed, None, ModelLocalTreeId::new(0), 0);
+    info!(
+        "total symlink good {} broken {}",
+        database.total_symlink_good.to_formatted_string(&LOCALE),
+        database.total_symlink_broken.to_formatted_string(&LOCALE)
+    );
+    let v = database
+        .associations
+        .drain(database.new_associations_at..)
+        .collect::<Vec<_>>();
+    Ok(v)
 }
 
 fn recurse_compressed(
     database: &mut AssociationCompressed,
     local: &CompressedPaths,
-    parent_database: ModelFileTreeId,
-    node_local: ModelLocalTreeId,
+    parent_database: Option<ModelFileTreeId>,
+    cur_local: ModelLocalTreeId,
     tree_depth: u32,
 ) {
-    let node = local.node_id(node_local);
-    let db_comp_id = database.components_to_id[node.name_from(&local)];
+    let cur_node = local.node_id(cur_local);
 
-    let tree_id = database.association_get_or_insert(NewHdPathAssociation {
-        tree_depth,
-        component_id: db_comp_id,
-        parent_id: Some(parent_database),
-    });
+    let cur_database;
+    let child_tree_depth;
+    if cur_local.inner_id() == 0 {
+        // listing root itself, which doesn't have a parent
+        assert_eq!(parent_database, None);
+        cur_database = None;
+        child_tree_depth = 0;
+    } else {
+        let db_comp_id = database.components_to_id[cur_node.name_from(&local)];
+        cur_database = Some(database.association_get_or_insert(NewHdPathAssociation {
+            tree_depth,
+            component_id: db_comp_id,
+            parent_id: parent_database,
+        }));
+        child_tree_depth = tree_depth + 1;
+    }
 
-    match node.node_type() {
+    match cur_node.node_type() {
         CompNodeType::Dir { children_node_ids } => {
-            for id in children_node_ids {
-                recurse_compressed(database, local, parent_database, *id, tree_depth + 1)
+            for child_local in children_node_ids {
+                recurse_compressed(
+                    database,
+                    local,
+                    cur_database,
+                    *child_local,
+                    child_tree_depth,
+                )
             }
         }
         CompNodeType::File => {
             // go no further
         }
-        v => todo!("{v:?}"),
+        CompNodeType::BrokenSymlink { raw } => {
+            database.total_symlink_broken += 1;
+        }
+        CompNodeType::Symlink { target_node_id } => {
+            database.total_symlink_good += 1;
+        }
     }
 }
 
@@ -81,6 +89,8 @@ struct AssociationCompressed<'r, 't> {
     lookup_by_new: HashMap<NewHdPathAssociation, usize>,
     components_to_id: HashMap<Vec<u8>, ModelFileCompId>,
     new_associations_at: usize,
+    total_symlink_broken: usize,
+    total_symlink_good: usize,
 }
 
 impl<'r, 't> AssociationCompressed<'r, 't> {
@@ -102,6 +112,8 @@ impl<'r, 't> AssociationCompressed<'r, 't> {
             lookup_by_new,
             components_to_id: HashMap::new(),
             new_associations_at,
+            total_symlink_good: 0,
+            total_symlink_broken: 0,
         })
     }
 
