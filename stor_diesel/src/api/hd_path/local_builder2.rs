@@ -1,7 +1,7 @@
 use crate::{
     CombinedStatAssociation, HdPathAssociation, ModelFileCompId, ModelFileTreeId, ModelLocalTreeId,
     NewHdPathAssociation, ScanStatDiesel, StorDieselResult, StorIdTypeDiesel, StorTransaction,
-    schema, storapi_hd_components_get_or_insert,
+    components_upsert_select_first, schema, components_upsert_cte,
 };
 use diesel::{HasQuery, RunQueryDsl};
 use std::collections::HashMap;
@@ -124,7 +124,11 @@ impl<'r, 't> AssociationCompressed<'r, 't> {
     }
 
     fn upsert_components(&mut self, compressed: &CompressedPaths) -> StorDieselResult<()> {
-        self.components_to_id = storapi_hd_components_get_or_insert(self.conn, compressed.parts())?;
+        self.components_to_id = components_upsert_cte(self.conn, compressed.parts())?;
+        // self.components_to_id = components_upsert_select_first(self.conn, compressed.parts())?
+        //     .into_iter()
+        //     .map(|(id, comp)| (comp, id))
+        //     .collect();
         Ok(())
     }
 

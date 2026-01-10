@@ -102,7 +102,7 @@ pub fn storapi_rebuild_parents(conn: &mut StorTransaction) -> StorDieselResult<(
     Ok(())
 }
 
-pub fn storapi_hd_components_get_or_insert(
+pub fn components_upsert_cte(
     conn: &mut StorTransaction,
     components_unique_input: &[impl AsRef<[u8]>],
 ) -> StorDieselResult<HashMap<Vec<u8>, ModelFileCompId>> {
@@ -160,6 +160,54 @@ fn components_update(
     );
 
     Ok(())
+}
+
+/// Worse case duplicates 3 times pre-selecting all and failing, inserting all, then re-selecting
+pub fn components_upsert_select_first(
+    conn: &mut StorTransaction,
+    input: &[Vec<u8>],
+) -> StorDieselResult<Vec<(ModelFileCompId, Vec<u8>)>> {
+    let mut found = Vec::with_capacity(input.len());
+    let mut missing: Vec<Vec<u8>> = Vec::new();
+    for chunk in chunky_iter(SQL_PLACEHOLDER_MAX, "comp_upsert_pre", input) {
+        let rows = schema::hd1_files_components::table
+            .filter(schema::hd1_files_components::component.eq_any(chunk))
+            .get_results::<(ModelFileCompId, Vec<u8>)>(conn.inner())?;
+        if rows.len() != chunk.len() {
+            let actual_comps: HashSet<&Vec<u8>> = rows.iter().map(|(_, comp)| comp).collect();
+
+            let mut expected_comps: HashSet<&Vec<u8>> = HashSet::new();
+            expected_comps.extend(chunk);
+
+            let cur_missing: Vec<_> = expected_comps
+                .difference(&actual_comps)
+                .into_iter()
+                .map(|v| v.to_vec())
+                .collect();
+            missing.extend(cur_missing);
+        }
+        found.extend(rows);
+    }
+
+    debug!("Inserting {} missing rows", missing.len());
+    for missing in chunky_iter(SQL_PLACEHOLDER_MAX, "comp_upsert_insert", &missing) {
+        let insert_rows: Vec<_> = missing
+            .iter()
+            .map(|v| schema::hd1_files_components::component.eq(v))
+            .collect();
+        let rows = diesel::insert_into(schema::hd1_files_components::table)
+            .values(insert_rows)
+            .execute(conn.inner());
+        check_insert_num_rows(rows, missing.len())?;
+
+        let new = schema::hd1_files_components::table
+            .filter(schema::hd1_files_components::component.eq_any(missing))
+            .get_results::<(ModelFileCompId, Vec<u8>)>(conn.inner())?;
+        assert_eq!(new.len(), missing.len());
+        found.extend(new);
+    }
+
+    Ok(found)
 }
 
 pub fn storapi_hd_revert_by_pop(conn: &mut StorTransaction) -> StorDieselResult<()> {
