@@ -15,6 +15,7 @@ pub enum StorImportErrorKind {
     QbInit,
     QbAuth,
     InvalidCompressedPaths,
+    InvalidChangeCompressedPaths,
     DieselFailed,
     InvalidQbMetadata,
     InvalidQbTorrents,

@@ -1,21 +1,23 @@
-use crate::importers::n_data_v1::change::{HdAddRoot, HdAddSymlink};
-use aelita_stor_diesel::{StorDieselResult, StorTransaction};
+use crate::err::StorImportResult;
+use crate::importers::n_data_v1::change::{HdAddPath, HdAddRoot, HdAddSymlink};
+use aelita_stor_diesel::StorTransaction;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 
 pub trait Changer {
-    fn commit_change(self, conn: &mut StorTransaction) -> StorDieselResult<()>;
+    fn commit_change(self, conn: &mut StorTransaction) -> StorImportResult<()>;
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) enum ChangeOp {
+    HdAddPath(HdAddPath),
     HdAddSymlink(HdAddSymlink),
     HdAddRoot(HdAddRoot),
 }
 
 impl Changer for ChangeOp {
-    fn commit_change(self, conn: &mut StorTransaction) -> StorDieselResult<()> {
+    fn commit_change(self, conn: &mut StorTransaction) -> StorImportResult<()> {
         match self {
+            Self::HdAddPath(v) => v.commit_change(conn),
             Self::HdAddRoot(v) => v.commit_change(conn),
             Self::HdAddSymlink(v) => v.commit_change(conn),
         }
