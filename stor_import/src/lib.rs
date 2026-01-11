@@ -8,8 +8,7 @@ mod importers;
 mod util;
 
 pub use importers::{
-    n_data_v1::{
-        commit::storcommit_hd, fetch::storfetch_paths_from_cache, fetch::storfetch_paths_from_disk,
-    },
-    qb_get_tor_json_v1::{commit::storcommit_torrents, fetch::storfetch_torrents},
+    n_data_v1::{fetch::storfetch_paths_from_cache, fetch::storfetch_paths_from_disk},
+    page_calls::commit_journal_row,
+    qb_get_tor_json_v1::fetch::storfetch_torrents,
 };

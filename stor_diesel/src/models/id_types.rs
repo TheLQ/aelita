@@ -17,6 +17,13 @@ pub trait StorIdTypeDiesel {
     fn inner_usize(&self) -> usize {
         usize::try_from(self.inner_id()).unwrap()
     }
+
+    fn invalid_value() -> Self
+    where
+        Self: Sized,
+    {
+        Self::new(u32::MAX - 10000)
+    }
 }
 
 macro_rules! id_type {

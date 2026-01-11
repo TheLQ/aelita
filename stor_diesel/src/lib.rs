@@ -13,8 +13,9 @@ mod schema;
 mod schema_temp;
 
 pub use api::{
-    api_hd::*, api_hd_mut::*, api_journal::*, api_space::*, api_tor::*, api_tor_mut::*,
-    api_variables::*, assert_packet_size_huge_enough, hd_path::*, show_create_table,
+    api_hd::*, api_hd_mut::*, api_hd_roots_mut::*, api_journal::*, api_space::*, api_tor::*,
+    api_tor_mut::*, api_variables::*, assert_packet_size_huge_enough, hd_path::*,
+    show_create_table,
 };
 pub use connection::{
     PermaStore, StorTransaction, apply_stor_instrument, establish_connection,
@@ -23,7 +24,7 @@ pub use connection::{
 pub use err::{StorDieselError, StorDieselResult};
 pub use models::{
     diesel_wrappers::*, enum_types::ModelHdRoot, enum_types::ModelJournalTypeName, id_types::*,
-    model_hd::*, model_journal::*, model_space::*, model_tor::*,
+    model_hd::*, model_hd_roots::*, model_journal::*, model_space::*, model_tor::*,
 };
 pub mod err_re {
     pub use chrono::ParseError as ChronoError;

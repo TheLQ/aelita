@@ -54,9 +54,9 @@ macro_rules! enum_value {
 )]
 #[diesel(sql_type = JournalImmutableJournalTypeEnum)]
 pub enum ModelJournalTypeName {
-    Space1,
     QbGetTorJson1,
     NData1,
+    ChangeOp1,
 }
 enum_value!(JournalImmutableJournalTypeEnum -> ModelJournalTypeName);
 
@@ -72,6 +72,8 @@ enum_value!(JournalImmutableJournalTypeEnum -> ModelJournalTypeName);
     strum::AsRefStr,
     strum::VariantArray,
     strum::Display,
+    Serialize,
+    Deserialize,
 )]
 #[diesel(sql_type = Hd1RootsRtypeEnum)]
 pub enum ModelHdRoot {

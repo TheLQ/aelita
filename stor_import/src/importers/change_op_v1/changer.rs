@@ -1,4 +1,4 @@
-use crate::importers::n_data_v1::change::{HdPathAddRoot, HdPathAddSymlink};
+use crate::importers::n_data_v1::change::{HdAddRoot, HdAddSymlink};
 use aelita_stor_diesel::{StorDieselResult, StorTransaction};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -9,15 +9,15 @@ pub trait Changer {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) enum ChangeOp {
-    HdPathAddSymlink(HdPathAddSymlink),
-    HdPathAddRoot(HdPathAddRoot),
+    HdAddSymlink(HdAddSymlink),
+    HdAddRoot(HdAddRoot),
 }
 
 impl Changer for ChangeOp {
     fn commit_change(self, conn: &mut StorTransaction) -> StorDieselResult<()> {
         match self {
-            Self::HdPathAddRoot(v) => v.commit_change(conn),
-            Self::HdPathAddSymlink(v) => v.commit_change(conn),
+            Self::HdAddRoot(v) => v.commit_change(conn),
+            Self::HdAddSymlink(v) => v.commit_change(conn),
         }
     }
 }
@@ -25,18 +25,21 @@ impl Changer for ChangeOp {
 #[cfg(test)]
 mod test {
     use crate::importers::change_op_v1::changer::ChangeOp;
-    use crate::importers::n_data_v1::change::{HdPathAddRoot, HdPathAddSymlink};
+    use crate::importers::n_data_v1::change::{HdAddRoot, HdAddSymlink};
+    use aelita_stor_diesel::ModelHdRoot;
 
     #[test]
     fn enc_test() {
         let values = [
-            ChangeOp::HdPathAddSymlink(HdPathAddSymlink {
+            ChangeOp::HdAddSymlink(HdAddSymlink {
                 target: vec!["asdf".as_bytes().to_vec()],
-                source: vec!["yep".as_bytes().to_vec()],
+                at: vec!["yep".as_bytes().to_vec()],
             }),
-            ChangeOp::HdPathAddRoot(HdPathAddRoot {
+            ChangeOp::HdAddRoot(HdAddRoot {
                 source: vec!["huh".as_bytes().to_vec()],
-                desc: "yasdf".into(),
+                description: "".to_string(),
+                space_name: "".to_string(),
+                root_type: ModelHdRoot::ZfsDataset,
             }),
         ];
         let out = serde_json::to_string(&values).unwrap();

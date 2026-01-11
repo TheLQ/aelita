@@ -1,2 +1,2 @@
 pub mod changer;
-mod commit;
+pub mod commit;

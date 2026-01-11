@@ -20,7 +20,7 @@ pub fn storcommit_torrents(
         .metadata
         .unwrap()
         .deserialize_json()
-        .map_err(|(msg, e)| StorImportErrorKind::InvalidQbMetadata.build_err_message(e, msg))?;
+        .map_err(|(e, msg)| StorImportErrorKind::InvalidQbMetadata.build_err_message(e, msg))?;
     info!("meta {metadata:?}");
 
     // let meta = row.data;
@@ -31,7 +31,7 @@ pub fn storcommit_torrents(
     let local_tors: Vec<ModelTorrentsQBittorrent> = row
         .data
         .deserialize_json()
-        .map_err(|(msg, e)| StorImportErrorKind::InvalidQbTorrents.build_err_message(e, msg))?;
+        .map_err(|(e, msg)| StorImportErrorKind::InvalidQbTorrents.build_err_message(e, msg))?;
     // let local_tors = local_tors_raw.as_tor_lookup_by_hash();
 
     let db_tors_raw =

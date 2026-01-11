@@ -1,15 +1,14 @@
 use aelita_commons::log_init;
 use aelita_stor_diesel::ModelJournalImmutable;
-use aelita_stor_diesel::ModelJournalTypeName;
 use aelita_stor_diesel::storapi_hd_revert_by_pop;
 use aelita_stor_diesel::{PermaStore, StorTransaction, establish_connection_or_panic};
 use aelita_stor_diesel::{storapi_journal_commit_new, storapi_journal_commit_remain_next};
-use aelita_stor_import::err::{StorImportError, StorImportErrorKind, StorImportResult};
-use aelita_stor_import::{storcommit_hd, storcommit_torrents};
+use aelita_stor_import::commit_journal_row;
+use aelita_stor_import::err::{StorImportErrorKind, StorImportResult};
 use std::ops::ControlFlow;
 use std::process::ExitCode;
 use xana_commons_rs::tracing_re::info;
-use xana_commons_rs::{BasicWatch, CrashErrKind, ResultXanaMap, pretty_main};
+use xana_commons_rs::{BasicWatch, CrashErrKind, pretty_main};
 
 fn main() -> ExitCode {
     log_init();
@@ -34,17 +33,17 @@ fn run() -> StorImportResult<()> {
                 process_row(conn, row)?;
                 total_commit += 1;
             }
-            Ok::<_, StorImportError>(())
+            StorImportResult::Ok(())
         })?;
     } else {
         loop {
             let next = StorTransaction::new_transaction("cli-import", &mut conn, |conn| {
                 if let Some(row) = storapi_journal_commit_remain_next(conn)
-                    .xana_err(StorImportErrorKind::DieselFailed)?
+                    .map_err(StorImportErrorKind::DieselFailed.xana_map())?
                 {
                     process_row(conn, row)?;
                     total_commit += 1;
-                    Ok::<_, StorImportError>(ControlFlow::Continue(()))
+                    StorImportResult::Ok(ControlFlow::Continue(()))
                 } else {
                     Ok(ControlFlow::Break(()))
                 }
@@ -63,18 +62,7 @@ fn process_row(conn: &mut StorTransaction, row: ModelJournalImmutable) -> StorIm
     let journal_id = row.journal_id.clone();
     info!("-- Commit journal {journal_id} {} --", row.journal_type);
     let journal_type = row.journal_type.clone();
-    match row.journal_type {
-        ModelJournalTypeName::QbGetTorJson1 => {
-            // todo!()
-            storcommit_torrents(conn, row)
-        }
-        ModelJournalTypeName::NData1 => storcommit_hd(conn, row),
-        ModelJournalTypeName::Space1 => todo!(),
-    }?;
-    // if 1 + 1 == 2 {
-    // if journal_type == ModelJournalTypeName::NData1 {
-    //     panic!("no commit for you");
-    // }
+    commit_journal_row(conn, journal_type, row)?;
     storapi_journal_commit_new(conn, &journal_id)?;
     Ok(())
 }
