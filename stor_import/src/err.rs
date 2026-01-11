@@ -18,6 +18,7 @@ pub enum StorImportErrorKind {
     DieselFailed,
     InvalidQbMetadata,
     InvalidQbTorrents,
+    InvalidChangeOp,
 }
 crash_builder!(
     StorImportError,
