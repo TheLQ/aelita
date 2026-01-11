@@ -1,7 +1,7 @@
 use crate::{
-    CombinedStatAssociation, HdPathAssociation, ModelFileCompId, ModelFileTreeId, ModelLocalTreeId,
-    NewHdPathAssociation, ScanStatDiesel, StorDieselResult, StorIdTypeDiesel, StorTransaction,
-    components_upsert_cte, components_upsert_select_first, schema,
+    CombinedStatAssociation, HdPathAssociation, ModelFileCompId, ModelFileTreeId,
+    NewHdPathAssociation, StorDieselResult, StorIdTypeDiesel, StorTransaction,
+    components_upsert_cte,
 };
 use diesel::{HasQuery, RunQueryDsl};
 use std::collections::HashMap;

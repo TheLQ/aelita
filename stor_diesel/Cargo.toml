@@ -21,3 +21,4 @@ postcard = { workspace = true }
 itertools = "0.14"
 sha2 = "0.10.9"
 url = "2.5.8"
+tempfile = "3.24.0"

@@ -3,8 +3,9 @@ use crate::err::{StorDieselErrorKind, StorDieselResult};
 use crate::storapi_variables_get;
 use diesel::sql_types::{Integer, Text, Unsigned};
 use diesel::{QueryResult, QueryableByName, RunQueryDsl, dsl};
-use xana_commons_rs::CrashErrKind;
-use xana_commons_rs::tracing_re::info;
+use xana_commons_rs::num_format_re::ToFormattedString;
+use xana_commons_rs::tracing_re::{info, trace};
+use xana_commons_rs::{CrashErrKind, LOCALE};
 
 /// Avoid "Prepared statement contains too many placeholders"
 pub const SQL_PLACEHOLDER_MAX: usize = 60_000;
@@ -70,18 +71,39 @@ struct CreateResult {
     create_table: String,
 }
 
-// pub struct ChunkyQuerySlice<'c, V, const CHUNK: usize>(&'c [V]);
-//
-// impl<'c, V, const CHUNK: usize> ChunkyQuerySlice<'c, V, CHUNK> {}
-//
-// impl<'c, V: 'c, const CHUNK: usize> IntoIterator for ChunkyQuerySlice<'c, V, CHUNK> {
-//     type Item = V;
-//     type IntoIter = std::slice::Iter<'c, V>;
-//
-//     fn into_iter(self) -> Self::IntoIter {
-//         self.0.iter()
-//     }
-// }
+pub fn chunky_iter<'s, V>(
+    size: usize,
+    message: &str,
+    slice: &'s [V],
+) -> impl Iterator<Item = &'s [V]> {
+    let chunks = slice.chunks(size);
+    let chunks_len = chunks.len() - 1;
+    chunks.enumerate().map(move |(i, chunk)| {
+        trace!(
+            "Chunky {message} - {} of {}",
+            i.to_formatted_string(&LOCALE),
+            chunks_len.to_formatted_string(&LOCALE)
+        );
+        chunk
+    })
+}
+
+pub fn chunky_iter_ref<'s, 'v, V: ?Sized>(
+    size: usize,
+    message: &str,
+    slice: &'s [&'v V],
+) -> impl Iterator<Item = &'s [&'v V]> {
+    let chunks = slice.chunks(size);
+    let chunks_len = chunks.len() - 1;
+    chunks.enumerate().map(move |(i, chunk)| {
+        trace!(
+            "Chunky {message} - {} of {}",
+            i.to_formatted_string(&LOCALE),
+            chunks_len.to_formatted_string(&LOCALE)
+        );
+        chunk
+    })
+}
 
 #[cfg(test)]
 pub mod test {

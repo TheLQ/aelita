@@ -82,7 +82,6 @@ pub fn establish_connection(
 ) -> Result<StorConnection, (String, ConnectionError)> {
     let database_url = load_db_url_from_env(perma);
     info!("Connecting to {database_url}");
-    // InstrumentedMysqlConnection::establish(&database_url)
     let mut conn = MysqlConnection::establish(&database_url).map_err(|e| (database_url, e))?;
     apply_stor_instrument(&mut conn);
     Ok(conn)

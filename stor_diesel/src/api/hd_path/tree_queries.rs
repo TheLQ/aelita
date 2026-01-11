@@ -20,20 +20,14 @@ pub fn storapi_hd_get_path_by_id(
     id: ModelFileTreeId,
 ) -> StorDieselResult<(Vec<PathRow>, PathBuf)> {
     if id.inner_id() == XRN_PATH_ROOT_ID {
-        _storapi_hd_get_path_by_id_root(conn)
+        info!("storapi_hd_get_path_by_id root");
+        Ok((Vec::new(), PathBuf::from("/")))
     } else {
         _storapi_hd_get_path_by_id_path(conn, id)
     }
 }
 
-pub fn _storapi_hd_get_path_by_id_root(
-    conn: &mut StorTransaction,
-) -> StorDieselResult<(Vec<PathRow>, PathBuf)> {
-    info!("storapi_hd_get_path_by_id root");
-    Ok((Vec::new(), PathBuf::from("/")))
-}
-
-pub fn _storapi_hd_get_path_by_id_path(
+fn _storapi_hd_get_path_by_id_path(
     conn: &mut StorTransaction,
     id: ModelFileTreeId,
 ) -> StorDieselResult<(Vec<PathRow>, PathBuf)> {

@@ -1,32 +1,12 @@
-use crate::api::common::{SQL_PLACEHOLDER_MAX, check_insert_num_rows, chunky_iter};
+use crate::api::common::{SQL_PLACEHOLDER_MAX, chunky_iter};
 use crate::{ModelFileCompId, StorDieselResult, StorTransaction};
 use crate::{schema, schema_temp};
 use diesel::RunQueryDsl;
 use diesel::prelude::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use xana_commons_rs::num_format_re::ToFormattedString;
-use xana_commons_rs::tracing_re::{info, trace};
+use xana_commons_rs::tracing_re::info;
 use xana_commons_rs::{BasicWatch, LOCALE};
-// pub fn storapi_hd_get_by_id(
-//     conn: &mut StorTransaction,
-//     id: ModelFileTreeId,
-// ) -> StorDieselResult<HdPathAssociation> {
-//     Ok(HdPathAssociation::query()
-//         .filter(schema::hd1_files_parents::tree_id.eq(id))
-//         .first(conn.inner())?)
-// }
-
-// pub fn components_get<T: AsRef<[u8]>>(
-//     conn: &mut StorTransaction,
-//     input: impl IntoIterator<Item = T>,
-// ) -> StorDieselResult<Vec<(ModelFileCompId, Vec<u8>)>> {
-//     let mut values: Vec<&[u8]> = Vec::new();
-//     for item in input {
-//         values.push(item.as_ref());
-//     }
-//     // let values = input.into_iter().map(|v| v.as_ref()).collect::<Vec<_>>();
-//     components_get_bytes(conn, &values)
-// }
 
 pub fn components_get_bytes(
     conn: &mut StorTransaction,

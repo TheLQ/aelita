@@ -1,22 +1,24 @@
-use crate::api::api_hd::components_get_from_fast;
 use crate::api::assert_test_database;
-use crate::api::bulk_insert::bulk_insert;
-use crate::api::common::SQL_PLACEHOLDER_MAX;
+use crate::api::bulk_insert::{COL_SEP, ROW_SEP, bulk_load};
+use crate::api::common::{SQL_PLACEHOLDER_MAX, check_insert_num_rows, chunky_iter};
+use crate::err::StorDieselErrorKind;
 use crate::models::enum_types::ModelJournalTypeName;
 use crate::schema_temp::{FAST_HD_COMPONENTS_CREATE, FAST_HD_COMPONENTS_TRUNCATE};
-use crate::{HdPathAssociation, ModelFileCompId, ModelJournalId};
-use crate::{ScanStatDiesel, StorIdTypeDiesel, storapi_journal_get_data};
+use crate::storapi_journal_get_data;
+use crate::{
+    HdPathAssociation, ModelFileCompId, ModelJournalId, RawDieselBytes, components_get_from_fast,
+};
 use crate::{StorDieselResult, StorTransaction, schema, schema_temp};
 use crate::{build_associations_from_compressed, storapi_variables_get_str};
 use chrono::NaiveDateTime;
 use chrono::format::{DelayedFormat, StrftimeItems};
 use diesel::RunQueryDsl;
 use diesel::prelude::*;
-use std::collections::HashMap;
-use std::fmt::Write;
+use std::collections::{HashMap, HashSet};
+use std::io::Write;
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{debug, info, trace};
-use xana_commons_rs::{BasicWatch, LOCALE};
+use xana_commons_rs::{BasicWatch, LOCALE, ResultXanaMap, io_op};
 use xana_fs_indexer_rs::{CompressedPaths, ScanStat};
 
 pub fn storapi_hd_tree_push(
@@ -29,7 +31,8 @@ pub fn storapi_hd_tree_push(
 
     let new = build_associations_from_compressed(conn, &compressed)?;
 
-    let rows = bulk_insert(
+    let watch = BasicWatch::start();
+    let rows = bulk_load(
         conn,
         "hd1_files_parents",
         [
@@ -64,23 +67,33 @@ pub fn storapi_hd_tree_push(
          query_res| {
             write!(
                 query_res,
-                "{tree_id},{tree_depth},{component_id},{parent_id},{created},{modified},{size},{user_id},{group_id},{hard_links}",
+                "{tree_id}{COL_SEP}\
+                {tree_depth}{COL_SEP}\
+                {component_id}{COL_SEP}\
+                {parent_id}{COL_SEP}\
+                {created}{COL_SEP}\
+                {modified}{COL_SEP}\
+                {size}{COL_SEP}\
+                {user_id}{COL_SEP}\
+                {group_id}{COL_SEP}\
+                {hard_links}{COL_SEP}\
+                {ROW_SEP}",
                 created = chrono_to_mysql(created),
                 modified = chrono_to_mysql(modified),
                 parent_id = match parent_id {
-                   Some(v) => v.to_string(),
-                   None => "NULL".into(),
+                    Some(v) => v.to_string(),
+                    None => "NULL".into(),
                 }
-            ).unwrap()
+            )
+            .unwrap()
         },
-        4_000_000,
     )?;
-    debug!("inserted {rows} rows");
+    debug!("inserted rows in {watch}");
 
     Ok(())
 }
 
-fn chrono_to_mysql(chron: &NaiveDateTime) -> DelayedFormat<StrftimeItems> {
+fn chrono_to_mysql(chron: &NaiveDateTime) -> DelayedFormat<StrftimeItems<'_>> {
     chron.format("'%Y-%m-%d %H:%M:%S%.6f'")
 }
 
@@ -89,7 +102,10 @@ pub fn storapi_rebuild_parents(conn: &mut StorTransaction) -> StorDieselResult<(
 
     // push_associations_fancy_insert(conn)?;
     let watch = BasicWatch::start();
-    let compressed_paths_raw = storapi_journal_get_data(conn, ModelJournalId::new(148))?;
+    // let compressed_paths_raw = storapi_journal_get_data(conn, ModelJournalId::new(1))?;
+    let compressed_paths_raw = io_op("journal-1.dat", |v| std::fs::read(v))
+        .xana_err(StorDieselErrorKind::_TODO)
+        .map(|v| RawDieselBytes(v))?;
     debug!(
         "loaded {} MB in {watch}",
         (compressed_paths_raw.as_inner().len() / 1000 / 1000).to_formatted_string(&LOCALE)
@@ -236,5 +252,10 @@ pub fn storapi_hd_revert_by_pop(conn: &mut StorTransaction) -> StorDieselResult<
     let rows = diesel::sql_query("TRUNCATE TABLE `hd1_files_parents`").execute(conn.inner())?;
     info!("truncate {rows} rows");
 
+    Ok(())
+}
+
+pub fn storapi_hd_parents_delete(conn: &mut StorTransaction) -> StorDieselResult<()> {
+    diesel::sql_query("TRUNCATE TABLE `hd1_files_parents`").execute(conn.inner())?;
     Ok(())
 }
