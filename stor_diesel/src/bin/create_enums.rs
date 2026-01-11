@@ -3,9 +3,12 @@ extern crate core;
 use aelita_commons::log_init;
 use aelita_stor_diesel::err::StorDieselErrorKind;
 use aelita_stor_diesel::{
-    ModelHdRoot, PermaStore, StorDieselError, StorDieselResult,
+    ModelHdRoot, ModelJournalTypeName, PermaStore, StorDieselError, StorDieselResult,
     StorTransaction, establish_connection,
 };
+use aelita_xrn::defs::address::XrnType;
+use aelita_xrn::defs::path_xrn::PathXrnType;
+use aelita_xrn::defs::space_xrn::SpaceXrnType;
 use diesel::RunQueryDsl;
 use std::process::ExitCode;
 use strum::VariantArray;
@@ -23,39 +26,52 @@ pub fn run() -> StorDieselResult<()> {
     })?;
 
     StorTransaction::new_transaction("build", conn, |conn| {
-        // let primary_keys = type_names::<XrnType>();
-        // diesel::sql_query(alter_enum_query("space_owned", "child_type1", primary_keys))
-        //     .execute(conn.inner())?;
-        //
-        // let mut secondary_keys = String::new();
-        // secondary_keys.push_str(&type_names::<SpaceXrnType>());
-        // secondary_keys.push_str(", ");
-        // secondary_keys.push_str(&type_names::<PathXrnType>());
-        // diesel::sql_query(alter_enum_query(
-        //     "space_owned",
-        //     "child_type2",
-        //     secondary_keys,
-        // ))
-        // .execute(conn.inner())?;
-        //
-        // let journal_keys = type_names::<ModelJournalTypeName>();
-        // diesel::sql_query(alter_enum_query(
-        //     "journal_immutable",
-        //     "journal_type",
-        //     journal_keys,
-        // ))
-        // .execute(conn.inner())?;
-
-        diesel::sql_query(alter_enum_query(
-            "hd1_roots",
-            "rtype",
-            type_names::<ModelHdRoot>(),
-        ))
-        .execute(conn.inner())?;
+        set_space_owned(conn)?;
+        set_journal(conn)?;
+        set_hd_roots(conn)?;
 
         Ok::<(), Box<StorDieselError>>(())
     })?;
 
+    Ok(())
+}
+
+fn set_space_owned(conn: &mut StorTransaction) -> StorDieselResult<()> {
+    let primary_keys = type_names::<XrnType>();
+    diesel::sql_query(alter_enum_query("space_owned", "child_type1", primary_keys))
+        .execute(conn.inner())?;
+
+    let mut secondary_keys = String::new();
+    secondary_keys.push_str(&type_names::<SpaceXrnType>());
+    secondary_keys.push_str(", ");
+    secondary_keys.push_str(&type_names::<PathXrnType>());
+    diesel::sql_query(alter_enum_query(
+        "space_owned",
+        "child_type2",
+        secondary_keys,
+    ))
+    .execute(conn.inner())?;
+    Ok(())
+}
+
+fn set_journal(conn: &mut StorTransaction) -> StorDieselResult<()> {
+    let journal_keys = type_names::<ModelJournalTypeName>();
+    diesel::sql_query(alter_enum_query(
+        "journal_immutable",
+        "journal_type",
+        journal_keys,
+    ))
+    .execute(conn.inner())?;
+    Ok(())
+}
+
+fn set_hd_roots(conn: &mut StorTransaction) -> StorDieselResult<()> {
+    diesel::sql_query(alter_enum_query(
+        "hd1_roots",
+        "rtype",
+        type_names::<ModelHdRoot>(),
+    ))
+    .execute(conn.inner())?;
     Ok(())
 }
 
