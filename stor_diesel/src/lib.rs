@@ -31,3 +31,4 @@ pub mod err_re {
     pub use diesel::result::Error as DieselError;
     pub use postcard::Error as PostcardError;
 }
+pub use connection::StorInstrument;

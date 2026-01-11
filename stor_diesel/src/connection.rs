@@ -13,12 +13,14 @@ use xana_fs_indexer_rs::read_file_better;
 pub enum PermaStore {
     AelitaNull,
     Edition1,
+    Lyoko1,
 }
 
 pub fn load_db_url_from_env(perma: PermaStore) -> String {
     let perma_name = match perma {
         PermaStore::AelitaNull => "aelita_null",
         PermaStore::Edition1 => "edition1",
+        PermaStore::Lyoko1 => "lyoko_aelita",
     };
 
     let mut env_path = Path::new(".env");
@@ -99,7 +101,7 @@ pub fn apply_stor_instrument(conn: &mut StorConnection) {
 }
 
 #[derive(Default)]
-struct StorInstrument {}
+pub struct StorInstrument {}
 
 impl Instrumentation for StorInstrument {
     fn on_connection_event(&mut self, event: InstrumentationEvent<'_>) {

@@ -26,7 +26,7 @@ pub fn storfetch_paths_from_cache(conn: &mut StorTransaction) -> StorImportResul
     let compressed_bytes = std::fs::read(COMPRESSED_CACHE)
         .map_io_err(COMPRESSED_CACHE)
         .xana_err(StorImportErrorKind::InvalidCompressedPaths)?;
-    // insert_compressed_encoded(conn, RawDieselBytes(compressed_bytes))?;
+    insert_compressed_encoded(conn, RawDieselBytes(compressed_bytes))?;
     Ok(())
 }
 
@@ -34,19 +34,15 @@ pub fn storfetch_paths_from_disk(
     conn: &mut StorTransaction,
     roots: &[impl AsRef<Path>],
 ) -> StorImportResult<()> {
-    const LOAD_FROM_DISK: bool = true;
+    const LOAD_FROM_DISK: bool = false;
     let scans = if LOAD_FROM_DISK || !SCAN_CACHE.exists() {
         scan_disk(roots)
     } else {
         scan_disk_cached()?
     };
 
-    let compressed = stat_scan_to_compressed(scans)?;
-    let watch = BasicWatch::start();
-    let encoded = RawDieselBytes::serialize_postcard(&compressed)
-        .xana_err(StorImportErrorKind::InvalidCompressedPaths)?;
-    info!("CompressedPaths encoded in {watch}");
-    insert_compressed_encoded(conn, encoded)?;
+    let (_compressed, encoded) = stat_scan_to_compressed(scans)?;
+    insert_compressed_encoded(conn, RawDieselBytes(encoded))?;
     Ok(())
 }
 
@@ -62,7 +58,9 @@ fn scan_disk_cached() -> StorImportResult<Vec<RecursiveStatResult>> {
     Ok(res)
 }
 
-fn stat_scan_to_compressed(scans: Vec<RecursiveStatResult>) -> StorImportResult<CompressedPaths> {
+fn stat_scan_to_compressed(
+    scans: Vec<RecursiveStatResult>,
+) -> StorImportResult<(CompressedPaths, Vec<u8>)> {
     let raw_size: usize = scans
         .iter()
         .map(|v| {
@@ -133,7 +131,7 @@ fn stat_scan_to_compressed(scans: Vec<RecursiveStatResult>) -> StorImportResult<
         .xana_err(StorImportErrorKind::InvalidCompressedPaths)?;
     info!("wrote to {}", COMPRESSED_CACHE.display());
 
-    Ok(compressed)
+    Ok((compressed, encoded))
 }
 
 fn scan_disk(roots: &[impl AsRef<Path>]) -> Vec<RecursiveStatResult> {

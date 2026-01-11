@@ -11,7 +11,7 @@ use xana_commons_rs::{BasicWatch, CrashErrKind, ResultXanaMap, SimpleIoMap};
 use xana_fs_indexer_rs::{RecursiveStatResult, ScanFileTypeWithPath, ScanStat};
 
 type InputCacheData = (DiskScanFile, ScanStat);
-type InputCacheDataRef<'s> = Vec<(DiskScanFile, &'s ScanStat)>;
+type InputCacheDataRef<'s> = (DiskScanFile, &'s ScanStat);
 const U64_BYTES: usize = 8;
 const FLUSH_AT_ENTRIES: usize = 4096;
 
@@ -65,7 +65,7 @@ impl ChannelOutSaved {
     // fn flush_values(&mut self, values_range: Range<usize>) {
     fn flush_values(&mut self, values: usize) {
         let (stype, scan) = &self.output[values];
-        let safe_values: InputCacheData = (stype.into(), scan.clone());
+        let safe_values: InputCacheDataRef = (stype.into(), scan);
 
         let encoded = RawDieselBytes::serialize_postcard(&safe_values)
             .unwrap_or_else(|e| panic!("failed {e} on value {values:?}"));
