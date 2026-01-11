@@ -51,10 +51,12 @@ pub fn components_get_from_fast(
 
 pub fn storapi_hd_components_with(
     conn: &mut StorTransaction,
-    input: &[&[u8]],
+    input: &[impl AsRef<[u8]>],
 ) -> StorDieselResult<HashMap<Vec<u8>, u32>> {
     let mut found = HashMap::new();
     for chunk in Chunky::ify(input, "comp-with").pieces::<SQL_PLACEHOLDER_MAX>() {
+        // todo: any way to avoid this middle vec?
+        let chunk = chunk.iter().map(|v| v.as_ref()).collect::<Vec<_>>();
         let rows = schema::hd1_files_components::table
             .select((
                 schema::hd1_files_components::component,

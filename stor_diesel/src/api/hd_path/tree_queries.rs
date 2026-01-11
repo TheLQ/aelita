@@ -77,13 +77,16 @@ fn _storapi_hd_get_path_by_id_path(
 
 pub fn storapi_hd_get_path_by_path(
     conn: &mut StorTransaction,
-    components_bytes: CompPathSlice,
+    components_bytes: &[impl AsRef<[u8]>],
 ) -> StorDieselResult<Vec<ModelFileTreeId>> {
     info!(
         "Load components for path {}",
         components_bytes
             .iter()
-            .map(|v| format!("\"{}\"", str::from_utf8(v).unwrap_or("INVALID_UTF8")))
+            .map(|v| format!(
+                "\"{}\"",
+                str::from_utf8(v.as_ref()).unwrap_or("INVALID_UTF8")
+            ))
             .collect::<CommaJoiner>()
     );
     let components_len = components_bytes.len();
@@ -118,10 +121,10 @@ pub fn storapi_hd_get_path_by_path(
         "
     );
 
-    let components_to_id = storapi_hd_components_with(conn, &components_bytes)?;
+    let components_to_id = storapi_hd_components_with(conn, components_bytes)?;
     let mut query_components = components_bytes
         .iter()
-        .map(|v| components_to_id.get(*v).unwrap())
+        .map(|v| components_to_id.get(v.as_ref()).unwrap())
         .collect::<Vec<_>>();
 
     let mut query = diesel::sql_query(raw_query).into_boxed();

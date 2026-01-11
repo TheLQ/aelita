@@ -109,13 +109,13 @@ impl RawDieselBytes {
 
     pub fn deserialize_json<'d, D: serde::Deserialize<'d>>(
         &'d self,
-    ) -> Result<D, (String, serde_json::Error)> {
+    ) -> Result<D, (serde_json::Error, String)> {
         serde_json::from_slice(&self.0).map_err(|e| {
             let len = self.0.len().min(10000);
             let extract = str::from_utf8(&self.0[0..len])
                 .unwrap_or("[not a string]")
                 .to_string();
-            (extract, e)
+            (e, extract)
         })
     }
 

@@ -11,7 +11,7 @@ use xana_commons_rs::{CrashErrKind, LOCALE};
 /// Avoid "Prepared statement contains too many placeholders"
 pub const SQL_PLACEHOLDER_MAX: usize = 60_000;
 
-pub(super) type CompPathSlice<'o, 'i> = &'o [&'o [u8]];
+pub type CompPathSlice<'o, 'i> = &'o [&'o [u8]];
 
 pub fn check_insert_num_rows(query: QueryResult<usize>, expected: usize) -> StorDieselResult<()> {
     let result_size = query?;

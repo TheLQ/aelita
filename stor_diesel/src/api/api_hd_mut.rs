@@ -227,8 +227,8 @@ pub fn components_upsert_select_first(
 
 pub fn storapi_hd_links_add(
     conn: &mut StorTransaction,
-    at: &[&[u8]],
-    target: &[&[u8]],
+    at: &[impl AsRef<[u8]>],
+    target: &[impl AsRef<[u8]>],
 ) -> StorDieselResult<()> {
     let at_path = storapi_hd_get_path_by_path(conn, at)?;
     let target_path = storapi_hd_get_path_by_path(conn, target)?;
