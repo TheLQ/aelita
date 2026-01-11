@@ -1,4 +1,5 @@
 use xana_commons_rs::{CrashErrKind, crash_builder};
+use xana_fs_indexer_rs::IndexerErrorKind;
 
 pub type StorDieselResult<T> = Result<T, Box<StorDieselError>>;
 
@@ -27,6 +28,7 @@ pub enum StorDieselErrorKind {
     CompressedPathNotRoot,
     CompressedPathEmpty,
     CompressedUnknownComponent,
+    InvalidChangeCompressedPaths,
     //
     EmptyResult,
     JournalHashFailed,
@@ -46,6 +48,7 @@ crash_builder!(
     (extern StdUtf8, std::str::Utf8Error),
     (extern Strum, strum::ParseError),
     (extern TryFromNumber, std::num::TryFromIntError),
+    (mod IndexerError, IndexerErrorKind),
 );
 
 /// Because ? is heavily used. They will probably have the same kind anyway
