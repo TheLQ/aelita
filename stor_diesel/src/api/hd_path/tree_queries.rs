@@ -1,4 +1,5 @@
 use crate::api::api_hd::storapi_hd_components_with;
+use crate::api::common::CompPathSlice;
 use crate::err::StorDieselErrorKind;
 use crate::{
     HdPathDieselDyn, ModelFileTreeId, PathRow, StorDieselResult, StorIdTypeDiesel, StorTransaction,
@@ -76,10 +77,8 @@ fn _storapi_hd_get_path_by_id_path(
 
 pub fn storapi_hd_get_path_by_path(
     conn: &mut StorTransaction,
-    path: impl AsRef<Path>,
+    components_bytes: CompPathSlice,
 ) -> StorDieselResult<Vec<ModelFileTreeId>> {
-    let path = path.as_ref();
-    let components_bytes = path_components(path, |v| v.as_bytes())?;
     info!(
         "Load components for path {}",
         components_bytes
@@ -119,9 +118,7 @@ pub fn storapi_hd_get_path_by_path(
         "
     );
 
-    let components_to_id = storapi_hd_components_with(conn, &components_bytes)?
-        .into_iter()
-        .collect::<HashMap<_, _>>();
+    let components_to_id = storapi_hd_components_with(conn, &components_bytes)?;
     let mut query_components = components_bytes
         .iter()
         .map(|v| components_to_id.get(*v).unwrap())

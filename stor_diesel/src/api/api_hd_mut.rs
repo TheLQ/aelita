@@ -6,6 +6,7 @@ use crate::models::enum_types::ModelJournalTypeName;
 use crate::schema_temp::{FAST_HD_COMPONENTS_CREATE, FAST_HD_COMPONENTS_TRUNCATE};
 use crate::{
     HdPathAssociation, ModelFileCompId, ModelJournalId, RawDieselBytes, components_get_from_fast,
+    storapi_hd_get_path_by_path,
 };
 use crate::{StorDieselResult, StorTransaction, schema, schema_temp};
 use crate::{build_associations_from_compressed, storapi_variables_get_str};
@@ -224,6 +225,24 @@ pub fn components_upsert_select_first(
     Ok(found)
 }
 
+pub fn storapi_hd_links_add(
+    conn: &mut StorTransaction,
+    at: &[&[u8]],
+    target: &[&[u8]],
+) -> StorDieselResult<()> {
+    let at_path = storapi_hd_get_path_by_path(conn, at)?;
+    let target_path = storapi_hd_get_path_by_path(conn, target)?;
+
+    let rows = diesel::insert_into(schema::hd1_files_links::table)
+        .values((
+            schema::hd1_files_links::at_tree.eq(at_path.last().unwrap()),
+            schema::hd1_files_links::target_tree.eq(target_path.last().unwrap()),
+        ))
+        .execute(conn.inner());
+    check_insert_num_rows(rows, 1)?;
+    Ok(())
+}
+
 pub fn storapi_hd_revert_by_pop(conn: &mut StorTransaction) -> StorDieselResult<()> {
     assert_test_database(conn)?;
 
@@ -254,6 +273,7 @@ pub fn storapi_hd_revert_by_pop(conn: &mut StorTransaction) -> StorDieselResult<
 }
 
 pub fn storapi_hd_parents_delete(conn: &mut StorTransaction) -> StorDieselResult<()> {
+    assert_test_database(conn)?;
     diesel::sql_query("TRUNCATE TABLE `hd1_files_parents`").execute(conn.inner())?;
     Ok(())
 }

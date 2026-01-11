@@ -48,10 +48,19 @@ CREATE TABLE IF NOT EXISTS `hd1_files_parents`
     CONSTRAINT `fk_hd1_files_parents_components`
         FOREIGN KEY (`component_id`) REFERENCES `hd1_files_components` (`id`)
 );
-# create unique index if not exist `glob_unique`  on `hd1_files_parents` (`tree_depth`, `parent_id`, `component_id`);
-# create index `parents` on `hd1_files_parents` (`parent_id`);
-# create index `lookup` on `hd1_files_parents` (`tree_id`, `parent_id`);
-show create table `hd1_files_parents`;
+# show create table `hd1_files_parents`;
+
+CREATE TABLE IF NOT EXISTS `hd1_files_links`
+(
+    `at_tree`     INTEGER UNSIGNED NOT NULL,
+    `target_tree` INTEGER UNSIGNED NOT NULL,
+    PRIMARY KEY (`at_tree`),
+    CONSTRAINT `fk_hd1_files_links_source`
+        FOREIGN KEY (`at_tree`) REFERENCES `hd1_files_parents` (`tree_id`),
+    CONSTRAINT `fk_hd1_files_links_target`
+        FOREIGN KEY (`target_tree`) REFERENCES `hd1_files_parents` (`tree_id`)
+);
+# drop table hd1_files_links;
 
 CREATE TABLE IF NOT EXISTS `hd1_files_paths`
 (

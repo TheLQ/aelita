@@ -31,6 +31,13 @@ diesel::table! {
 }
 
 diesel::table! {
+    hd1_files_links (at_tree) {
+        at_tree -> Unsigned<Integer>,
+        target_tree -> Unsigned<Integer>,
+    }
+}
+
+diesel::table! {
     hd1_files_parents (tree_id) {
         tree_id -> Unsigned<Integer>,
         tree_depth -> Unsigned<Integer>,
@@ -208,6 +215,7 @@ diesel::joinable!(tor1_torrents -> journal_immutable (journal_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     hd1_files_components,
+    hd1_files_links,
     hd1_files_parents,
     hd1_files_parents_bak,
     hd1_files_paths,
