@@ -2,8 +2,6 @@ use crate::api::common::check_insert_num_rows;
 use crate::{StorDieselResult, StorTransaction, storapi_row_count};
 use diesel::RunQueryDsl;
 use diesel::connection::SimpleConnection;
-use std::fmt::{Display, Write};
-use std::fs::write;
 use std::io::BufWriter;
 use tempfile::NamedTempFile;
 use xana_commons_rs::num_format_re::ToFormattedString;

@@ -6,7 +6,7 @@ use crate::{
 use diesel::{HasQuery, RunQueryDsl};
 use std::collections::HashMap;
 use xana_commons_rs::num_format_re::ToFormattedString;
-use xana_commons_rs::tracing_re::{debug, info, warn};
+use xana_commons_rs::tracing_re::info;
 use xana_commons_rs::{LOCALE, StorIdType};
 use xana_fs_indexer_rs::{CompNodeType, CompressedPaths, FsNodeId, ScanStat};
 
@@ -77,10 +77,10 @@ fn recurse_compressed(
         CompNodeType::File => {
             // go no further
         }
-        CompNodeType::BrokenSymlink { raw } => {
+        CompNodeType::BrokenSymlink { .. } => {
             database.total_symlink_broken += 1;
         }
-        CompNodeType::Symlink { target_node_id } => {
+        CompNodeType::Symlink { .. } => {
             database.total_symlink_good += 1;
         }
     }

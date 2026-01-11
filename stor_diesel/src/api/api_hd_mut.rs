@@ -1,10 +1,9 @@
 use crate::api::assert_test_database;
 use crate::api::bulk_insert::{COL_SEP, ROW_SEP, bulk_load};
-use crate::api::common::{SQL_PLACEHOLDER_MAX, check_insert_num_rows, chunky_iter};
+use crate::api::common::{Chunky, ChunkyPiece, SQL_PLACEHOLDER_MAX, check_insert_num_rows};
 use crate::err::StorDieselErrorKind;
 use crate::models::enum_types::ModelJournalTypeName;
 use crate::schema_temp::{FAST_HD_COMPONENTS_CREATE, FAST_HD_COMPONENTS_TRUNCATE};
-use crate::storapi_journal_get_data;
 use crate::{
     HdPathAssociation, ModelFileCompId, ModelJournalId, RawDieselBytes, components_get_from_fast,
 };
@@ -17,7 +16,7 @@ use diesel::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use xana_commons_rs::num_format_re::ToFormattedString;
-use xana_commons_rs::tracing_re::{debug, info, trace};
+use xana_commons_rs::tracing_re::{debug, info};
 use xana_commons_rs::{BasicWatch, LOCALE, ResultXanaMap, io_op};
 use xana_fs_indexer_rs::{CompressedPaths, ScanStat};
 
@@ -32,7 +31,7 @@ pub fn storapi_hd_tree_push(
     let new = build_associations_from_compressed(conn, &compressed)?;
 
     let watch = BasicWatch::start();
-    let rows = bulk_load(
+    bulk_load(
         conn,
         "hd1_files_parents",
         [
@@ -141,12 +140,9 @@ fn components_update(
         .map(|v| schema_temp::fast_hd_components::component.eq(v.as_ref()))
         .collect::<Vec<_>>();
     let mut total_rows = 0;
-    let chunks = components_unique.chunks(SQL_PLACEHOLDER_MAX);
-    let total_chunks = chunks.len();
-    for (i, chunk) in chunks.enumerate() {
-        trace!("Insert chunk {i} of {total_chunks}");
+    for chunk in Chunky::ify(components_unique, "comps").pieces::<SQL_PLACEHOLDER_MAX>() {
         total_rows += diesel::insert_into(schema_temp::fast_hd_components::table)
-            .values(chunk)
+            .values(chunk.as_ref())
             .execute(conn.inner())?;
         // if 1 + 1 == 2 {
         //     break;
@@ -185,7 +181,7 @@ pub fn components_upsert_select_first(
 ) -> StorDieselResult<Vec<(ModelFileCompId, Vec<u8>)>> {
     let mut found = Vec::with_capacity(input.len());
     let mut missing: Vec<Vec<u8>> = Vec::new();
-    for chunk in chunky_iter(SQL_PLACEHOLDER_MAX, "comp_upsert_pre", input) {
+    for chunk in Chunky::ify(input, "comp_upsert_pre").pieces::<SQL_PLACEHOLDER_MAX>() {
         let rows = schema::hd1_files_components::table
             .filter(schema::hd1_files_components::component.eq_any(chunk))
             .get_results::<(ModelFileCompId, Vec<u8>)>(conn.inner())?;
@@ -206,7 +202,9 @@ pub fn components_upsert_select_first(
     }
 
     debug!("Inserting {} missing rows", missing.len());
-    for missing in chunky_iter(SQL_PLACEHOLDER_MAX, "comp_upsert_insert", &missing) {
+    for missing in
+        Chunky::ify(missing.as_slice(), "comp_upsert_insert").pieces::<SQL_PLACEHOLDER_MAX>()
+    {
         let insert_rows: Vec<_> = missing
             .iter()
             .map(|v| schema::hd1_files_components::component.eq(v))

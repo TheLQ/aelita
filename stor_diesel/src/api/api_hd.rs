@@ -1,4 +1,4 @@
-use crate::api::common::{SQL_PLACEHOLDER_MAX, chunky_iter};
+use crate::api::common::{Chunky, ChunkyPiece, SQL_PLACEHOLDER_MAX};
 use crate::{ModelFileCompId, StorDieselResult, StorTransaction};
 use crate::{schema, schema_temp};
 use diesel::RunQueryDsl;
@@ -54,7 +54,7 @@ pub fn storapi_hd_components_with(
     input: &[&[u8]],
 ) -> StorDieselResult<HashMap<Vec<u8>, u32>> {
     let mut found = HashMap::new();
-    for chunk in chunky_iter(SQL_PLACEHOLDER_MAX, "comp-with", input) {
+    for chunk in Chunky::ify(input, "comp-with").pieces::<SQL_PLACEHOLDER_MAX>() {
         let rows = schema::hd1_files_components::table
             .select((
                 schema::hd1_files_components::component,

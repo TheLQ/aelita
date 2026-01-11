@@ -1,5 +1,7 @@
 use crate::api::assert_test_database;
-use crate::api::common::{SQL_PLACEHOLDER_MAX, check_insert_num_rows, mysql_last_id};
+use crate::api::common::{
+    Chunky, ChunkyPiece, SQL_PLACEHOLDER_MAX, check_insert_num_rows, mysql_last_id,
+};
 use crate::models::diesel_wrappers::TorHashV1Diesel;
 use crate::models::enum_types::ModelTorrentState;
 use crate::schema_temp::{SQL_FAST_TOR_CREATE, SQL_FAST_TOR_TRUNCATE};
@@ -11,7 +13,6 @@ use diesel::prelude::*;
 use itertools::Itertools;
 use xana_commons_rs::bencode_torrent_re::TorHashV1;
 use xana_commons_rs::qbittorrent_re::TorrentState;
-use xana_commons_rs::tracing_re::trace;
 
 pub fn storapi_tor_host_new(
     conn: &mut StorTransaction,
@@ -32,12 +33,8 @@ pub fn storapi_tor_torrents_push(
     meta: ModelTorrentsMeta,
     torrents: Vec<ModelTorrentsDiesel>,
 ) -> StorDieselResult<()> {
-    const CHUNK_SIZE: usize = SQL_PLACEHOLDER_MAX / /*columns*/16;
-    let total_chunks = torrents.as_chunks::<CHUNK_SIZE>().0.len();
-    let chunks = torrents.into_iter().chunks(CHUNK_SIZE);
-    for (i, chunk) in chunks.into_iter().enumerate() {
-        trace!("Insert chunk {i} of {total_chunks}");
-        let chunk = chunk.map(|v| (meta.clone(), v)).collect_vec();
+    for chunk in Chunky::ify(torrents, "tor").pieces::<{ SQL_PLACEHOLDER_MAX / 16 }>() {
+        let chunk = chunk.into_iter().map(|v| (meta.clone(), v)).collect_vec();
         let expected_len = chunk.len();
         let rows = diesel::insert_into(schema::tor1_torrents::table)
             .values(chunk)
@@ -57,7 +54,8 @@ pub fn storapi_tor_torrents_update_status_batch(
     diesel::sql_query(SQL_FAST_TOR_CREATE).execute(conn.inner())?;
     diesel::sql_query(SQL_FAST_TOR_TRUNCATE).execute(conn.inner())?;
 
-    for chunk in updates.chunks(SQL_PLACEHOLDER_MAX / /*columns*/2) {
+    let updates_len = updates.len();
+    for chunk in Chunky::ify(updates, "tor-update").pieces::<{ SQL_PLACEHOLDER_MAX / 2 }>() {
         let values = chunk
             .iter()
             .map(|(hash, state)| ModelSuperfast {
@@ -83,7 +81,7 @@ pub fn storapi_tor_torrents_update_status_batch(
          SET `tor1_torrents`.`state` = `fast_tor_update`.`tor_state`",
     )
     .execute(conn.inner());
-    check_insert_num_rows(rows, updates.len())?;
+    check_insert_num_rows(rows, updates_len)?;
 
     Ok(())
 }
