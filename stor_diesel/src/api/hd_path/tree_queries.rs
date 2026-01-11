@@ -85,16 +85,16 @@ pub fn storapi_hd_get_path_by_path(
     path: impl AsRef<Path>,
 ) -> StorDieselResult<Vec<ModelFileTreeId>> {
     let path = path.as_ref();
-    let components_str = path_components(path, |v| v.to_str().unwrap())?;
+    let components_bytes = path_components(path, |v| v.as_bytes())?;
     info!(
         "Load components for path {}",
-        components_str
+        components_bytes
             .iter()
-            .map(|v| format!("\"{v}\""))
+            .map(|v| format!("\"{}\"", str::from_utf8(v).unwrap_or("INVALID_UTF8")))
             .collect::<CommaJoiner>()
     );
-    let components_len = components_str.len();
-    if components_str.is_empty() {
+    let components_len = components_bytes.len();
+    if components_bytes.is_empty() {
         // we can't get the root component. all root's chuldren are null
         return Err(StorDieselErrorKind::EmptyPath.build());
     }
@@ -125,10 +125,10 @@ pub fn storapi_hd_get_path_by_path(
         "
     );
 
-    let components_to_id = storapi_hd_components_with(conn, &components_str)?
+    let components_to_id = storapi_hd_components_with(conn, &components_bytes)?
         .into_iter()
-        .collect::<HashMap<String, _>>();
-    let mut query_components = components_str
+        .collect::<HashMap<_, _>>();
+    let mut query_components = components_bytes
         .iter()
         .map(|v| components_to_id.get(*v).unwrap())
         .collect::<Vec<_>>();

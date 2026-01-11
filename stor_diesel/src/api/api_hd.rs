@@ -1,12 +1,12 @@
+use crate::api::common::{SQL_PLACEHOLDER_MAX, check_insert_num_rows, chunky_iter};
 use crate::{ModelFileCompId, StorDieselResult, StorTransaction};
 use crate::{schema, schema_temp};
 use diesel::RunQueryDsl;
 use diesel::prelude::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use xana_commons_rs::num_format_re::ToFormattedString;
-use xana_commons_rs::tracing_re::info;
+use xana_commons_rs::tracing_re::{info, trace};
 use xana_commons_rs::{BasicWatch, LOCALE};
-
 // pub fn storapi_hd_get_by_id(
 //     conn: &mut StorTransaction,
 //     id: ModelFileTreeId,
@@ -30,14 +30,14 @@ use xana_commons_rs::{BasicWatch, LOCALE};
 
 pub fn components_get_bytes(
     conn: &mut StorTransaction,
-    input_bytes: &[&[u8]],
+    filter_components: &[&[u8]],
 ) -> StorDieselResult<Vec<(ModelFileCompId, Vec<u8>)>> {
     schema::hd1_files_components::table
         .select((
             schema::hd1_files_components::id,
             schema::hd1_files_components::component,
         ))
-        .filter(schema::hd1_files_components::component.eq_any(input_bytes))
+        .filter(schema::hd1_files_components::component.eq_any(filter_components))
         .get_results(conn.inner())
         .map_err(Into::into)
 }
@@ -71,15 +71,18 @@ pub fn components_get_from_fast(
 
 pub fn storapi_hd_components_with(
     conn: &mut StorTransaction,
-    input: &[impl AsRef<str>],
-) -> StorDieselResult<HashMap<String, u32>> {
-    let filter: Vec<&[u8]> = input.iter().map(|v| v.as_ref().as_bytes()).collect();
-
-    let rows: Vec<(u32, Vec<u8>)> = schema::hd1_files_components::table
-        .filter(schema::hd1_files_components::component.eq_any(filter))
-        .get_results::<(u32, Vec<u8>)>(conn.inner())?;
-    Ok(rows
-        .into_iter()
-        .map(|(i, comp)| (String::from_utf8(comp).unwrap(), i))
-        .collect())
+    input: &[&[u8]],
+) -> StorDieselResult<HashMap<Vec<u8>, u32>> {
+    let mut found = HashMap::new();
+    for chunk in chunky_iter(SQL_PLACEHOLDER_MAX, "comp-with", input) {
+        let rows = schema::hd1_files_components::table
+            .select((
+                schema::hd1_files_components::component,
+                schema::hd1_files_components::id,
+            ))
+            .filter(schema::hd1_files_components::component.eq_any(chunk))
+            .get_results(conn.inner())?;
+        found.extend(rows)
+    }
+    Ok(found)
 }
