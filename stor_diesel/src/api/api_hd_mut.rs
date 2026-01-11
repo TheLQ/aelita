@@ -1,5 +1,7 @@
 use crate::api::assert_test_database;
-use crate::api::bulk_insert::{COL_SEP, ROW_SEP, bulk_load};
+use crate::api::bulk_insert::{
+    BulkyInsert, DEFAULT_MEGA_CHUNK_SIZE, FormatBulkRow, ROW_SEP, RowizerContext,
+};
 use crate::api::common::{Chunky, ChunkyPiece, SQL_PLACEHOLDER_MAX, check_insert_num_rows};
 use crate::err::StorDieselErrorKind;
 use crate::models::enum_types::ModelJournalTypeName;
@@ -15,7 +17,6 @@ use chrono::format::{DelayedFormat, StrftimeItems};
 use diesel::RunQueryDsl;
 use diesel::prelude::*;
 use std::collections::{HashMap, HashSet};
-use std::io::Write;
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{debug, info};
 use xana_commons_rs::{BasicWatch, LOCALE, ResultXanaMap, io_op};
@@ -32,10 +33,10 @@ pub fn storapi_hd_tree_push(
     let new = build_associations_from_compressed(conn, &compressed)?;
 
     let watch = BasicWatch::start();
-    bulk_load(
+    BulkyInsert {
         conn,
-        "hd1_files_parents",
-        [
+        table: "hd1_files_parents",
+        keys: [
             "tree_id",
             "tree_depth",
             "component_id",
@@ -47,45 +48,53 @@ pub fn storapi_hd_tree_push(
             "group_id",
             "hard_links",
         ],
-        &new,
-        |(
-            HdPathAssociation {
-                tree_id,
-                tree_depth,
-                component_id,
-                parent_id,
-            },
-            ScanStat {
-                created,
-                modified,
-                size,
-                user_id,
-                group_id,
-                hard_links,
-            },
-        ),
-         query_res| {
-            write!(
-                query_res,
-                "{tree_id}{COL_SEP}\
-                {tree_depth}{COL_SEP}\
-                {component_id}{COL_SEP}\
-                {parent_id}{COL_SEP}\
-                {created}{COL_SEP}\
-                {modified}{COL_SEP}\
-                {size}{COL_SEP}\
-                {user_id}{COL_SEP}\
-                {group_id}{COL_SEP}\
-                {hard_links}{COL_SEP}\
-                {ROW_SEP}",
-                created = chrono_to_mysql(created),
-                modified = chrono_to_mysql(modified),
+        values: &new,
+        chunk_size: DEFAULT_MEGA_CHUNK_SIZE,
+    }
+    .insert_probably_huge_data(
+        |RowizerContext {
+             before,
+             middle,
+             after,
+             output,
+             row,
+         }| {
+            let (
+                HdPathAssociation {
+                    tree_id,
+                    tree_depth,
+                    component_id,
+                    parent_id,
+                },
+                ScanStat {
+                    created,
+                    modified,
+                    size,
+                    user_id,
+                    group_id,
+                    hard_links,
+                },
+            ) = row;
+            output.add_single_row(format_args!(
+                "{before}\
+                {tree_id}{middle}\
+                {tree_depth}{middle}\
+                {component_id}{middle}\
+                {parent_id}{middle}\
+                {created}{middle}\
+                {modified}{middle}\
+                {size}{middle}\
+                {user_id}{middle}\
+                {group_id}{middle}\
+                {hard_links}\
+                {after}",
+                created = chrono_to_mysql(&created),
+                modified = chrono_to_mysql(&modified),
                 parent_id = match parent_id {
                     Some(v) => v.to_string(),
                     None => "NULL".into(),
                 }
-            )
-            .unwrap()
+            ))
         },
     )?;
     debug!("inserted rows in {watch}");
