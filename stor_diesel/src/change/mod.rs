@@ -1,2 +1,2 @@
-pub mod change;
-pub mod changer_hd;
+pub mod change_hd;
+pub mod defs;

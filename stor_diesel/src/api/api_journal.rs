@@ -129,7 +129,7 @@ pub fn storapi_journal_get_data(
     }
 }
 
-pub fn storapi_journal_get(
+pub fn storapi_journal_get_metajournal(
     conn: &mut StorTransaction,
     journal_id: ModelJournalId,
 ) -> StorDieselResult<ModelJournalImmutableDiesel> {
@@ -150,11 +150,20 @@ pub fn storapi_journal_get_created(
         .map_err(Into::into)
 }
 
-pub fn storapi_journal_commit_remain_next(
+pub fn storapi_journal_get_journal(
     conn: &mut StorTransaction,
-) -> StorDieselResult<Option<ModelJournalImmutable>> {
+    journal_id: ModelJournalId,
+) -> StorDieselResult<ModelJournalImmutable> {
     let watch = BasicWatch::start();
+    let metajournal = storapi_journal_get_metajournal(conn, journal_id)?;
+    _journal_get_query(conn, metajournal, watch)
+}
 
+fn _journal_get_query(
+    conn: &mut StorTransaction,
+    metajournal: ModelJournalImmutableDiesel,
+    watch: BasicWatch,
+) -> StorDieselResult<ModelJournalImmutable> {
     let ModelJournalImmutableDiesel {
         journal_id,
         journal_type,
@@ -164,19 +173,11 @@ pub fn storapi_journal_commit_remain_next(
         cause_description,
         cause_xrn,
         data_hash,
-    } = match ModelJournalImmutableDiesel::query()
-        .filter(schema::journal_immutable::committed.eq(false))
-        .order_by(schema::journal_immutable::journal_id.asc())
-        .first(conn.inner())
-    {
-        Ok(v) => v,
-        Err(diesel::result::Error::NotFound) => return Ok(None),
-        Err(e) => return Err(e.into()),
-    };
+    } = metajournal;
     let data = storapi_journal_get_data(conn, journal_id)?;
 
     debug!("Fetch journal {journal_id} in {watch}");
-    Ok(Some(ModelJournalImmutable {
+    Ok(ModelJournalImmutable {
         journal_id,
         journal_type,
         at,
@@ -186,7 +187,24 @@ pub fn storapi_journal_commit_remain_next(
         cause_description,
         cause_xrn,
         data_hash,
-    }))
+    })
+}
+
+pub fn storapi_journal_commit_remain_next(
+    conn: &mut StorTransaction,
+) -> StorDieselResult<Option<ModelJournalImmutable>> {
+    let watch = BasicWatch::start();
+
+    let only_journal = match ModelJournalImmutableDiesel::query()
+        .filter(schema::journal_immutable::committed.eq(false))
+        .order_by(schema::journal_immutable::journal_id.asc())
+        .first(conn.inner())
+    {
+        Ok(v) => v,
+        Err(diesel::result::Error::NotFound) => return Ok(None),
+        Err(e) => return Err(e.into()),
+    };
+    _journal_get_query(conn, only_journal, watch).map(|v| Some(v))
 }
 
 pub fn storapi_journal_commit_new(

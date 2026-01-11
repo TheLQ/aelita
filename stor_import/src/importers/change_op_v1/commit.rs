@@ -14,7 +14,7 @@ pub fn storcommit_change_op_v1(
     let watch = BasicWatch::start();
     let changes_len = changes.len();
     for change in changes {
-        change.commit_change(conn)?;
+        change.commit_change(conn, row.journal_id)?;
     }
     info!("Committed {changes_len} change ops in {watch}");
 

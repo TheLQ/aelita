@@ -18,7 +18,10 @@ pub use api::{
     api_tor_mut::*, api_variables::*, assert_packet_size_huge_enough, hd_path::*,
     show_create_table,
 };
-pub use change::changer_hd::{ChangeOp, Changer};
+pub use change::{
+    change_hd::*,
+    defs::{ChangeOp, Changer},
+};
 pub use connection::{
     PermaStore, StorTransaction, apply_stor_instrument, establish_connection,
     establish_connection_or_panic, load_db_url_from_env, with_quiet_sql_log_spam,

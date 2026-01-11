@@ -1,9 +1,13 @@
-use crate::change::change::{HdAddPath, HdAddRoot, HdAddSymlink};
-use crate::{StorDieselResult, StorTransaction};
+use crate::change::change_hd::{HdAddPath, HdAddRoot, HdAddSymlink};
+use crate::{ModelJournalId, StorDieselResult, StorTransaction};
 use serde::{Deserialize, Serialize};
 
 pub trait Changer {
-    fn commit_change(self, conn: &mut StorTransaction) -> StorDieselResult<()>;
+    fn commit_change(
+        self,
+        conn: &mut StorTransaction,
+        journal_id: ModelJournalId,
+    ) -> StorDieselResult<()>;
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -14,11 +18,15 @@ pub enum ChangeOp {
 }
 
 impl Changer for ChangeOp {
-    fn commit_change(self, conn: &mut StorTransaction) -> StorDieselResult<()> {
+    fn commit_change(
+        self,
+        conn: &mut StorTransaction,
+        journal_id: ModelJournalId,
+    ) -> StorDieselResult<()> {
         match self {
-            Self::HdAddPath(v) => v.commit_change(conn),
-            Self::HdAddRoot(v) => v.commit_change(conn),
-            Self::HdAddSymlink(v) => v.commit_change(conn),
+            Self::HdAddPath(v) => v.commit_change(conn, journal_id),
+            Self::HdAddRoot(v) => v.commit_change(conn, journal_id),
+            Self::HdAddSymlink(v) => v.commit_change(conn, journal_id),
         }
     }
 }
@@ -26,8 +34,8 @@ impl Changer for ChangeOp {
 #[cfg(test)]
 mod test {
     use crate::ModelHdRoot;
-    use crate::change::change::{HdAddRoot, HdAddSymlink};
-    use crate::change::changer_hd::ChangeOp;
+    use crate::change::change_hd::{HdAddRoot, HdAddSymlink};
+    use crate::change::defs::ChangeOp;
 
     #[test]
     fn enc_test() {

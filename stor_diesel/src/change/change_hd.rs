@@ -1,4 +1,4 @@
-use crate::change::changer_hd::Changer;
+use crate::change::defs::Changer;
 use crate::err::StorDieselErrorKind;
 use crate::{
     DisplayCompPath, ModelHdRoot, ModelJournalId, NewHdRoot, NewModelSpaceName, StorDieselResult,
@@ -16,13 +16,18 @@ pub struct HdAddPath {
     pub paths: Vec<(ScanFileTypeWithPath, ScanStat)>,
 }
 impl Changer for HdAddPath {
-    fn commit_change(self, conn: &mut StorTransaction) -> StorDieselResult<()> {
+    fn commit_change(
+        self,
+        conn: &mut StorTransaction,
+        _journal_id: ModelJournalId,
+    ) -> StorDieselResult<()> {
         let Self { paths } = self;
 
-        for (scan_type, _stat) in &paths[..5] {
+        let preview = 5;
+        for (scan_type, _stat) in paths.iter().take(preview) {
             info!("Add path {}", scan_type.path().display());
         }
-        if paths.len() >= 5 {
+        if paths.len() >= preview {
             info!("... to len {}", paths.len())
         }
         // todo: this is expensive for 1 path...
@@ -38,7 +43,11 @@ pub struct HdAddSymlink {
     pub target: Vec<Vec<u8>>,
 }
 impl Changer for HdAddSymlink {
-    fn commit_change(self, conn: &mut StorTransaction) -> StorDieselResult<()> {
+    fn commit_change(
+        self,
+        conn: &mut StorTransaction,
+        _journal_id: ModelJournalId,
+    ) -> StorDieselResult<()> {
         let Self { at, target } = self;
         info!(
             "Link {} to {}",
@@ -57,7 +66,11 @@ pub struct HdAddRoot {
     pub root_type: ModelHdRoot,
 }
 impl Changer for HdAddRoot {
-    fn commit_change(self, conn: &mut StorTransaction) -> StorDieselResult<()> {
+    fn commit_change(
+        self,
+        conn: &mut StorTransaction,
+        journal_id: ModelJournalId,
+    ) -> StorDieselResult<()> {
         let Self {
             source,
             description,
@@ -71,7 +84,7 @@ impl Changer for HdAddRoot {
         storapi_hdroots_push(
             conn,
             NewModelSpaceName {
-                journal_id: ModelJournalId::invalid_value(),
+                journal_id,
                 description,
                 space_name,
             },
