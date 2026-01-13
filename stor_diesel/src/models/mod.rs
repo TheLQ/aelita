@@ -1,5 +1,6 @@
 pub(crate) mod common; // should be internal only
 // mod compressed_tree;
+pub mod compressed_encode;
 mod diesel_opt;
 pub mod diesel_wrappers; // should be internal only
 pub(crate) mod enum_types; // should be internal only
