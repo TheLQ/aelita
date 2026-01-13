@@ -6,7 +6,7 @@ pub trait Changer {
     fn commit_change(
         self,
         conn: &mut StorTransaction,
-        journal_id: ModelJournalId,
+        change_context: ChangeContext,
     ) -> StorDieselResult<()>;
 }
 
@@ -18,17 +18,17 @@ pub enum ChangeOp {
 }
 
 impl Changer for ChangeOp {
-    fn commit_change(
-        self,
-        conn: &mut StorTransaction,
-        journal_id: ModelJournalId,
-    ) -> StorDieselResult<()> {
+    fn commit_change(self, conn: &mut StorTransaction, ctx: ChangeContext) -> StorDieselResult<()> {
         match self {
-            Self::HdAddPath(v) => v.commit_change(conn, journal_id),
-            Self::HdAddRoot(v) => v.commit_change(conn, journal_id),
-            Self::HdAddSymlink(v) => v.commit_change(conn, journal_id),
+            Self::HdAddPath(v) => v.commit_change(conn, ctx),
+            Self::HdAddRoot(v) => v.commit_change(conn, ctx),
+            Self::HdAddSymlink(v) => v.commit_change(conn, ctx),
         }
     }
+}
+
+pub struct ChangeContext {
+    pub journal_id: ModelJournalId,
 }
 
 #[cfg(test)]

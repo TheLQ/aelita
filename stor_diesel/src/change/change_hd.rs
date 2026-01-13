@@ -1,4 +1,4 @@
-use crate::change::defs::Changer;
+use crate::change::defs::{ChangeContext, Changer};
 use crate::err::StorDieselErrorKind;
 use crate::{
     DisplayCompPath, ModelFileTreeId, ModelHdRoot, ModelJournalId, NewHdRoot, NewModelSpaceName,
@@ -19,7 +19,7 @@ impl Changer for HdAddPath {
     fn commit_change(
         self,
         conn: &mut StorTransaction,
-        _journal_id: ModelJournalId,
+        _ctx: ChangeContext,
     ) -> StorDieselResult<()> {
         let Self { paths } = self;
 
@@ -79,7 +79,7 @@ impl Changer for HdAddSymlink {
     fn commit_change(
         self,
         conn: &mut StorTransaction,
-        _journal_id: ModelJournalId,
+        _ctx: ChangeContext,
     ) -> StorDieselResult<()> {
         let Self { at, target } = self;
         info!(
@@ -102,7 +102,7 @@ impl Changer for HdAddRoot {
     fn commit_change(
         self,
         conn: &mut StorTransaction,
-        journal_id: ModelJournalId,
+        ChangeContext { journal_id }: ChangeContext,
     ) -> StorDieselResult<()> {
         let Self {
             source,
