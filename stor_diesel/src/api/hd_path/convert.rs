@@ -1,7 +1,7 @@
 use crate::StorDieselResult;
 use crate::err::StorDieselErrorKind;
 use std::os::unix::ffi::OsStrExt;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Component, Path};
 use xana_commons_rs::CrashErrKind;
 
 pub fn convert_path_to_comps(path: &Path) -> StorDieselResult<Vec<&[u8]>> {

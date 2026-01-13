@@ -8,6 +8,8 @@ pub enum StorDieselErrorKind {
     EmptyPath,
     PathNotAbsolute,
     PathWeird,
+    PathAlreadyExists,
+    PathFileParentMissing,
     //
     PathXrnRequiresId,
     NotPathXrn,
@@ -32,6 +34,7 @@ pub enum StorDieselErrorKind {
     //
     EmptyResult,
     JournalHashFailed,
+    BadRowizerForBulkLoad,
     _TODO,
 }
 

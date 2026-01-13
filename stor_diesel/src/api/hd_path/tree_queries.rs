@@ -1,5 +1,4 @@
 use crate::api::api_hd::storapi_hd_components_with;
-use crate::api::common::CompPathSlice;
 use crate::err::StorDieselErrorKind;
 use crate::{
     HdPathDieselDyn, ModelFileTreeId, PathRow, StorDieselResult, StorIdTypeDiesel, StorTransaction,
@@ -7,7 +6,7 @@ use crate::{
 };
 use aelita_xrn::defs::path_xrn::XRN_PATH_ROOT_ID;
 use diesel::sql_types::Unsigned;
-use diesel::{QueryableByName, RunQueryDsl};
+use diesel::{OptionalExtension, QueryableByName, RunQueryDsl};
 use std::collections::HashMap;
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
@@ -132,12 +131,18 @@ pub fn storapi_hd_get_path_by_path(
     for i in query_components {
         query = query.bind::<Unsigned<diesel::sql_types::Integer>, _>(i)
     }
-    let row = query.get_result::<HdPathDieselDyn>(conn.inner())?;
-    Ok(row
-        .components
-        .into_iter()
-        .map(ModelFileTreeId::new)
-        .collect())
+    let row = query
+        .get_result::<HdPathDieselDyn>(conn.inner())
+        .optional()?;
+    if let Some(row) = row {
+        Ok(row
+            .components
+            .into_iter()
+            .map(ModelFileTreeId::new)
+            .collect())
+    } else {
+        Ok(Vec::new())
+    }
 }
 
 pub fn storapi_hd_list_children_by_id(
@@ -322,9 +327,7 @@ pub fn storapi_hd_list_children_by_path(
 #[cfg(test)]
 mod test {
     use crate::api::common::test::sql_test;
-    use crate::api::hd_path::tree_queries::{
-        storapi_hd_get_path_by_path, storapi_hd_list_children_by_path,
-    };
+    use crate::api::hd_path::tree_queries::storapi_hd_list_children_by_path;
     use xana_commons_rs::PrettyUnwrap;
     use xana_commons_rs::tracing_re::info;
 
@@ -339,10 +342,8 @@ mod test {
             info!("{top_1} {}", children.join(", "));
             let children = storapi_hd_list_children_by_path(conn, format!("/{top_2}"))?;
             info!("{top_2} {}", children.join(", "));
-
-            storapi_hd_get_path_by_path(conn, "").pretty_unwrap();
-
-            panic!("??");
+            // panic!("??");
+            Ok(())
         })
         .pretty_unwrap()
     }

@@ -7,7 +7,7 @@ use std::io::{BufWriter, Write};
 use tempfile::NamedTempFile;
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{info, trace};
-use xana_commons_rs::{BasicWatch, CrashErrKind, LOCALE, ResultXanaMap};
+use xana_commons_rs::{BasicWatch, CrashErrKind, LOCALE};
 
 pub const DEFAULT_MEGA_CHUNK_SIZE: usize = 1_000_000;
 const MEBI_BYTE: usize = 1024 * 1024;
@@ -129,8 +129,6 @@ impl<'c, 'tx, 't, 'k, 'v, Row, const COLS: usize> BulkyInsert<'c, 'tx, 't, 'k, '
         Ok(())
     }
 }
-
-pub struct FormatBulkRow {}
 
 // pub struct RowizerContext<'v, 'w, W, Row, Output>
 pub struct RowizerContext<'v, 'o, Row> {

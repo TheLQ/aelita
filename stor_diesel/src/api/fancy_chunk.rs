@@ -21,28 +21,19 @@ impl<T, M: Display> Chunky<T, M> {
     pub fn ify(input: T, message: M) -> Self {
         Self { input, message }
     }
-
-    pub fn ify_as_ref<'c, InnerNeedsConv, Inner>(
-        input: &'c T,
-        message: M,
-    ) -> Chunky<ChunkyAsRef<'c, InnerNeedsConv, Inner>, M>
-    where
-        T: AsRef<[InnerNeedsConv]>,
-        InnerNeedsConv: AsRef<[Inner]>,
-    {
-        Chunky::ify(ChunkyAsRef(input.as_ref(), PhantomData), message)
-        // Chunky::ify(input, message)
-    }
 }
 
-impl<T, M: Display> Chunky<T, M>
-where
-    Self: ChunkyPiece,
-{
-    fn log_passthru(
+impl<T, M: Display> Chunky<T, M> where Self: ChunkyPiece {}
+
+pub trait ChunkyPiece {
+    type Value;
+
+    fn pieces<const SIZE: usize>(self) -> impl Iterator<Item = Self::Value>;
+
+    fn log_passthru<M: Display>(
         chunks_len: usize,
         message: M,
-    ) -> impl FnMut((usize, <Self as ChunkyPiece>::Value)) -> <Self as ChunkyPiece>::Value {
+    ) -> impl FnMut((usize, Self::Value)) -> Self::Value {
         move |(i, value)| {
             trace!(
                 "Chunky {message} - {} of {}",
@@ -52,12 +43,6 @@ where
             value
         }
     }
-}
-
-pub trait ChunkyPiece {
-    type Value;
-
-    fn pieces<const SIZE: usize>(self) -> impl Iterator<Item = Self::Value>;
 }
 
 impl<T, M: Display> ChunkyPiece for Chunky<Vec<T>, M> {
@@ -109,35 +94,33 @@ impl<'t, T, M: Display> ChunkyPiece for Chunky<&'t [T], M> {
     }
 }
 
-struct ContainerWithLifetime<'a, T: 'a>(T, PhantomData<&'a T>);
-
-pub struct ChunkyAsRef<'container, InnerNeedsConv, Inner>(
-    &'container [InnerNeedsConv],
+pub struct ChunkyAsRef<'container, InnerNeedsConv, Inner, M: Display>(
+    Chunky<&'container [InnerNeedsConv], M>,
     PhantomData<Inner>,
 )
 where
     InnerNeedsConv: AsRef<[Inner]>;
 
-impl<'container, InnerNeedsConv, Inner> ChunkyAsRef<'container, InnerNeedsConv, Inner>
+impl<'container, InnerNeedsConv, Inner, M: Display>
+    ChunkyAsRef<'container, InnerNeedsConv, Inner, M>
 where
     InnerNeedsConv: AsRef<[Inner]>,
 {
-    pub fn new(input: &'container [InnerNeedsConv]) -> Self {
-        Self(input, PhantomData)
+    pub fn new(input: &'container [InnerNeedsConv], message: M) -> Self {
+        Self(Chunky { input, message }, PhantomData)
     }
 }
 
-impl<'c, InnerNeedsConv, Inner, M: Display> ChunkyPiece
-    for Chunky<ChunkyAsRef<'c, InnerNeedsConv, Inner>, M>
+impl<'container, InnerNeedsConv, Inner, M: Display> ChunkyPiece
+    for ChunkyAsRef<'container, InnerNeedsConv, Inner, M>
 where
-    InnerNeedsConv: AsRef<[Inner]> + 'c,
-    Inner: 'c,
+    InnerNeedsConv: AsRef<[Inner]> + 'container,
+    Inner: 'container,
 {
-    type Value = Vec<&'c [Inner]>;
+    type Value = Vec<&'container [Inner]>;
 
     fn pieces<const SIZE: usize>(self) -> impl Iterator<Item = Self::Value> {
-        let Self { input, message } = self;
-        let input = input.0.as_ref();
+        let Chunky { input, message } = self.0;
 
         // why into_chunks why
         // - truncates remainder, so we need to save it first
@@ -151,8 +134,6 @@ where
             Vec::new()
         };
         assert_eq!(input.len() % SIZE, 0);
-
-        let chunks = input.chunks(SIZE).collect::<Vec<_>>();
 
         let chunks_len = chunks_in_len(SIZE, &input);
         input

@@ -1,9 +1,9 @@
 use crate::change::defs::Changer;
 use crate::err::StorDieselErrorKind;
 use crate::{
-    DisplayCompPath, ModelHdRoot, ModelJournalId, NewHdRoot, NewModelSpaceName, StorDieselResult,
-    StorIdTypeDiesel, StorTransaction, storapi_hd_links_add, storapi_hd_tree_push,
-    storapi_hdroots_push,
+    DisplayCompPath, ModelFileTreeId, ModelHdRoot, ModelJournalId, NewHdRoot, NewModelSpaceName,
+    StorDieselResult, StorTransaction, convert_path_to_comps, storapi_hd_get_path_by_path,
+    storapi_hd_links_add, storapi_hd_tree_push, storapi_hd_tree_push_single, storapi_hdroots_push,
 };
 use serde::{Deserialize, Serialize};
 use xana_commons_rs::CrashErrKind;
@@ -24,16 +24,49 @@ impl Changer for HdAddPath {
         let Self { paths } = self;
 
         let preview = 5;
-        for (scan_type, _stat) in paths.iter().take(preview) {
-            info!("Add path {}", scan_type.path().display());
+
+        if paths.is_empty() {
+            panic!("no empty")
+        } else if paths.len() < preview {
+            for path in paths {
+                commit_add_path_sql(conn, path)?;
+            }
+            Ok(())
+        } else {
+            for (scan_type, _stat) in paths.iter().take(preview) {
+                info!("Add path {}", scan_type.path().display());
+            }
+            if paths.len() >= preview {
+                info!("... to len {}", paths.len())
+            }
+            // todo: this is expensive for 1 path...
+            let new_paths = CompressedPaths::from_scan(paths)
+                .map_err(StorDieselErrorKind::InvalidChangeCompressedPaths.xana_map())?;
+            storapi_hd_tree_push(conn, new_paths)
         }
-        if paths.len() >= preview {
-            info!("... to len {}", paths.len())
-        }
-        // todo: this is expensive for 1 path...
-        let new_paths = CompressedPaths::from_scan(paths)
-            .map_err(StorDieselErrorKind::InvalidChangeCompressedPaths.xana_map())?;
-        storapi_hd_tree_push(conn, new_paths)
+    }
+}
+
+fn commit_add_path_sql(
+    conn: &mut StorTransaction,
+    (scan_type, stat): (ScanFileTypeWithPath, ScanStat),
+) -> StorDieselResult<ModelFileTreeId> {
+    let path = scan_type.path();
+    let path_comps = convert_path_to_comps(path)?;
+    let existing_ids = storapi_hd_get_path_by_path(conn, &path_comps)?;
+
+    if path_comps.len() == existing_ids.len() {
+        Err(StorDieselErrorKind::PathAlreadyExists.build_message(path.display()))
+    } else if path_comps.len() - 1 == existing_ids.len() {
+        // perfect, add a single batch
+        let parent = existing_ids.last().unwrap();
+        let file_comp = path_comps.last().unwrap();
+        let file_id = storapi_hd_tree_push_single(conn, Some(*parent), &[(file_comp, stat)])?;
+        // get stats
+        Ok(file_id)
+    } else {
+        // todo adding more than once starts making the SQL equivalent of CompressedPaths
+        Err(StorDieselErrorKind::PathFileParentMissing.build_message(path.display()))
     }
 }
 

@@ -3,10 +3,8 @@ use crate::err::{StorDieselErrorKind, StorDieselResult};
 use crate::storapi_variables_get;
 use diesel::sql_types::{Integer, Text, Unsigned};
 use diesel::{QueryResult, QueryableByName, RunQueryDsl, dsl};
-use std::fmt::Display;
-use xana_commons_rs::num_format_re::ToFormattedString;
-use xana_commons_rs::tracing_re::{info, trace};
-use xana_commons_rs::{CrashErrKind, LOCALE};
+use xana_commons_rs::CrashErrKind;
+use xana_commons_rs::tracing_re::info;
 
 /// Avoid "Prepared statement contains too many placeholders"
 pub const SQL_PLACEHOLDER_MAX: usize = 60_000;

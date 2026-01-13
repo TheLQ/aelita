@@ -1,22 +1,20 @@
 use crate::api::assert_test_database;
-use crate::api::bulk_insert::{
-    BulkyInsert, DEFAULT_MEGA_CHUNK_SIZE, FormatBulkRow, ROW_SEP, RowizerContext,
-};
+use crate::api::bulk_insert::{BulkyInsert, DEFAULT_MEGA_CHUNK_SIZE, RowizerContext};
 use crate::api::common::{SQL_PLACEHOLDER_MAX, check_insert_num_rows};
 use crate::api::fancy_chunk::{Chunky, ChunkyAsRef, ChunkyPiece};
 use crate::err::StorDieselErrorKind;
 use crate::models::enum_types::ModelJournalTypeName;
 use crate::schema_temp::{FAST_HD_COMPONENTS_CREATE, FAST_HD_COMPONENTS_TRUNCATE};
 use crate::{
-    HdPathAssociation, ModelFileCompId, ModelJournalId, RawDieselBytes, components_get_from_fast,
-    storapi_hd_get_path_by_path,
+    CombinedStatAssociation, HdPathAssociation, ModelFileCompId, ModelFileTreeId, ModelJournalId,
+    RawDieselBytes, StorIdTypeDiesel, components_get_from_fast, storapi_hd_get_path_by_path,
 };
 use crate::{StorDieselResult, StorTransaction, schema, schema_temp};
 use crate::{build_associations_from_compressed, storapi_variables_get_str};
 use chrono::NaiveDateTime;
 use chrono::format::{DelayedFormat, StrftimeItems};
-use diesel::RunQueryDsl;
 use diesel::prelude::*;
+use diesel::{RunQueryDsl, dsl};
 use std::collections::{HashMap, HashSet};
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{debug, info};
@@ -107,6 +105,57 @@ fn chrono_to_mysql(chron: &NaiveDateTime) -> DelayedFormat<StrftimeItems<'_>> {
     chron.format("'%Y-%m-%d %H:%M:%S%.6f'")
 }
 
+pub fn storapi_hd_tree_push_single(
+    conn: &mut StorTransaction,
+    parent: Option<ModelFileTreeId>,
+    new_remain: &[(&[u8], ScanStat)],
+) -> StorDieselResult<ModelFileTreeId> {
+    let comps = components_upsert_cte(conn, &new_remain.iter().map(|v| &v.0).collect::<Vec<_>>())?;
+
+    let mut next_new_id = schema::hd1_files_parents::table
+        .select(dsl::max(schema::hd1_files_parents::tree_id))
+        .execute(conn.inner())?;
+    next_new_id += 1;
+
+    let parent_depth = if let Some(parent) = parent {
+        let depth = schema::hd1_files_parents::table
+            .select(schema::hd1_files_parents::tree_depth)
+            .filter(schema::hd1_files_parents::tree_id.eq(parent))
+            .get_result::<u32>(conn.inner())?;
+        Some(depth)
+    } else {
+        None
+    };
+
+    let mut new_parents = Vec::with_capacity(new_remain.len());
+    let mut last_parent = parent;
+    let mut next_tree_depth = if let Some(parent_depth) = parent_depth {
+        parent_depth + 1
+    } else {
+        0
+    };
+    for (comp, stat) in new_remain {
+        let tree_id = ModelFileTreeId::new_usize(next_new_id);
+        new_parents.push(CombinedStatAssociation {
+            path: HdPathAssociation {
+                tree_id,
+                parent_id: last_parent,
+                component_id: *comps.get(*comp).unwrap(),
+                tree_depth: next_tree_depth,
+            },
+            stat: stat.clone().into(),
+        });
+        last_parent = Some(tree_id);
+        next_tree_depth += 1;
+    }
+    let rows = diesel::insert_into(schema::hd1_files_parents::table)
+        .values(new_parents)
+        .execute(conn.inner());
+    check_insert_num_rows(rows, new_remain.len())?;
+
+    Ok(last_parent.unwrap())
+}
+
 pub fn storapi_rebuild_parents(conn: &mut StorTransaction) -> StorDieselResult<()> {
     // diesel::sql_query("TRUNCATE TABLE `hd1_files_parents`").execute(conn.inner())?;
 
@@ -186,20 +235,24 @@ fn components_update(
 }
 
 /// Worse case duplicates 3 times pre-selecting all and failing, inserting all, then re-selecting
-pub fn components_upsert_select_first(
+pub fn components_upsert_select_first<Comp>(
     conn: &mut StorTransaction,
-    input: &[Vec<u8>],
-) -> StorDieselResult<Vec<(ModelFileCompId, Vec<u8>)>> {
+    input: &[Comp],
+) -> StorDieselResult<Vec<(ModelFileCompId, Vec<u8>)>>
+where
+    Comp: AsRef<[u8]>,
+{
     let mut found = Vec::with_capacity(input.len());
     let mut missing: Vec<Vec<u8>> = Vec::new();
-    for chunk in Chunky::ify(input, "comp_upsert_pre").pieces::<SQL_PLACEHOLDER_MAX>() {
+    for chunk in ChunkyAsRef::new(input, "comp_upsert_pre").pieces::<SQL_PLACEHOLDER_MAX>() {
         let rows = schema::hd1_files_components::table
-            .filter(schema::hd1_files_components::component.eq_any(chunk))
+            .filter(schema::hd1_files_components::component.eq_any(&chunk))
             .get_results::<(ModelFileCompId, Vec<u8>)>(conn.inner())?;
         if rows.len() != chunk.len() {
-            let actual_comps: HashSet<&Vec<u8>> = rows.iter().map(|(_, comp)| comp).collect();
+            let actual_comps: HashSet<&[u8]> =
+                rows.iter().map(|(_, comp)| comp.as_slice()).collect();
 
-            let mut expected_comps: HashSet<&Vec<u8>> = HashSet::new();
+            let mut expected_comps: HashSet<&[u8]> = HashSet::new();
             expected_comps.extend(chunk);
 
             let cur_missing: Vec<_> = expected_comps
