@@ -1,7 +1,6 @@
 use crate::api::assert_test_database;
-use crate::api::common::{
-    Chunky, ChunkyPiece, SQL_PLACEHOLDER_MAX, check_insert_num_rows, mysql_last_id,
-};
+use crate::api::common::{SQL_PLACEHOLDER_MAX, check_insert_num_rows, mysql_last_id};
+use crate::api::fancy_chunk::{Chunky, ChunkyPiece};
 use crate::models::diesel_wrappers::TorHashV1Diesel;
 use crate::models::enum_types::ModelTorrentState;
 use crate::schema_temp::{SQL_FAST_TOR_CREATE, SQL_FAST_TOR_TRUNCATE};

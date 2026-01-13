@@ -1,4 +1,5 @@
-use crate::api::common::{Chunky, ChunkyPiece, SQL_PLACEHOLDER_MAX};
+use crate::api::common::SQL_PLACEHOLDER_MAX;
+use crate::api::fancy_chunk::{Chunky, ChunkyPiece};
 use crate::{ModelFileCompId, StorDieselResult, StorTransaction};
 use crate::{schema, schema_temp};
 use diesel::RunQueryDsl;

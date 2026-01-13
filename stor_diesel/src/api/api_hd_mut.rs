@@ -2,7 +2,8 @@ use crate::api::assert_test_database;
 use crate::api::bulk_insert::{
     BulkyInsert, DEFAULT_MEGA_CHUNK_SIZE, FormatBulkRow, ROW_SEP, RowizerContext,
 };
-use crate::api::common::{Chunky, ChunkyPiece, SQL_PLACEHOLDER_MAX, check_insert_num_rows};
+use crate::api::common::{SQL_PLACEHOLDER_MAX, check_insert_num_rows};
+use crate::api::fancy_chunk::{Chunky, ChunkyAsRef, ChunkyPiece};
 use crate::err::StorDieselErrorKind;
 use crate::models::enum_types::ModelJournalTypeName;
 use crate::schema_temp::{FAST_HD_COMPONENTS_CREATE, FAST_HD_COMPONENTS_TRUNCATE};
