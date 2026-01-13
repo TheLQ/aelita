@@ -64,6 +64,7 @@ fn push_symlinked_zfs_roots(
         root_type: ModelHdRoot::ZfsDataset,
     }));
 
+    // todo: this should fail as out of order from the hd add root?
     changes.push(add_path_from_fs(active.to_path_buf())?);
     changes.push(ChangeOp::HdAddSymlink(HdAddSymlink {
         at: convert_path_to_comps_owned(active)

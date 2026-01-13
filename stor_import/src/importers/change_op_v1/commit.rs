@@ -1,5 +1,7 @@
 use crate::err::{StorImportErrorKind, StorImportResult};
-use aelita_stor_diesel::{ChangeOp, Changer, ModelJournalImmutable, StorTransaction};
+use aelita_stor_diesel::{
+    ChangeContext, ChangeOp, Changer, ModelJournalImmutable, StorTransaction,
+};
 use xana_commons_rs::tracing_re::info;
 use xana_commons_rs::{BasicWatch, CrashErrKind, ResultXanaMap};
 
@@ -14,7 +16,12 @@ pub fn storcommit_change_op_v1(
     let watch = BasicWatch::start();
     let changes_len = changes.len();
     for change in changes {
-        change.commit_change(conn, row.journal_id)?;
+        change.commit_change(
+            conn,
+            ChangeContext {
+                journal_id: row.journal_id,
+            },
+        )?;
     }
     info!("Committed {changes_len} change ops in {watch}");
 

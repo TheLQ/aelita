@@ -17,4 +17,5 @@ serde_json = { workspace = true }
 strum = { workspace = true }
 zstd = { workspace = true }
 postcard = { workspace = true }
+chrono = { workspace = true }
 #

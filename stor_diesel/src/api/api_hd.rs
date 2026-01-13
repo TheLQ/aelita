@@ -1,5 +1,5 @@
 use crate::api::common::SQL_PLACEHOLDER_MAX;
-use crate::api::fancy_chunk::{Chunky, ChunkyPiece};
+use crate::api::fancy_chunk::{ChunkyAsRef, ChunkyPiece};
 use crate::{ModelFileCompId, StorDieselResult, StorTransaction};
 use crate::{schema, schema_temp};
 use diesel::RunQueryDsl;
@@ -55,9 +55,7 @@ pub fn storapi_hd_components_with(
     input: &[impl AsRef<[u8]>],
 ) -> StorDieselResult<HashMap<Vec<u8>, u32>> {
     let mut found = HashMap::new();
-    for chunk in Chunky::ify(input, "comp-with").pieces::<SQL_PLACEHOLDER_MAX>() {
-        // todo: any way to avoid this middle vec?
-        let chunk = chunk.iter().map(|v| v.as_ref()).collect::<Vec<_>>();
+    for chunk in ChunkyAsRef::new(input, "comp-with").pieces::<SQL_PLACEHOLDER_MAX>() {
         let rows = schema::hd1_files_components::table
             .select((
                 schema::hd1_files_components::component,
@@ -66,6 +64,13 @@ pub fn storapi_hd_components_with(
             .filter(schema::hd1_files_components::component.eq_any(chunk))
             .get_results(conn.inner())?;
         found.extend(rows)
+    }
+    if found.len() != input.len() {
+        panic!(
+            "not all components found, found {} input {}",
+            found.len(),
+            input.len()
+        );
     }
     Ok(found)
 }

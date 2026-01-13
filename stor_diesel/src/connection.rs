@@ -1,5 +1,5 @@
-use diesel::Connection;
 use diesel::connection::{Instrumentation, InstrumentationEvent};
+use diesel::{Connection, QueryResult, RunQueryDsl};
 use diesel::{ConnectionError, MysqlConnection};
 use std::collections::HashMap;
 use std::path::Path;
@@ -10,10 +10,12 @@ use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::{Level, debug, info, span};
 use xana_fs_indexer_rs::read_file_better;
 
+#[derive(strum::AsRefStr)]
 pub enum PermaStore {
     AelitaNull,
     Edition1,
     Lyoko1,
+    AelitaInteg,
 }
 
 pub fn load_db_url_from_env(perma: PermaStore) -> String {
@@ -21,6 +23,7 @@ pub fn load_db_url_from_env(perma: PermaStore) -> String {
         PermaStore::AelitaNull => "aelita_null",
         PermaStore::Edition1 => "edition1",
         PermaStore::Lyoko1 => "lyoko_aelita",
+        PermaStore::AelitaInteg => "aelita_integ",
     };
 
     let mut env_path = Path::new(".env");
@@ -46,16 +49,21 @@ pub fn load_db_url_from_env(perma: PermaStore) -> String {
     let env_map = str::from_utf8(&env_map_raw)
         .unwrap()
         .split("\n")
-        .filter(|line| !line.is_empty())
-        .map(|line| {
-            line.split_once("=")
-                .unwrap_or_else(|| panic!("Line '{line}' missing equals"))
+        .filter_map(|line| {
+            if line.is_empty() || line.starts_with('#') {
+                None
+            } else if let Some((key, value)) = line.split_once("=") {
+                Some((key.trim(), value.trim()))
+            } else {
+                panic!("Line '{line}' missing equals")
+            }
         })
         .collect::<HashMap<_, _>>();
 
+    let name = perma.as_ref();
     let url_raw = env_map
-        .get("DATABASE_URL")
-        .expect("DATABASE_URL must be set")
+        .get(name)
+        .unwrap_or_else(|| panic!("{name} not set in {}", env_path.display()))
         .to_string();
     let url = Url::parse(&url_raw).unwrap();
     let url_path = url.path();
@@ -83,13 +91,19 @@ pub fn establish_connection(
     perma: PermaStore,
 ) -> Result<StorConnection, (String, ConnectionError)> {
     let database_url = load_db_url_from_env(perma);
+    establish_connection_url(database_url)
+}
+
+fn establish_connection_url(
+    database_url: String,
+) -> Result<StorConnection, (String, ConnectionError)> {
     info!("Connecting to {database_url}");
     let mut conn = MysqlConnection::establish(&database_url).map_err(|e| (database_url, e))?;
     apply_stor_instrument(&mut conn);
     Ok(conn)
 }
 
-pub fn establish_connection_or_panic(perma: PermaStore) -> StorConnection {
+pub fn establish_connection_perma_or_panic(perma: PermaStore) -> StorConnection {
     match establish_connection(perma) {
         Ok(conn) => conn,
         Err((url, e)) => panic!("Failed to connect to {url}: {e}"),
@@ -211,6 +225,10 @@ impl<'s> StorTransaction<'s> {
 
     pub fn inner(&mut self) -> &mut StorConnection {
         self.0
+    }
+
+    pub fn raw_sql_execute<I: Into<String>>(&mut self, input: I) -> QueryResult<usize> {
+        diesel::sql_query(input).execute(self.0)
     }
 }
 

@@ -5,6 +5,7 @@
 
 pub mod err;
 mod importers;
+mod integ_test;
 mod util;
 
 pub use importers::{

@@ -20,11 +20,11 @@ pub use api::{
 };
 pub use change::{
     change_hd::*,
-    defs::{ChangeOp, Changer},
+    defs::{ChangeContext, ChangeOp, Changer},
 };
 pub use connection::{
     PermaStore, StorTransaction, apply_stor_instrument, establish_connection,
-    establish_connection_or_panic, load_db_url_from_env, with_quiet_sql_log_spam,
+    establish_connection_perma_or_panic, load_db_url_from_env, with_quiet_sql_log_spam,
 };
 pub use err::{StorDieselError, StorDieselResult};
 pub use models::{

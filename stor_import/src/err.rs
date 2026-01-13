@@ -19,6 +19,9 @@ pub enum StorImportErrorKind {
     InvalidQbMetadata,
     InvalidQbTorrents,
     InvalidChangeOp,
+    //
+    MigrationMissingCreate,
+    MigrationMissingEnd,
 }
 crash_builder!(
     StorImportError,

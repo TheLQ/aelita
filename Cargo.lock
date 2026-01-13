@@ -27,6 +27,7 @@ dependencies = [
  "url",
  "xana-commons-rs",
  "xana-fs-indexer-rs",
+ "zstd",
 ]
 
 [[package]]
@@ -36,6 +37,7 @@ dependencies = [
  "aelita_commons",
  "aelita_stor_diesel",
  "bytes",
+ "chrono",
  "postcard",
  "serde",
  "serde_json",
