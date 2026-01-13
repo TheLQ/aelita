@@ -9,6 +9,7 @@ pub mod api_tor_mut;
 pub mod api_variables;
 mod bulk_insert;
 mod common;
+mod fancy_chunk;
 pub mod hd_path;
 
 pub use common::{assert_packet_size_huge_enough, assert_test_database, show_create_table};
