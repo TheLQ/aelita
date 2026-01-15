@@ -3,7 +3,7 @@ use aelita_stor_diesel::{
     ChangeContext, ChangeOp, Changer, ModelJournalImmutable, StorTransaction,
 };
 use xana_commons_rs::tracing_re::info;
-use xana_commons_rs::{BasicWatch, CrashErrKind, ResultXanaMap};
+use xana_commons_rs::{BasicWatch, CrashErrKind};
 
 pub fn storcommit_change_op_v1(
     conn: &mut StorTransaction,

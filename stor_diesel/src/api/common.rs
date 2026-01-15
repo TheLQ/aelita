@@ -2,7 +2,7 @@ use crate::connection::{StorConnection, StorTransaction};
 use crate::err::{StorDieselErrorKind, StorDieselResult};
 use crate::storapi_variables_get;
 use diesel::sql_types::{Integer, Text, Unsigned};
-use diesel::{Connection, QueryResult, QueryableByName, RunQueryDsl, dsl};
+use diesel::{QueryResult, QueryableByName, RunQueryDsl, dsl};
 use xana_commons_rs::CrashErrKind;
 use xana_commons_rs::tracing_re::info;
 

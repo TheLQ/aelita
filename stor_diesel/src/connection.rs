@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use url::Url;
 use xana_commons_rs::LOCALE;
 use xana_commons_rs::num_format_re::ToFormattedString;
-use xana_commons_rs::tracing_re::{Level, debug, info, span, trace};
+use xana_commons_rs::tracing_re::{Level, info, span, trace};
 use xana_fs_indexer_rs::read_file_better;
 
 #[derive(strum::AsRefStr)]

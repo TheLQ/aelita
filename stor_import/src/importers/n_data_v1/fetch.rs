@@ -152,16 +152,16 @@ fn scan_disk_root(
     total_errors
 }
 
-fn insert_compressed(
-    conn: &mut StorTransaction,
-    compressed: CompressedPaths,
-) -> StorImportResult<()> {
-    // let compressed_encoded = std::fs::read(COMPRESSEDD_CACHE).map_io_err(COMPRESSEDD_CACHE)?;
-    // let data = RawDieselBytes(compressed_encoded);
-    let data = RawDieselBytes::serialize_postcard(&compressed)
-        .xana_err(StorImportErrorKind::InvalidCompressedPaths)?;
-    insert_compressed_encoded(conn, data)
-}
+// fn insert_compressed(
+//     conn: &mut StorTransaction,
+//     compressed: CompressedPaths,
+// ) -> StorImportResult<()> {
+//     // let compressed_encoded = std::fs::read(COMPRESSEDD_CACHE).map_io_err(COMPRESSEDD_CACHE)?;
+//     // let data = RawDieselBytes(compressed_encoded);
+//     let data = RawDieselBytes::serialize_postcard(&compressed)
+//         .xana_err(StorImportErrorKind::InvalidCompressedPaths)?;
+//     insert_compressed_encoded(conn, data)
+// }
 
 fn insert_compressed_encoded(
     conn: &mut StorTransaction,

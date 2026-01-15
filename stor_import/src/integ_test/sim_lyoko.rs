@@ -4,9 +4,9 @@ use crate::journal_commit_remain;
 use aelita_commons::log_init;
 use aelita_stor_diesel::{
     ChangeOp, HdAddPath, HdAddSymlink, ModelJournalTypeName, NewModelJournalImmutable, PermaStore,
-    RawDieselBytes, StorTransaction, assert_database_name_is, bootstrap_enum_hd_roots,
-    bootstrap_enum_journal, encode_compressed_paths, establish_connection,
-    storapi_hd_get_path_by_path, storapi_journal_immutable_push_single,
+    RawDieselBytes, StorTransaction, assert_database_name_is, bootstrap_enum_journal,
+    encode_compressed_paths, establish_connection, storapi_hd_get_path_by_path,
+    storapi_journal_immutable_push_single,
 };
 use chrono::NaiveDateTime;
 use xana_commons_rs::tracing_re::{info, warn};
