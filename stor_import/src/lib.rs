@@ -5,8 +5,11 @@
 
 pub mod err;
 mod importers;
-mod integ_test;
 mod util;
+
+// todo: test not callable outside of main
+// #[cfg(test)]
+pub mod integ_test;
 
 pub use importers::{
     n_data_v1::{fetch::storfetch_paths_from_cache, fetch::storfetch_paths_from_disk},

@@ -3,21 +3,22 @@ use crate::integ_test::migration_sql_caller::MigrationModel;
 use aelita_commons::log_init;
 use aelita_stor_diesel::{
     ChangeOp, HdAddPath, HdAddSymlink, ModelJournalTypeName, NewModelJournalImmutable, PermaStore,
-    RawDieselBytes, StorTransaction, encode_compressed_paths, establish_connection,
-    storapi_hd_get_path_by_path, storapi_journal_immutable_push_single,
+    RawDieselBytes, StorTransaction, bootstrap_enum_hd_roots, bootstrap_enum_journal,
+    encode_compressed_paths, establish_connection, storapi_hd_get_path_by_path,
+    storapi_journal_immutable_push_single,
 };
 use chrono::NaiveDateTime;
 use xana_commons_rs::tracing_re::info;
 use xana_commons_rs::{CrashErrKind, PrettyUnwrap, ResultXanaMap};
 use xana_fs_indexer_rs::{CompressedPaths, ScanFileTypeWithPath, ScanStat};
 
-#[test]
-pub fn sim_lyoko() {
+// #[test]
+pub fn sim_lyoko_main() {
     log_init();
-    _sim_lyoko().pretty_unwrap();
+    sim_lyoko().pretty_unwrap();
 }
 
-fn _sim_lyoko() -> StorImportResult<()> {
+pub fn sim_lyoko() -> StorImportResult<()> {
     let conn = &mut establish_connection(PermaStore::AelitaInteg)
         .map_err(|(m, e)| StorImportErrorKind::DieselFailed.build_err_message(e, m))?;
     StorTransaction::new_transaction("sym-lyko", conn, simulate)
@@ -36,6 +37,7 @@ fn simulate(conn: &mut StorTransaction) -> StorImportResult<()> {
     for (model, table) in &tables {
         model.create_table(conn, table)?;
     }
+    bootstrap_enum_journal(conn)?;
 
     journal_paths_backup(conn)?;
     journal_paths_active(conn)?;
@@ -122,7 +124,7 @@ fn journal_paths_active(conn: &mut StorTransaction) -> StorImportResult<()> {
     storapi_journal_immutable_push_single(
         conn,
         NewModelJournalImmutable {
-            journal_type: ModelJournalTypeName::NData1,
+            journal_type: ModelJournalTypeName::ChangeOp1,
             data,
             metadata: None,
             cause_description: "simulated".into(),
