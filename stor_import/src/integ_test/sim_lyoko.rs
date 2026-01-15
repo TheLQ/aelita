@@ -156,7 +156,7 @@ fn test_paths(conn: &mut StorTransaction) -> StorImportResult<()> {
 }
 
 fn drop_table(conn: &mut StorTransaction, table: &str) -> StorImportResult<()> {
-    conn.raw_sql_execute(&format!("DROP TABLE `{}`", table))
+    conn.raw_sql_execute(&format!("DROP TABLE IF EXISTS `{}`", table))
         .xana_err(StorImportErrorKind::DieselFailed)?;
     Ok(())
 }

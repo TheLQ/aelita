@@ -215,7 +215,7 @@ pub fn storapi_journal_commit_remain_next(
 
 pub fn storapi_journal_commit_new(
     conn: &mut StorTransaction,
-    to_commit: &ModelJournalId,
+    to_commit: ModelJournalId,
 ) -> StorDieselResult<()> {
     let expected_commit: Option<u32> = schema::journal_immutable::table
         .select(dsl::min(schema::journal_immutable::journal_id))
