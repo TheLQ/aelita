@@ -1,9 +1,10 @@
 use crate::change::defs::{ChangeContext, Changer};
 use crate::err::StorDieselErrorKind;
 use crate::{
-    DisplayCompPath, ModelFileTreeId, ModelHdRoot, NewHdRoot, NewModelSpaceName, StorDieselResult,
-    StorTransaction, components_upsert_cte, convert_path_to_comps, storapi_hd_get_path_by_path,
-    storapi_hd_links_add, storapi_hd_tree_push, storapi_hd_tree_push_single, storapi_hdroots_push,
+    DisplayCompPath, ModelFileTreeId, ModelHdRoot, ModelSpaceId, ModelSpaceOwned, NewHdRoot,
+    NewModelSpaceName, StorDieselResult, StorTransaction, components_upsert_cte,
+    convert_path_to_comps, storapi_hd_get_path_by_path, storapi_hd_links_add, storapi_hd_tree_push,
+    storapi_hd_tree_push_single, storapi_hdroots_push,
 };
 use serde::{Deserialize, Serialize};
 use xana_commons_rs::CrashErrKind;
@@ -16,6 +17,8 @@ pub struct HdAddPath {
     pub paths: Vec<(ScanFileTypeWithPath, ScanStat)>,
 }
 impl Changer for HdAddPath {
+    type Result = ();
+
     fn commit_change(
         self,
         conn: &mut StorTransaction,
@@ -77,6 +80,8 @@ pub struct HdAddSymlink {
     pub target: Vec<Vec<u8>>,
 }
 impl Changer for HdAddSymlink {
+    type Result = ();
+
     fn commit_change(
         self,
         conn: &mut StorTransaction,
@@ -100,11 +105,13 @@ pub struct HdAddRoot {
     pub root_type: ModelHdRoot,
 }
 impl Changer for HdAddRoot {
+    type Result = ModelSpaceId;
+
     fn commit_change(
         self,
         conn: &mut StorTransaction,
         ChangeContext { journal_id }: ChangeContext,
-    ) -> StorDieselResult<()> {
+    ) -> StorDieselResult<Self::Result> {
         let Self {
             source,
             description,
@@ -115,7 +122,7 @@ impl Changer for HdAddRoot {
             "Add root {} name {space_name} ({description})",
             DisplayCompPath(source.as_slice()),
         );
-        storapi_hdroots_push(
+        let space_id = storapi_hdroots_push(
             conn,
             NewModelSpaceName {
                 journal_id,
@@ -124,6 +131,6 @@ impl Changer for HdAddRoot {
             },
             NewHdRoot { rtype: root_type },
         )?;
-        Ok(())
+        Ok(space_id)
     }
 }

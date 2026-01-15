@@ -3,11 +3,13 @@ use crate::{ModelJournalId, StorDieselResult, StorTransaction};
 use serde::{Deserialize, Serialize};
 
 pub trait Changer {
+    type Result;
+
     fn commit_change(
         self,
         conn: &mut StorTransaction,
         change_context: ChangeContext,
-    ) -> StorDieselResult<()>;
+    ) -> StorDieselResult<Self::Result>;
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -18,10 +20,12 @@ pub enum ChangeOp {
 }
 
 impl Changer for ChangeOp {
+    type Result = ();
+
     fn commit_change(self, conn: &mut StorTransaction, ctx: ChangeContext) -> StorDieselResult<()> {
         match self {
             Self::HdAddPath(v) => v.commit_change(conn, ctx),
-            Self::HdAddRoot(v) => v.commit_change(conn, ctx),
+            Self::HdAddRoot(v) => v.commit_change(conn, ctx).map(|_| ()),
             Self::HdAddSymlink(v) => v.commit_change(conn, ctx),
         }
     }
