@@ -12,7 +12,7 @@ mod util;
 pub mod integ_test;
 
 pub use importers::{
+    impl_calls::commit_journal_row,
     n_data_v1::{fetch::storfetch_paths_from_cache, fetch::storfetch_paths_from_disk},
-    page_calls::commit_journal_row,
     qb_get_tor_json_v1::fetch::storfetch_torrents,
 };
