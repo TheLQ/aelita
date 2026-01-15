@@ -13,4 +13,7 @@ mod common;
 mod fancy_chunk;
 pub mod hd_path;
 
-pub use common::{assert_packet_size_huge_enough, assert_test_database, show_create_table};
+pub use common::{
+    assert_database_name_is, assert_packet_size_huge_enough, assert_test_database,
+    show_create_table,
+};

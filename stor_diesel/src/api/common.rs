@@ -2,7 +2,7 @@ use crate::connection::{StorConnection, StorTransaction};
 use crate::err::{StorDieselErrorKind, StorDieselResult};
 use crate::storapi_variables_get;
 use diesel::sql_types::{Integer, Text, Unsigned};
-use diesel::{QueryResult, QueryableByName, RunQueryDsl, dsl};
+use diesel::{Connection, QueryResult, QueryableByName, RunQueryDsl, dsl};
 use xana_commons_rs::CrashErrKind;
 use xana_commons_rs::tracing_re::info;
 
@@ -22,9 +22,13 @@ pub fn check_insert_num_rows(query: QueryResult<usize>, expected: usize) -> Stor
 }
 
 pub fn assert_test_database(conn: &mut StorTransaction) -> QueryResult<()> {
-    let db_name: String = diesel::select(dsl::sql::<Text>("DATABASE()")).first(conn.inner())?;
+    assert_database_name_is(conn.inner(), "aelita_null")
+}
+
+pub fn assert_database_name_is(conn: &mut StorConnection, expected: &str) -> QueryResult<()> {
+    let db_name: String = diesel::select(dsl::sql::<Text>("DATABASE()")).first(conn)?;
     info!("database name: {}", db_name);
-    assert_eq!(db_name, "aelita_null");
+    assert_eq!(db_name, expected);
     Ok(())
 }
 

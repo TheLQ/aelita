@@ -58,15 +58,13 @@ impl<'c, 'tx, 't, 'k, 'v, Row, const COLS: usize> BulkyInsert<'c, 'tx, 't, 'k, '
         for (chunk_i, chunk) in chunks.enumerate() {
             let mut query_raw = prefix.clone();
             for row in chunk {
-                query_raw.push('(');
                 rowizer(RowizerContext {
-                    before: "(\"",
-                    middle: "\",\"",
-                    after: "\")",
+                    before: "(",
+                    middle: ",",
+                    after: "),",
                     output: RowizerOut::String(&mut query_raw),
                     row,
                 })?;
-                query_raw.push_str("),");
             }
             query_raw.pop();
             trace!(
