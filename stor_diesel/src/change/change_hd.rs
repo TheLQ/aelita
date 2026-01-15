@@ -2,8 +2,9 @@ use crate::change::defs::{ChangeContext, Changer};
 use crate::err::StorDieselErrorKind;
 use crate::{
     DisplayCompPath, ModelFileTreeId, ModelHdRoot, ModelJournalId, NewHdRoot, NewModelSpaceName,
-    StorDieselResult, StorTransaction, convert_path_to_comps, storapi_hd_get_path_by_path,
-    storapi_hd_links_add, storapi_hd_tree_push, storapi_hd_tree_push_single, storapi_hdroots_push,
+    StorDieselResult, StorTransaction, components_upsert_cte, convert_path_to_comps,
+    storapi_hd_get_path_by_path, storapi_hd_links_add, storapi_hd_tree_push,
+    storapi_hd_tree_push_single, storapi_hdroots_push,
 };
 use serde::{Deserialize, Serialize};
 use xana_commons_rs::CrashErrKind;
@@ -27,7 +28,7 @@ impl Changer for HdAddPath {
 
         if paths.is_empty() {
             panic!("no empty")
-        } else if paths.len() < preview {
+        } else if paths.len() == 1 {
             for path in paths {
                 commit_add_path_sql(conn, path)?;
             }
@@ -40,7 +41,7 @@ impl Changer for HdAddPath {
                 info!("... to len {}", paths.len())
             }
             // todo: this is expensive for 1 path...
-            let new_paths = CompressedPaths::from_scan(paths)
+            let new_paths = CompressedPaths::from_scan(paths, false)
                 .map_err(StorDieselErrorKind::InvalidChangeCompressedPaths.xana_map())?;
             storapi_hd_tree_push(conn, new_paths)
         }
@@ -53,6 +54,7 @@ fn commit_add_path_sql(
 ) -> StorDieselResult<ModelFileTreeId> {
     let path = scan_type.path();
     let path_comps = convert_path_to_comps(path)?;
+    components_upsert_cte(conn, &path_comps)?;
     let existing_ids = storapi_hd_get_path_by_path(conn, &path_comps)?;
 
     if path_comps.len() == existing_ids.len() {
