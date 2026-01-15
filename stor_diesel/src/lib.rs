@@ -15,7 +15,7 @@ mod schema_temp;
 
 pub use api::{
     api_hd::*, api_hd_mut::*, api_hd_roots_mut::*, api_journal::*, api_space::*, api_tor::*,
-    api_tor_mut::*, api_variables::*, assert_packet_size_huge_enough, hd_path::*,
+    api_tor_mut::*, api_variables::*, assert_packet_size_huge_enough, boot_enums::*, hd_path::*,
     show_create_table,
 };
 pub use change::{

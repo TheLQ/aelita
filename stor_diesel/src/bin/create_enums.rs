@@ -4,7 +4,8 @@ use aelita_commons::log_init;
 use aelita_stor_diesel::err::StorDieselErrorKind;
 use aelita_stor_diesel::{
     ModelHdRoot, ModelJournalTypeName, PermaStore, StorDieselError, StorDieselResult,
-    StorTransaction, establish_connection,
+    StorTransaction, bootstrap_enum_hd_roots, bootstrap_enum_journal, bootstrap_enum_space_owned,
+    establish_connection,
 };
 use aelita_xrn::defs::address::XrnType;
 use aelita_xrn::defs::path_xrn::PathXrnType;
@@ -26,66 +27,12 @@ pub fn run() -> StorDieselResult<()> {
     })?;
 
     StorTransaction::new_transaction("build", conn, |conn| {
-        set_space_owned(conn)?;
-        set_journal(conn)?;
-        set_hd_roots(conn)?;
+        bootstrap_enum_space_owned(conn)?;
+        bootstrap_enum_journal(conn)?;
+        bootstrap_enum_hd_roots(conn)?;
 
         Ok::<(), Box<StorDieselError>>(())
     })?;
 
     Ok(())
-}
-
-fn set_space_owned(conn: &mut StorTransaction) -> StorDieselResult<()> {
-    let primary_keys = type_names::<XrnType>();
-    diesel::sql_query(alter_enum_query("space_owned", "child_type1", primary_keys))
-        .execute(conn.inner())?;
-
-    let mut secondary_keys = String::new();
-    secondary_keys.push_str(&type_names::<SpaceXrnType>());
-    secondary_keys.push_str(", ");
-    secondary_keys.push_str(&type_names::<PathXrnType>());
-    diesel::sql_query(alter_enum_query(
-        "space_owned",
-        "child_type2",
-        secondary_keys,
-    ))
-    .execute(conn.inner())?;
-    Ok(())
-}
-
-fn set_journal(conn: &mut StorTransaction) -> StorDieselResult<()> {
-    let journal_keys = type_names::<ModelJournalTypeName>();
-    diesel::sql_query(alter_enum_query(
-        "journal_immutable",
-        "journal_type",
-        journal_keys,
-    ))
-    .execute(conn.inner())?;
-    Ok(())
-}
-
-fn set_hd_roots(conn: &mut StorTransaction) -> StorDieselResult<()> {
-    diesel::sql_query(alter_enum_query(
-        "hd1_roots",
-        "rtype",
-        type_names::<ModelHdRoot>(),
-    ))
-    .execute(conn.inner())?;
-    Ok(())
-}
-
-fn type_names<'a, V: VariantArray + AsRef<str>>() -> String {
-    V::VARIANTS
-        .into_iter()
-        .map(|v| format!("'{}'", v.as_ref()))
-        .collect::<CommaJoiner>()
-        .value()
-}
-
-fn alter_enum_query(table: &str, key: &str, values: String) -> String {
-    format!(
-        "ALTER TABLE `{table}` MODIFY \
-        {key} ENUM ( {values} ) NOT NULL"
-    )
 }
