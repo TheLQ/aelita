@@ -12,8 +12,8 @@ pub enum MigrationModel {
 impl MigrationModel {
     fn load_file(&self) -> StorImportResult<String> {
         let path = match self {
-            Self::Journal => Path::new("../stor_diesel/migrations/1_init_journal/up.sql"),
-            Self::Hd => Path::new("../stor_diesel/migrations/4_init_hd/up.sql"),
+            Self::Journal => Path::new("./stor_diesel/migrations/1_init_journal/up.sql"),
+            Self::Hd => Path::new("./stor_diesel/migrations/4_init_hd/up.sql"),
         };
         trace!("Reading migration file {}", path.display());
         let content = io_op(path, |v| std::fs::read_to_string(v))

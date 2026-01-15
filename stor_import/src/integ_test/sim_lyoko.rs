@@ -1,11 +1,12 @@
 use crate::err::{StorImportErrorKind, StorImportResult};
 use crate::integ_test::migration_sql_caller::MigrationModel;
+use crate::journal_commit_remain;
 use aelita_commons::log_init;
 use aelita_stor_diesel::{
     ChangeOp, HdAddPath, HdAddSymlink, ModelJournalTypeName, NewModelJournalImmutable, PermaStore,
-    RawDieselBytes, StorTransaction, bootstrap_enum_hd_roots, bootstrap_enum_journal,
-    encode_compressed_paths, establish_connection, storapi_hd_get_path_by_path,
-    storapi_journal_immutable_push_single,
+    RawDieselBytes, StorTransaction, assert_database_name_is, bootstrap_enum_hd_roots,
+    bootstrap_enum_journal, encode_compressed_paths, establish_connection,
+    storapi_hd_get_path_by_path, storapi_journal_immutable_push_single,
 };
 use chrono::NaiveDateTime;
 use xana_commons_rs::tracing_re::info;
@@ -21,32 +22,60 @@ pub fn sim_lyoko_main() {
 pub fn sim_lyoko() -> StorImportResult<()> {
     let conn = &mut establish_connection(PermaStore::AelitaInteg)
         .map_err(|(m, e)| StorImportErrorKind::DieselFailed.build_err_message(e, m))?;
-    StorTransaction::new_transaction("sym-lyko", conn, simulate)
-}
 
-fn simulate(conn: &mut StorTransaction) -> StorImportResult<()> {
+    assert_database_name_is(conn, "aelita_integ").xana_err(StorImportErrorKind::DieselFailed)?;
+
     let tables = [
         (MigrationModel::Journal, "journal_immutable"),
         (MigrationModel::Journal, "journal_immutable_data"),
         (MigrationModel::Hd, "hd1_files_components"),
+        (MigrationModel::Hd, "hd1_files_parents"),
     ];
 
+    StorTransaction::new_transaction("create", conn, |conn| simulate_create(conn, &tables))?;
+
+    StorTransaction::new_transaction("fill", conn, |conn| simulate_fill(conn))?;
+
+    journal_commit_remain(conn)?;
+
+    StorTransaction::new_transaction("test", conn, |conn| test_simulation(conn))?;
+
+    StorTransaction::new_transaction("drop", conn, |conn| simulate_drop(conn, &tables))?;
+    Ok(())
+}
+
+fn simulate_create(
+    conn: &mut StorTransaction,
+    tables: &[(MigrationModel, &str)],
+) -> StorImportResult<()> {
     for (_model, table) in tables.iter().rev() {
         drop_table(conn, table)?;
     }
-    for (model, table) in &tables {
+    for (model, table) in tables {
         model.create_table(conn, table)?;
     }
     bootstrap_enum_journal(conn)?;
+    Ok(())
+}
 
+fn simulate_fill(conn: &mut StorTransaction) -> StorImportResult<()> {
     journal_paths_backup(conn)?;
     journal_paths_active(conn)?;
-    test_paths(conn)?;
+    Ok(())
+}
 
+fn test_simulation(conn: &mut StorTransaction) -> StorImportResult<()> {
+    test_paths(conn)?;
+    Ok(())
+}
+
+fn simulate_drop(
+    conn: &mut StorTransaction,
+    tables: &[(MigrationModel, &str)],
+) -> StorImportResult<()> {
     for (_model, table) in tables.iter().rev() {
         drop_table(conn, table)?;
     }
-
     Ok(())
 }
 
