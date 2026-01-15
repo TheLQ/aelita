@@ -69,7 +69,7 @@ fn stat_scan_to_compressed(
         .sum();
 
     let watch = BasicWatch::start();
-    let compressed = CompressedPaths::from_scan(scans)
+    let compressed = CompressedPaths::from_scan(scans, true)
         .map_err(StorImportErrorKind::InvalidCompressedPaths.xana_map())?;
     debug!("CompressedPath built in {watch}");
 

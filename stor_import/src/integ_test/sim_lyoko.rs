@@ -9,7 +9,7 @@ use aelita_stor_diesel::{
     storapi_hd_get_path_by_path, storapi_journal_immutable_push_single,
 };
 use chrono::NaiveDateTime;
-use xana_commons_rs::tracing_re::info;
+use xana_commons_rs::tracing_re::{info, warn};
 use xana_commons_rs::{CrashErrKind, PrettyUnwrap, ResultXanaMap};
 use xana_fs_indexer_rs::{CompressedPaths, ScanFileTypeWithPath, ScanStat};
 
@@ -30,6 +30,7 @@ pub fn sim_lyoko() -> StorImportResult<()> {
         (MigrationModel::Journal, "journal_immutable_data"),
         (MigrationModel::Hd, "hd1_files_components"),
         (MigrationModel::Hd, "hd1_files_parents"),
+        (MigrationModel::Hd, "hd1_files_links"),
     ];
 
     StorTransaction::new_transaction("create", conn, |conn| simulate_create(conn, &tables))?;
@@ -65,7 +66,9 @@ fn simulate_fill(conn: &mut StorTransaction) -> StorImportResult<()> {
 }
 
 fn test_simulation(conn: &mut StorTransaction) -> StorImportResult<()> {
+    warn!("---------------- Test ----------------");
     test_paths(conn)?;
+    warn!("---------------- Complete ----------------");
     Ok(())
 }
 
@@ -81,32 +84,35 @@ fn simulate_drop(
 
 fn journal_paths_backup(conn: &mut StorTransaction) -> StorImportResult<()> {
     let stat_dummy_usable = stat_dummy_usable();
-    let compressed = CompressedPaths::from_scan(vec![
-        (
-            ScanFileTypeWithPath::Dir {
-                path: "/backup".into(),
-            },
-            stat_dummy_usable.clone(),
-        ),
-        (
-            ScanFileTypeWithPath::Dir {
-                path: "/backup/active".into(),
-            },
-            stat_dummy_usable.clone(),
-        ),
-        (
-            ScanFileTypeWithPath::Dir {
-                path: "/backup/active/important_empty".into(),
-            },
-            stat_dummy_usable.clone(),
-        ),
-        (
-            ScanFileTypeWithPath::File {
-                path: "/backup/active/magic.rs".into(),
-            },
-            stat_dummy_usable.clone(),
-        ),
-    ])
+    let compressed = CompressedPaths::from_scan(
+        vec![
+            (
+                ScanFileTypeWithPath::Dir {
+                    path: "/backup".into(),
+                },
+                stat_dummy_usable.clone(),
+            ),
+            (
+                ScanFileTypeWithPath::Dir {
+                    path: "/backup/active".into(),
+                },
+                stat_dummy_usable.clone(),
+            ),
+            (
+                ScanFileTypeWithPath::Dir {
+                    path: "/backup/active/important_empty".into(),
+                },
+                stat_dummy_usable.clone(),
+            ),
+            (
+                ScanFileTypeWithPath::File {
+                    path: "/backup/active/magic.rs".into(),
+                },
+                stat_dummy_usable.clone(),
+            ),
+        ],
+        false,
+    )
     .map_err(StorImportErrorKind::DieselFailed.xana_map())?;
     let encoded = encode_compressed_paths(&compressed, None)
         .map_err(StorImportErrorKind::DieselFailed.xana_map())?;
