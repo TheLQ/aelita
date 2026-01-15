@@ -29,6 +29,12 @@ pub fn storapi_journal_immutable_push_single(
         cause_xrn,
     } = value_raw;
     let data_hash = TorHashV2::from_raw(Sha256::digest(data.as_inner()).into());
+    let journal_type_clone = journal_type.clone();
+    info!(
+        "Push Journal type {journal_type_clone} size {}",
+        data.0.len()
+    );
+
     let row = NewModelJournalImmutableDiesel {
         journal_type,
         metadata,

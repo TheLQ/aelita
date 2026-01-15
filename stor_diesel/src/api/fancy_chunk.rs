@@ -122,23 +122,9 @@ where
     fn pieces<const SIZE: usize>(self) -> impl Iterator<Item = Self::Value> {
         let Chunky { input, message } = self.0;
 
-        // why into_chunks why
-        // - truncates remainder, so we need to save it first
-        // - Remainder Vec and Fixed Array are converted to Boxed Slice
-
-        let input_len = input.len();
-        let remainder = input_len % SIZE;
-        let remainder = if remainder != 0 {
-            vec![&input[(input_len - remainder)..]]
-        } else {
-            Vec::new()
-        };
-        assert_eq!(input.len() % SIZE, 0);
-
         let chunks_len = chunks_in_len(SIZE, &input);
         input
             .chunks(SIZE)
-            .chain(remainder.into_iter())
             .map(|needs_conv_chunk| {
                 needs_conv_chunk
                     .iter()
