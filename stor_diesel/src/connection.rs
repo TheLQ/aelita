@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use url::Url;
 use xana_commons_rs::LOCALE;
 use xana_commons_rs::num_format_re::ToFormattedString;
-use xana_commons_rs::tracing_re::{Level, debug, info, span};
+use xana_commons_rs::tracing_re::{Level, debug, info, span, trace};
 use xana_fs_indexer_rs::read_file_better;
 
 #[derive(strum::AsRefStr)]
@@ -134,18 +134,18 @@ impl Instrumentation for StorInstrument {
                         && binds < prefix + suffix
                     {
                         let query_str = &query_str[..binds];
-                        debug!("{query_str} -- ...binds truncate...");
+                        trace!("{query_str} -- ...binds truncate...");
                     } else {
                         let small_prefix = &query_str[0..prefix];
                         let small_suffix = &query_str[(query_str.len() - suffix)..];
                         let removed = query_str.len() - prefix - suffix;
-                        debug!(
+                        trace!(
                             "{small_prefix}...truncate {} chars...{small_suffix}",
                             removed.to_formatted_string(&LOCALE)
                         );
                     }
                 } else {
-                    debug!("{}", query_str);
+                    trace!("{}", query_str);
                 }
             }
             _ => (),

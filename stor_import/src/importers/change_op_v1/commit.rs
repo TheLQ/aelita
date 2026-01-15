@@ -16,6 +16,7 @@ pub fn storcommit_change_op_v1(
     let watch = BasicWatch::start();
     let changes_len = changes.len();
     for change in changes {
+        info!("Committing change {change:?}");
         change.commit_change(
             conn,
             ChangeContext {
