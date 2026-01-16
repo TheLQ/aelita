@@ -9,6 +9,15 @@ Ask "How would you create a small https://archive.org?" managing storage to cata
 desktop.
 Also ponder how ephemeral information becomes.
 
+* Manages files as Vault folders. Aelita tracks
+  where it came from (torrent, site scrape, manual download with url.txt, etc),
+  where it is (poolA, backupB, tape444, someCloud, etc),
+  as well as deep metadata like hashes, stat, various tags, and generated scripts.
+  Explained more below
+* Keeps Filesystem-native "UI" where possible. For example /a-search/videos-mkv-disk2 is "All .mkv videos on disk2"
+* qBittorrent Cluster Manager
+* Platform for custom site scrapers, richer indexing of large datasets, and more that a queryable filesystem provides
+
 ## Concept
 
 ### Vault
@@ -44,7 +53,7 @@ Meaning fetching `myapp:8000/list_somedata` journals the entire response
 before commiting the lookup tables. If a field was skipped initially say for time
 it can losslessly be added later.
 
-While none of this is revolutionary, combined and specialized for qbittorrent and ZFS makes a powerful tool that obtains
+While none of this is revolutionary, combined and specialized for qBittorrent and ZFS makes a powerful tool that obtains
 
 - A standard unit of disk data. Movable, copyable, and versionable
 - Backend and frontend Platform for vastly different models: videos to photo albums to bookmarks to social media
@@ -64,7 +73,7 @@ We can choose the best model for us
 ## Features
 
 - Managing and categorizing 1+ million torrent collections
-- Qbittorrent shard management
+- qBittorrent shard management
 - [ ] Managing and categorizing site scrapes
 - [ ] Video Playback from browser to current machine's mpv player
 - [ ] Managing and categorizing site scraping
@@ -78,14 +87,4 @@ Dreams
 - [ ] Social media scrape backend
 - [ ] ZFS Diffing and archiving from sanoid snapshots
 - [ ] ...
-
-```raw
-Browser History        > Mutation Log > Distilled Database 
-Tabs Open/Close Events                  Frontend Site
-Reddit Saved
-Twitter Saved
-Youtube Downloads
-Project Tracking
-```
-
 
