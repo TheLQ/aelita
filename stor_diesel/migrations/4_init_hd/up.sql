@@ -98,12 +98,14 @@ show create table `hd1_files_paths`;
 
 CREATE TABLE IF NOT EXISTS `hd1_roots`
 (
+    -- @formatter:off
     `space_id` INTEGER UNSIGNED NOT NULL,
-    `rtype`    ENUM ('')        NOT NULL,
+    `rtype`    ENUM( 'ZfsDataset','Project','Movie','Episodes' ) NOT NULL,
+    -- @formatter:on
     PRIMARY KEY (`space_id`),
     CONSTRAINT `fk_hd1_roots_space`
         FOREIGN KEY (`space_id`) REFERENCES `space_names` (`space_id`)
 );
-ALTER TABLE `hd1_roots`
-    MODIFY `rtype`
-        ENUM ('ZfsDataset', 'Project')
+# ALTER TABLE `hd1_roots`
+#     MODIFY `rtype`
+#         ENUM ('ZfsDataset', 'Project')

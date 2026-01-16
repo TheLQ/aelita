@@ -60,9 +60,10 @@ fn simulate_create(
     for (model, table) in tables {
         model.create_table(conn, table)?;
     }
-    bootstrap_enum_journal(conn)?;
-    bootstrap_enum_space_owned(conn)?;
-    bootstrap_enum_hd_roots(conn)?;
+    // update then re-comment because ALTER TABLE MODIFY is slow
+    // bootstrap_enum_journal(conn)?;
+    // bootstrap_enum_space_owned(conn)?;
+    // bootstrap_enum_hd_roots(conn)?;
     Ok(())
 }
 
