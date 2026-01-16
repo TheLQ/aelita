@@ -32,13 +32,14 @@ pub trait ChunkyPiece {
 
     fn log_passthru<M: Display>(
         chunks_len: usize,
+        total: usize,
         message: M,
     ) -> impl FnMut((usize, Self::Value)) -> Self::Value {
         move |(i, value)| {
             trace!(
-                "Chunky {message} - {} of {}",
+                "Chunky {message} - {} of {} total_len {total}",
                 i.to_formatted_string(&LOCALE),
-                chunks_len.to_formatted_string(&LOCALE)
+                (chunks_len.checked_sub(1).unwrap_or(666_666_666)).to_formatted_string(&LOCALE)
             );
             value
         }
@@ -77,7 +78,7 @@ impl<T, M: Display> ChunkyPiece for Chunky<Vec<T>, M> {
             })
             .chain([remainder].into_iter())
             .enumerate()
-            .map(Self::log_passthru(chunks_len, message))
+            .map(Self::log_passthru(chunks_len, input_len, message))
     }
 }
 
@@ -87,10 +88,11 @@ impl<'t, T, M: Display> ChunkyPiece for Chunky<&'t [T], M> {
     fn pieces<const SIZE: usize>(self) -> impl Iterator<Item = Self::Value> {
         let Self { input, message } = self;
         let chunks_len = chunks_in_len(SIZE, input);
+        let input_len = input.len();
         input
             .chunks(SIZE)
             .enumerate()
-            .map(Self::log_passthru(chunks_len, message))
+            .map(Self::log_passthru(chunks_len, input_len, message))
     }
 }
 
@@ -121,7 +123,7 @@ where
 
     fn pieces<const SIZE: usize>(self) -> impl Iterator<Item = Self::Value> {
         let Chunky { input, message } = self.0;
-
+        let input_len = input.len();
         let chunks_len = chunks_in_len(SIZE, &input);
         input
             .chunks(SIZE)
@@ -132,7 +134,7 @@ where
                     .collect::<Vec<&[Inner]>>()
             })
             .enumerate()
-            .map(Self::log_passthru(chunks_len, message))
+            .map(Self::log_passthru(chunks_len, input_len, message))
     }
 }
 
