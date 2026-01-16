@@ -4,8 +4,10 @@ use std::path::Path;
 use xana_commons_rs::tracing_re::{info, trace};
 use xana_commons_rs::{CrashErrKind, ResultXanaMap, io_op};
 
+#[derive(strum::Display)]
 pub enum MigrationModel {
     Journal,
+    Space,
     Hd,
 }
 
@@ -13,6 +15,7 @@ impl MigrationModel {
     fn load_file(&self) -> StorImportResult<String> {
         let path = match self {
             Self::Journal => Path::new("./stor_diesel/migrations/1_init_journal/up.sql"),
+            Self::Space => Path::new("./stor_diesel/migrations/2_init_core/up.sql"),
             Self::Hd => Path::new("./stor_diesel/migrations/4_init_hd/up.sql"),
         };
         trace!("Reading migration file {}", path.display());
@@ -25,12 +28,12 @@ impl MigrationModel {
         trace!("creating table {table}");
         let content = self.load_file()?;
         let Some(start) = content.find(&format!("CREATE TABLE IF NOT EXISTS `{table}`")) else {
-            return Err(StorImportErrorKind::MigrationMissingCreate.build());
+            return Err(StorImportErrorKind::MigrationMissingCreate.build_message(table));
         };
         let remain = &content[start..];
         let needle = ");";
         let Some(end) = remain.find(needle) else {
-            return Err(StorImportErrorKind::MigrationMissingEnd.build());
+            return Err(StorImportErrorKind::MigrationMissingEnd.build_message(table));
         };
         let command = &remain[..(end + needle.len())];
 

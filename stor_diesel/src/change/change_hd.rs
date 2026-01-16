@@ -1,12 +1,18 @@
+use crate::api::api_space_mut::storapi_space_owned_new;
 use crate::change::defs::{ChangeContext, Changer};
 use crate::err::StorDieselErrorKind;
 use crate::{
     DisplayCompPath, ModelFileTreeId, ModelHdRoot, ModelSpaceId, ModelSpaceOwned, NewHdRoot,
-    NewModelSpaceName, StorDieselResult, StorTransaction, components_upsert_cte,
-    convert_path_to_comps, storapi_hd_get_path_by_path, storapi_hd_links_add, storapi_hd_tree_push,
-    storapi_hd_tree_push_single, storapi_hdroots_push,
+    NewModelSpaceName, StorDieselResult, StorIdTypeDiesel, StorTransaction, components_get_bytes,
+    components_upsert_cte, convert_comps_to_path, convert_path_to_comps,
+    storapi_hd_get_path_by_path, storapi_hd_links_add, storapi_hd_tree_push,
+    storapi_hd_tree_push_single, storapi_hdroots_push, storapi_space_get,
+    storapi_space_get_ids_by_name,
 };
+use aelita_xrn::defs::path_xrn::{PathXrn, PathXrnType};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::path::PathBuf;
 use xana_commons_rs::CrashErrKind;
 use xana_commons_rs::tracing_re::info;
 use xana_fs_indexer_rs::{CompressedPaths, ScanFileTypeWithPath, ScanStat};
@@ -119,7 +125,7 @@ impl Changer for HdAddRoot {
             root_type,
         } = self;
         info!(
-            "Add root {} name {space_name} ({description})",
+            "Add root {} type {root_type} name {space_name} ({description})",
             DisplayCompPath(source.as_slice()),
         );
         let space_id = storapi_hdroots_push(
@@ -132,5 +138,70 @@ impl Changer for HdAddRoot {
             NewHdRoot { rtype: root_type },
         )?;
         Ok(space_id)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HdAddPathToSpace {
+    pub path_to_space_name: Vec<AddPathMeta>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AddPathMeta {
+    pub path: Vec<Vec<u8>>,
+    pub space_name: String,
+    pub owned_description: String,
+}
+
+impl Changer for HdAddPathToSpace {
+    type Result = ();
+
+    fn commit_change(
+        self,
+        conn: &mut StorTransaction,
+        ChangeContext { journal_id }: ChangeContext,
+    ) -> StorDieselResult<Self::Result> {
+        let Self { path_to_space_name } = self;
+
+        let mut space_names = path_to_space_name
+            .iter()
+            .map(|meta| meta.space_name.as_ref())
+            .collect::<Vec<_>>();
+        space_names.sort_unstable();
+        space_names.dedup();
+        let space_id_by_name = storapi_space_get_ids_by_name(conn, space_names.as_ref())?
+            .into_iter()
+            .collect::<HashMap<_, _>>();
+
+        for AddPathMeta {
+            path,
+            space_name,
+            owned_description,
+        } in path_to_space_name
+        {
+            let Some(space_id) = space_id_by_name.get(&space_name).cloned() else {
+                return Err(StorDieselErrorKind::UnknownComponent.build_message(space_name));
+            };
+
+            let path_ids = storapi_hd_get_path_by_path(conn, &path)?;
+            let path_id = path_ids.last().unwrap();
+            let xrn = PathXrn::new(
+                PathXrnType::Fs,
+                convert_comps_to_path(&path),
+                path_id.inner_id(),
+            );
+
+            storapi_space_owned_new(
+                conn,
+                ModelSpaceOwned {
+                    space_id,
+                    journal_id,
+                    description: Some(owned_description),
+                },
+                xrn.into(),
+            )?;
+        }
+
+        Ok(())
     }
 }

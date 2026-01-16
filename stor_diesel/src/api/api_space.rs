@@ -19,6 +19,20 @@ pub fn storapi_space_get(
         .map_err(Into::into)
 }
 
+pub fn storapi_space_get_ids_by_name(
+    conn: &mut StorTransaction,
+    name: &[&str],
+) -> StorDieselResult<Vec<(String, ModelSpaceId)>> {
+    schema::space_names::table
+        .select((
+            schema::space_names::space_name,
+            schema::space_names::space_id,
+        ))
+        .filter(schema::space_names::space_name.eq_any(name))
+        .get_results(conn.inner())
+        .map_err(Into::into)
+}
+
 pub fn storapi_space_list(conn: &mut StorTransaction) -> StorDieselResult<Vec<ModelSpaceName>> {
     ModelSpaceName::query()
         .load(conn.inner())

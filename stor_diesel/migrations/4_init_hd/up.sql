@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS `hd1_files_paths`
 # create index `i7` on `hd1_files_paths` (`p7`);
 show create table `hd1_files_paths`;
 
-CREATE TABLE `hd1_roots`
+CREATE TABLE IF NOT EXISTS `hd1_roots`
 (
     `space_id` INTEGER UNSIGNED NOT NULL,
     `rtype`    ENUM ('')        NOT NULL,

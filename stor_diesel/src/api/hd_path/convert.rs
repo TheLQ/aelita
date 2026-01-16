@@ -32,6 +32,12 @@ pub fn convert_path_to_comps_owned(path: &Path) -> StorDieselResult<Vec<Vec<u8>>
     convert_path_to_comps(path).map(|v| v.into_iter().map(|v| v.to_vec()).collect())
 }
 
+pub fn convert_strs_to_comps(strs: &[impl AsRef<str>]) -> Vec<Vec<u8>> {
+    strs.into_iter()
+        .map(|v| v.as_ref().as_bytes().to_vec())
+        .collect()
+}
+
 pub fn convert_comps_to_path(comps: &[impl AsRef<[u8]>]) -> PathBuf {
     let mut res = PathBuf::from("/");
     res.extend(comps.iter().map(|v| OsStr::from_bytes(v.as_ref())));

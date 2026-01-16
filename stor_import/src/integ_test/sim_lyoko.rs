@@ -3,10 +3,12 @@ use crate::integ_test::migration_sql_caller::MigrationModel;
 use crate::journal_commit_remain;
 use aelita_commons::log_init;
 use aelita_stor_diesel::{
-    ChangeOp, HdAddPath, HdAddSymlink, ModelJournalTypeName, NewModelJournalImmutable, PermaStore,
-    RawDieselBytes, StorTransaction, assert_database_name_is, bootstrap_enum_journal,
-    encode_compressed_paths, establish_connection, storapi_hd_get_path_by_path,
-    storapi_journal_immutable_push_single,
+    AddPathMeta, ChangeOp, HdAddPath, HdAddPathToSpace, HdAddRoot, HdAddSymlink, ModelHdRoot,
+    ModelJournalTypeName, NewModelJournalImmutable, PermaStore, RawDieselBytes, RootType,
+    StorTransaction, assert_database_name_is, bootstrap_enum_hd_roots, bootstrap_enum_journal,
+    bootstrap_enum_space_owned, convert_path_to_comps, convert_path_to_comps_owned,
+    convert_strs_to_comps, encode_compressed_paths, establish_connection,
+    storapi_hd_get_path_by_path, storapi_journal_immutable_push_single,
 };
 use chrono::NaiveDateTime;
 use xana_commons_rs::tracing_re::{info, warn};
@@ -28,9 +30,12 @@ pub fn sim_lyoko() -> StorImportResult<()> {
     let tables = [
         (MigrationModel::Journal, "journal_immutable"),
         (MigrationModel::Journal, "journal_immutable_data"),
+        (MigrationModel::Space, "space_names"),
+        (MigrationModel::Space, "space_owned"),
         (MigrationModel::Hd, "hd1_files_components"),
         (MigrationModel::Hd, "hd1_files_parents"),
         (MigrationModel::Hd, "hd1_files_links"),
+        (MigrationModel::Hd, "hd1_roots"),
     ];
 
     StorTransaction::new_transaction("create", conn, |conn| simulate_create(conn, &tables))?;
@@ -41,7 +46,7 @@ pub fn sim_lyoko() -> StorImportResult<()> {
 
     StorTransaction::new_transaction("test", conn, |conn| test_simulation(conn))?;
 
-    StorTransaction::new_transaction("drop", conn, |conn| simulate_drop(conn, &tables))?;
+    // StorTransaction::new_transaction("drop", conn, |conn| simulate_drop(conn, &tables))?;
     Ok(())
 }
 
@@ -56,6 +61,8 @@ fn simulate_create(
         model.create_table(conn, table)?;
     }
     bootstrap_enum_journal(conn)?;
+    bootstrap_enum_space_owned(conn)?;
+    bootstrap_enum_hd_roots(conn)?;
     Ok(())
 }
 
@@ -132,27 +139,42 @@ fn journal_paths_backup(conn: &mut StorTransaction) -> StorImportResult<()> {
 
 fn journal_paths_active(conn: &mut StorTransaction) -> StorImportResult<()> {
     let stat_dummy_usable = stat_dummy_usable();
-    let mut changes = Vec::new();
-    changes.push(ChangeOp::HdAddPath(HdAddPath {
-        paths: vec![
-            (
-                ScanFileTypeWithPath::File {
-                    path: "/backup/active/more".into(),
-                },
-                stat_dummy_usable.clone(),
-            ),
-            (
-                ScanFileTypeWithPath::Dir {
-                    path: "/active".into(),
-                },
-                stat_dummy_usable.clone(),
-            ),
-        ],
-    }));
-    changes.push(ChangeOp::HdAddSymlink(HdAddSymlink {
-        at: vec![b"active".to_vec()],
-        target: vec![b"backup".to_vec(), b"active".to_vec()],
-    }));
+    let mut changes = Vec::from([
+        ChangeOp::HdAddPath(HdAddPath {
+            paths: vec![
+                (
+                    ScanFileTypeWithPath::File {
+                        path: "/backup/active/more".into(),
+                    },
+                    stat_dummy_usable.clone(),
+                ),
+                (
+                    ScanFileTypeWithPath::Dir {
+                        path: "/active".into(),
+                    },
+                    stat_dummy_usable.clone(),
+                ),
+            ],
+        }),
+        ChangeOp::HdAddSymlink(HdAddSymlink {
+            at: convert_strs_to_comps(&["active"]),
+            target: convert_strs_to_comps(&["backup", "active"]),
+            // ,vec![b"backup".to_vec(), b"active".to_vec()]
+        }),
+        ChangeOp::HdAddRoot(HdAddRoot {
+            source: convert_strs_to_comps(&["active"]),
+            space_name: "active-zfs".into(),
+            description: "some zfs".into(),
+            root_type: ModelHdRoot::Episodes,
+        }),
+        ChangeOp::HdAddPathToSpace(HdAddPathToSpace {
+            path_to_space_name: vec![AddPathMeta {
+                path: convert_strs_to_comps(&["active"]),
+                owned_description: "main zfs root".into(),
+                space_name: "active-zfs".into(),
+            }],
+        }),
+    ]);
 
     let data = RawDieselBytes::serialize_json(changes)
         .map_err(StorImportErrorKind::DieselFailed.err_map())?;

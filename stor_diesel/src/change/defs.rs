@@ -1,5 +1,5 @@
 use crate::change::change_hd::{HdAddPath, HdAddRoot, HdAddSymlink};
-use crate::{ModelJournalId, StorDieselResult, StorTransaction};
+use crate::{HdAddPathToSpace, ModelJournalId, StorDieselResult, StorTransaction};
 use serde::{Deserialize, Serialize};
 
 pub trait Changer {
@@ -17,6 +17,7 @@ pub enum ChangeOp {
     HdAddPath(HdAddPath),
     HdAddSymlink(HdAddSymlink),
     HdAddRoot(HdAddRoot),
+    HdAddPathToSpace(HdAddPathToSpace),
 }
 
 impl Changer for ChangeOp {
@@ -27,6 +28,7 @@ impl Changer for ChangeOp {
             Self::HdAddPath(v) => v.commit_change(conn, ctx),
             Self::HdAddRoot(v) => v.commit_change(conn, ctx).map(|_| ()),
             Self::HdAddSymlink(v) => v.commit_change(conn, ctx),
+            Self::HdAddPathToSpace(v) => v.commit_change(conn, ctx),
         }
     }
 }
