@@ -14,7 +14,7 @@ use xana_commons_rs::{BasicWatch, CrashErrKind, LOCALE, SimpleIoMap};
 fn build_paths_mega_query(
     conn: &mut StorTransaction,
     paths: &[impl AsRef<Path>],
-    component_to_id: &HashMap<String, u32>,
+    component_to_id: &HashMap<Vec<u8>, u32>,
 ) -> StorDieselResult<()> {
     let watch = BasicWatch::start();
 
@@ -91,13 +91,13 @@ const COL_SEP: u8 = 0x1f;
 fn build_paths_infile(
     conn: &mut StorTransaction,
     paths: &[impl AsRef<Path>],
-    component_to_id: &HashMap<String, u32>,
+    component_to_id: &HashMap<Vec<u8>, u32>,
 ) -> StorDieselResult<()> {
     let watch = BasicWatch::start();
     let mut content = Vec::new();
     for path in paths.iter() {
         let path = path.as_ref();
-        let diesel_path = HdPathDiesel::from_path(path, &component_to_id)?;
+        let diesel_path = HdPathDiesel::from_path(path, component_to_id)?;
         for field in diesel_path.into_array() {
             if let Some(v) = field {
                 content.extend(v.to_string().as_bytes());

@@ -1,7 +1,9 @@
 use crate::StorDieselResult;
 use crate::err::StorDieselErrorKind;
+use std::ffi::OsStr;
+use std::fmt::Formatter;
 use std::os::unix::ffi::OsStrExt;
-use std::path::{Component, Path};
+use std::path::{Component, Path, PathBuf};
 use xana_commons_rs::CrashErrKind;
 
 pub fn convert_path_to_comps(path: &Path) -> StorDieselResult<Vec<&[u8]>> {
@@ -28,6 +30,30 @@ pub fn convert_path_to_comps(path: &Path) -> StorDieselResult<Vec<&[u8]>> {
 
 pub fn convert_path_to_comps_owned(path: &Path) -> StorDieselResult<Vec<Vec<u8>>> {
     convert_path_to_comps(path).map(|v| v.into_iter().map(|v| v.to_vec()).collect())
+}
+
+pub fn convert_comps_to_path(comps: &[impl AsRef<[u8]>]) -> PathBuf {
+    let mut res = PathBuf::from("/");
+    res.extend(comps.iter().map(|v| OsStr::from_bytes(v.as_ref())));
+    res
+}
+
+pub fn convert_comps_to_list(comps: &[impl AsRef<[u8]>]) -> String {
+    // we could use opt.unwrap_or_else("NOT_UTF8") but lets see what this does
+    struct Wrapper<'v, I: AsRef<[u8]>> {
+        inner: &'v [I],
+    }
+    impl<'v, I: AsRef<[u8]>> std::fmt::Display for Wrapper<'v, I> {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            for comp in self.inner {
+                let comp = comp.as_ref();
+                write!(f, "{}", OsStr::from_bytes(comp).display())?;
+            }
+            Ok(())
+        }
+    }
+
+    Wrapper { inner: comps }.to_string()
 }
 
 #[cfg(test)]

@@ -1,8 +1,9 @@
 use crate::api::api_hd::storapi_hd_components_with;
+use crate::api::hd_path::convert::convert_comps_to_list;
 use crate::err::StorDieselErrorKind;
 use crate::{
     HdPathDieselDyn, ModelFileTreeId, PathRow, StorDieselResult, StorIdTypeDiesel, StorTransaction,
-    components_get_bytes, path_components,
+    components_get_bytes, convert_path_to_comps,
 };
 use aelita_xrn::defs::path_xrn::XRN_PATH_ROOT_ID;
 use diesel::sql_types::Unsigned;
@@ -246,22 +247,21 @@ pub fn storapi_hd_list_children_by_path(
 ) -> StorDieselResult<Vec<String>> {
     let path = path.as_ref();
 
-    let path_components_bytes = path_components(path, |c| c.as_bytes())?;
-    let path_components_str = path_components(path, |c| c.to_str().unwrap())?;
+    let path_components_bytes = convert_path_to_comps(path)?;
     let selected_column = path_components_bytes.len();
 
-    let components_to_id_vec = components_get_bytes(conn, &path_components_bytes)?;
-    let components_to_id = components_to_id_vec
+    let components_to_id = components_get_bytes(conn, &path_components_bytes)?
         .into_iter()
-        .map(|(id, comp)| (String::from_utf8(comp).unwrap(), id))
+        .map(|(id, comp)| (comp, id))
         .collect::<HashMap<_, _>>();
-    if components_to_id.len() != path_components_str.len() {
-        let mut missing = path_components_str.clone();
+    if components_to_id.len() != path_components_bytes.len() {
+        let mut missing = path_components_bytes.clone();
         missing.retain(|v| !components_to_id.contains_key(*v));
+
         return Err(StorDieselErrorKind::UnknownComponent.build_message(format!(
-            "{} total {}",
-            missing.join(","),
-            missing.len()
+            "total {} values {}",
+            missing.len(),
+            convert_comps_to_list(&missing),
         )));
     }
 
@@ -295,7 +295,7 @@ pub fn storapi_hd_list_children_by_path(
                     parents{i}.tree_depth = {i} AND \
                     parents{i}.component_id = {comp_id} AND \
                     parents{i}.parent_id = parents{prev_i}.tree_id",
-                    comp_id = components_to_id[path_components_str[i]],
+                    comp_id = components_to_id[path_components_bytes[i]],
                     prev_i = i - 1
                 )
             })
@@ -315,7 +315,7 @@ pub fn storapi_hd_list_children_by_path(
             parents0.component_id = {comp_id} AND \
             parents0.parent_id IS NULL \
         LIMIT {LIMIT_CHILDREN_SIZE}",
-            comp_id = components_to_id[path_components_str[0]]
+            comp_id = components_to_id[path_components_bytes[0]]
         );
         rows = diesel::sql_query(query_builder).load::<PathResult>(conn.inner())?;
     }

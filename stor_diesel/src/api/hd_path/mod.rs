@@ -8,7 +8,10 @@ mod display;
 mod local_builder2;
 mod tree_queries;
 
-pub use convert::{convert_path_to_comps, convert_path_to_comps_owned};
+pub use convert::{
+    convert_comps_to_list, convert_comps_to_path, convert_path_to_comps,
+    convert_path_to_comps_owned,
+};
 pub use display::DisplayCompPath;
 pub use local_builder2::build_associations_from_compressed;
 pub use tree_queries::{

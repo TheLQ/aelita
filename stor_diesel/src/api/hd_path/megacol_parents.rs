@@ -1,7 +1,6 @@
-use crate::{HD_PATH_DEPTH, StorDieselResult, StorTransaction, path_components};
+use crate::{HD_PATH_DEPTH, StorDieselResult, StorTransaction, convert_path_to_comps};
 use diesel::sql_types::Binary;
 use diesel::{QueryableByName, RunQueryDsl};
-use std::os::unix::prelude::OsStrExt;
 use std::path::Path;
 use xana_commons_rs::num_format_re::ToFormattedString;
 use xana_commons_rs::tracing_re::trace;
@@ -78,7 +77,7 @@ fn hd_list_children_paths(
     path: impl AsRef<Path>,
 ) -> StorDieselResult<Vec<String>> {
     let path = path.as_ref();
-    let path_components = path_components(path, |c| c.as_bytes())?;
+    let path_components = convert_path_to_comps(path)?;
 
     let selected_column = path_components.len();
     let mut query_builder = format!(

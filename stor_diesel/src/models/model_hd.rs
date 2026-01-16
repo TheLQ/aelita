@@ -1,5 +1,5 @@
 use crate::err::StorDieselErrorKind;
-use crate::{ModelFileCompId, ModelFileTreeId, StorDieselResult};
+use crate::{ModelFileCompId, ModelFileTreeId, StorDieselResult, convert_path_to_comps};
 use crate::{RawDieselBytes, schema};
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
@@ -213,14 +213,13 @@ pub struct HdPathDiesel {
 impl HdPathDiesel {
     pub fn from_path(
         path: &Path,
-        component_to_id: &HashMap<String, u32>,
+        component_to_id: &HashMap<Vec<u8>, u32>,
     ) -> StorDieselResult<Self> {
-        let component_ids = path_components(path, |c| {
-            let key = c.to_str().unwrap();
-            *component_to_id.get(key).unwrap()
-        })?;
-        let mut iter = component_ids.into_iter();
+        let component_ids = convert_path_to_comps(path)?;
 
+        let mut iter = component_ids
+            .into_iter()
+            .map(|v| *component_to_id.get(v).unwrap());
         let new = Self {
             p0: iter.next(),
             p1: iter.next(),
@@ -280,47 +279,5 @@ impl HdPathDiesel {
             p10,
         } = self;
         [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10]
-    }
-}
-
-pub fn path_components<'p, R>(
-    path: &'p Path,
-    map: impl Fn(&'p OsStr) -> R,
-) -> StorDieselResult<Vec<R>> {
-    let mut component_strs = Vec::new();
-    let mut components = path.components();
-    let Some(root) = components.next() else {
-        return Err(StorDieselErrorKind::EmptyPath.build_message(path.display()));
-    };
-    if root != Component::RootDir {
-        return Err(StorDieselErrorKind::PathNotAbsolute.build_message(path.display()));
-    }
-    for component in components {
-        let os_str = match component {
-            Component::Normal(v) => v,
-            _unknown => {
-                return Err(StorDieselErrorKind::PathWeird.build_message(path.display()));
-            }
-        };
-        component_strs.push(map(os_str));
-    }
-
-    Ok(component_strs)
-}
-
-#[cfg(test)]
-mod test {
-    use crate::path_components;
-    use std::path::Path;
-
-    #[test]
-    fn is_component() {
-        let path = Path::new("/foo/bar");
-        let comp = path_components(path, |o| o.to_str().unwrap()).unwrap();
-        assert_eq!(comp, vec!["foo", "bar"]);
-
-        let path = Path::new("/");
-        let comp = path_components(path, |o| o.to_str().unwrap()).unwrap();
-        assert!(comp.is_empty());
     }
 }
