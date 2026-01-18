@@ -4,10 +4,8 @@ use crate::journal_commit_remain;
 use aelita_commons::log_init;
 use aelita_stor_diesel::{
     AddPathMeta, ChangeOp, HdAddPath, HdAddPathToSpace, HdAddRoot, HdAddSymlink, ModelHdRoot,
-    ModelJournalTypeName, NewModelJournalImmutable, PermaStore, RawDieselBytes, RootType,
-    StorTransaction, assert_database_name_is, bootstrap_enum_hd_roots, bootstrap_enum_journal,
-    bootstrap_enum_space_owned, convert_path_to_comps, convert_path_to_comps_owned,
-    convert_strs_to_comps, encode_compressed_paths, establish_connection,
+    ModelJournalTypeName, NewModelJournalImmutable, PermaStore, RawDieselBytes, StorTransaction,
+    assert_database_name_is, convert_strs_to_comps, encode_compressed_paths, establish_connection,
     storapi_hd_get_path_by_path, storapi_journal_immutable_push_single,
 };
 use chrono::NaiveDateTime;
@@ -54,9 +52,7 @@ fn simulate_create(
     conn: &mut StorTransaction,
     tables: &[(MigrationModel, &str)],
 ) -> StorImportResult<()> {
-    for (_model, table) in tables.iter().rev() {
-        drop_table(conn, table)?;
-    }
+    simulate_drop(conn, tables)?;
     for (model, table) in tables {
         model.create_table(conn, table)?;
     }
@@ -140,7 +136,7 @@ fn journal_paths_backup(conn: &mut StorTransaction) -> StorImportResult<()> {
 
 fn journal_paths_active(conn: &mut StorTransaction) -> StorImportResult<()> {
     let stat_dummy_usable = stat_dummy_usable();
-    let mut changes = Vec::from([
+    let changes = Vec::from([
         ChangeOp::HdAddPath(HdAddPath {
             paths: vec![
                 (

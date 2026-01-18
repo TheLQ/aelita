@@ -13,11 +13,6 @@ use xana_commons_rs::tracing_re::{debug, error, info};
 use xana_commons_rs::{BasicWatch, CrashErrKind, ResultXanaMap, SimpleIoMap};
 use xana_fs_indexer_rs::{CompressedPaths, RecursiveStatResult, read_dirs_recursive_stat_better};
 
-static ROOTS: LazyLock<Vec<String>> = LazyLock::new(|| {
-    let path = Path::new("local_data/ndata_roots.txt");
-    let raw = std::fs::read_to_string(path).map_io_err(path).unwrap();
-    raw.split('\n').map(|s| s.to_string()).collect()
-});
 pub const COMPRESSED_CACHE: PathConst = PathConst("compressed_paths.cache.json");
 pub const SCAN_CACHE: PathConst = PathConst("compressed_paths.scancache.json");
 
